@@ -1012,10 +1012,10 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     //figure out if WIN1 masks on this scanline
     if (REG_DISPCNT & DISPCNT_WIN1_ON)
     {
-        WIN1bottom = (REG_WIN0V & 0xFF); //y2;
-        WIN1top = (REG_WIN0V & 0xFF00) >> 8; //y1;
-        WIN1right = (REG_WIN0H & 0xFF); //x2
-        WIN1left = (REG_WIN0H & 0xFF00) >> 8; //x1
+        WIN1bottom = (REG_WIN1V & 0xFF); //y2;
+        WIN1top = (REG_WIN1V & 0xFF00) >> 8; //y1;
+        WIN1right = (REG_WIN1H & 0xFF); //x2
+        WIN1left = (REG_WIN1H & 0xFF00) >> 8; //x1
         
         if (WIN1top > WIN1bottom) {
             if (vcount >= WIN1top || vcount < WIN1bottom)
