@@ -1,5 +1,6 @@
 	.section .rodata
 
+	.include "asm/macros/bit_width.inc"
 	.include "asm/macros/m4a.inc"
 	.include "asm/macros/music_voice.inc"
 
@@ -10,4 +11,4 @@
 	.include "sound/song_table.inc"
 	.include "sound/direct_sound_data.inc"
 
-	.align 2
+	ptr_align

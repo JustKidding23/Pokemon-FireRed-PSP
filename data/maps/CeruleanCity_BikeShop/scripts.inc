@@ -16,7 +16,7 @@ CeruleanCity_BikeShop_EventScript_Clerk::
 	case 127, CeruleanCity_BikeShop_EventScript_ClerkGoodbye
 	end
 
-@ The Bicycle price / players money is never actually checked
+/* The Bicycle price / players money is never actually checked*/
 CeruleanCity_BikeShop_EventScript_TryPurchaseBicycle::
 	msgbox CeruleanCity_BikeShop_Text_SorryYouCantAffordIt
 	goto CeruleanCity_BikeShop_EventScript_ClerkGoodbye
@@ -43,7 +43,7 @@ CeruleanCity_BikeShop_EventScript_AlreadyGotBicycle::
 	release
 	end
 
-@ Unused
+/* Unused*/
 CeruleanCity_BikeShop_EventScript_NoRoomForBicycle::
 	msgbox CeruleanCity_BikeShop_Text_MakeRoomForBicycle
 	release

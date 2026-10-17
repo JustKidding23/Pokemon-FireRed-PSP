@@ -10,7 +10,9 @@
 // Ruby's actual debug build does not use the AGBPrint features.
 
 // Revision 10 disabled asserts in some other way, comment out NDEBUG there to bring them back.
-#if REVISION >= 0xA
+// The portable builds have no debugger to print asserts to, and the retail
+// game never fails them.
+#if REVISION >= 0xA || defined(PORTABLE)
 #define NDEBUG
 #endif
 

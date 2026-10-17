@@ -1,4 +1,4 @@
-@ Flavor text for interacting with various background objects
+/* Flavor text for interacting with various background objects*/
 
 EventScript_Bookshelf::
 	msgbox Text_Bookshelf, MSGBOX_SIGN

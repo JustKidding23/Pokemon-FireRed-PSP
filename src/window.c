@@ -494,10 +494,15 @@ u32 GetWindowAttribute(u8 windowId, u8 attributeId)
     case WINDOW_BASE_BLOCK:
         return gWindows[windowId].window.baseBlock;
     case WINDOW_TILE_DATA:
-        return (u32)(gWindows[windowId].tileData);
+        DBGPRINTF("WINDOW_TILE_DATA attribute can no longer be accessed by GetWindowAttribute");
     default:
         return 0;
     }
+}
+
+u8* GetWindowTileData(u8 windowId)
+{
+    return gWindows[windowId].tileData;
 }
 
 static u8 GetNumActiveWindowsOnBg(u8 bgId)

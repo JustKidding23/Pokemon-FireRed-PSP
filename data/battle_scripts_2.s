@@ -11,7 +11,7 @@
 #include "constants/game_stat.h"
 #include "constants/battle_string_ids.h"
 	.include "asm/macros/battle_script.inc"
-@ Define these here since misc_constants.inc conflicts with the C headers
+/* Define these here since misc_constants.inc conflicts with the C headers*/
 	.set NULL, 0
 	.set FALSE, 0
 	.set TRUE, 1

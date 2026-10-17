@@ -40,13 +40,13 @@ Route8_WestEntrance_EventScript_GiveTea::
 	goto Route8_WestEntrance_EventScript_GuardDrinkTea
 	end
 
-@ Unused
+/* Unused*/
 Route8_WestEntrance_EventScript_GiveSodaPop::
 	removeitem ITEM_SODA_POP
 	goto Route8_WestEntrance_EventScript_GuardDrinkTea
 	end
 
-@ Unused
+/* Unused*/
 Route8_WestEntrance_EventScript_GiveLemonade::
 	removeitem ITEM_LEMONADE
 	goto Route8_WestEntrance_EventScript_GuardDrinkTea

@@ -38,7 +38,7 @@ PalletTown_OnFrame::
 	map_script_2 VAR_MAP_SCENE_PALLET_TOWN_OAK, 2, PalletTown_EventScript_OakRatingScene
 	.2byte 0
 
-@ Oak approaches player after exiting their house post Elite Four to check if they should receieve the National Dex
+/* Oak approaches player after exiting their house post Elite Four to check if they should receieve the National Dex*/
 PalletTown_EventScript_OakRatingScene::
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE

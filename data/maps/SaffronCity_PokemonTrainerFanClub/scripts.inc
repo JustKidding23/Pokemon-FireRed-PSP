@@ -38,7 +38,7 @@ SaffronCity_PokemonTrainerFanClub_Movement_FanApproachPlayer::
 	walk_left
 	step_end
 
-@ Unused, leftover from RS
+/* Unused, leftover from RS*/
 LilycoveCity_PokemonTrainerFanClub_Movement_FanApproachPlayer::
 	delay_8
 	walk_in_place_faster_down
@@ -49,7 +49,7 @@ LilycoveCity_PokemonTrainerFanClub_Movement_FanApproachPlayer::
 	walk_left
 	step_end
 
-@ Unused, leftover from RS
+/* Unused, leftover from RS*/
 LilycoveCity_PokemonTrainerFanClub_Movement_LittleGirlWatchPlayer::
 	walk_fast_left
 	walk_fast_left
@@ -59,13 +59,13 @@ LilycoveCity_PokemonTrainerFanClub_Movement_LittleGirlWatchPlayer::
 	walk_fast_down
 	step_end
 
-@ Unused, leftover from RS
+/* Unused, leftover from RS*/
 LilycoveCity_PokemonTrainerFanClub_Movement_LittleGirlMoveCloserToPlayer::
 	walk_down
 	walk_in_place_faster_right
 	step_end
 
-@ Unused, leftover from RS
+/* Unused, leftover from RS*/
 LilycoveCity_PokemonTrainerFanClub_Movement_LittleGirlHideFromPlayer::
 	jump_in_place_right
 	walk_fast_up

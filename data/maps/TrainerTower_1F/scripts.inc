@@ -4,7 +4,7 @@ TrainerTower_1F_MapScripts::
 	map_script MAP_SCRIPT_ON_FRAME_TABLE, TrainerTower_OnFrame
 	.byte 0
 
-@ All Trainer Tower floors/roof share these scripts for their object events
+/* All Trainer Tower floors/roof share these scripts for their object events*/
 
 TrainerTower_EventScript_DoublesTrainer1::
 	call TrainerTower_EventScript_SpeakToDoublesTrainer1

@@ -1,11 +1,11 @@
-@ Add a positive/negative value to the score of the move being evaluated.
+/* Add a positive/negative value to the score of the move being evaluated.*/
 
 	.macro score score
 	.byte 0x00
 	.byte \score
 	.endm
 
-@ turn (AKA "Appeal No.")
+/* turn (AKA "Appeal No.")*/
 
 	.macro get_turn
 	.byte 0x01
@@ -35,7 +35,7 @@
 	.4byte \addr
 	.endm
 
-@ audience excitement
+/* audience excitement*/
 
 	.macro get_excitement
 	.byte 0x06
@@ -65,7 +65,7 @@
 	.4byte \addr
 	.endm
 
-@ the order that the user goes in the current turn
+/* the order that the user goes in the current turn*/
 
 	.macro get_user_order
 	.byte 0x0B
@@ -95,7 +95,7 @@
 	.4byte \addr
 	.endm
 
-@ user condition
+/* user condition*/
 
 	.macro get_user_condition
 	.byte 0x10
@@ -125,18 +125,18 @@
 	.4byte \addr
 	.endm
 
-@ 15
-@ 16
-@ 17
-@ 18
-@ 19
-@ 1A
-@ 1B
-@ 1C
-@ 1D
-@ 1E
+/* 15*/
+/* 16*/
+/* 17*/
+/* 18*/
+/* 19*/
+/* 1A*/
+/* 1B*/
+/* 1C*/
+/* 1D*/
+/* 1E*/
 
-@ contest type
+/* contest type*/
 
 	.macro get_contest_type
 	.byte 0x1F
@@ -154,7 +154,7 @@
 	.4byte \addr
 	.endm
 
-@ move excitement (change in excitement due to move)
+/* move excitement (change in excitement due to move)*/
 
 	.macro get_move_excitement
 	.byte 0x22
@@ -184,7 +184,7 @@
 	.4byte \addr
 	.endm
 
-@ move effect
+/* move effect*/
 
 	.macro get_effect
 	.byte 0x27
@@ -202,7 +202,7 @@
 	.4byte \addr
 	.endm
 
-@ move effect type
+/* move effect type*/
 
 	.macro get_effect_type
 	.byte 0x2A
@@ -220,7 +220,7 @@
 	.4byte \addr
 	.endm
 
-@ whether the current move is the most appealing in the user's moveset
+/* whether the current move is the most appealing in the user's moveset*/
 
 	.macro check_most_appealing_move
 	.byte 0x2D
@@ -231,20 +231,20 @@
 	.4byte \addr
 	.endm
 
-@ 2F
-@ 30
-@ 31
-@ 32
-@ 33
-@ 34
-@ 35
-@ 36
-@ 37
-@ 38
-@ 39
-@ 3A
+/* 2F*/
+/* 30*/
+/* 31*/
+/* 32*/
+/* 33*/
+/* 34*/
+/* 35*/
+/* 36*/
+/* 37*/
+/* 38*/
+/* 39*/
+/* 3A*/
 
-@ number of times current move has been used
+/* number of times current move has been used*/
 
 	.macro get_move_used_count
 	.byte 0x3B
@@ -274,7 +274,7 @@
 	.4byte \addr
 	.endm
 
-@ whether the current move is a combo starter (with another move in the moveset)
+/* whether the current move is a combo starter (with another move in the moveset)*/
 
 	.macro check_combo_starter
 	.byte 0x40
@@ -290,7 +290,7 @@
 	.4byte \addr
 	.endm
 
-@ whether the current move is a combo finisher (with another move in the moveset)
+/* whether the current move is a combo finisher (with another move in the moveset)*/
 
 	.macro check_combo_finisher
 	.byte 0x43
@@ -306,7 +306,7 @@
 	.4byte \addr
 	.endm
 
-@ whether the current move would finish a combo
+/* whether the current move would finish a combo*/
 
 	.macro check_would_finish_combo
 	.byte 0x46
@@ -322,7 +322,7 @@
 	.4byte \addr
 	.endm
 
-@ condition of mon (indexed by order)
+/* condition of mon (indexed by order)*/
 
 	.macro get_condition mon
 	.byte 0x49
@@ -357,9 +357,9 @@
 	.4byte \addr
 	.endm
 
-@ whether the mon used a combo starter move
-@ Even though this value is always 1 or 0 (i.e. TRUE/FALSE),
-@ there are less-than and greater-than comparison operations for some reason.
+/* whether the mon used a combo starter move*/
+/* Even though this value is always 1 or 0 (i.e. TRUE/FALSE),*/
+/* there are less-than and greater-than comparison operations for some reason.*/
 
 	.macro get_used_combo_starter mon
 	.byte 0x4E
@@ -395,7 +395,7 @@
 	.4byte \addr
 	.endm
 
-@ whether the mon can make an appeal
+/* whether the mon can make an appeal*/
 
 	.macro check_can_participate mon
 	.byte 0x53
@@ -414,8 +414,8 @@
 	.4byte \addr
 	.endm
 
-@ 56
-@ 57
+/* 56*/
+/* 57*/
 
 	.macro contest_58 param addr
 	.byte 0x58
@@ -423,42 +423,42 @@
 	.4byte \addr
 	.endm
 
-@ 59
-@ 5A
-@ 5B
-@ 5C
-@ 5D
-@ 5E
-@ 5F
-@ 60
-@ 61
-@ 62
-@ 63
-@ 64
-@ 65
-@ 66
-@ 67
-@ 68
-@ 69
-@ 6A
-@ 6B
-@ 6C
-@ 6D
-@ 6E
-@ 6F
-@ 70
-@ 71
-@ 72
-@ 73
-@ 74
-@ 75
-@ 76
-@ 77
-@ 78
-@ 79
-@ 7A
-@ 7B
-@ 7C
+/* 59*/
+/* 5A*/
+/* 5B*/
+/* 5C*/
+/* 5D*/
+/* 5E*/
+/* 5F*/
+/* 60*/
+/* 61*/
+/* 62*/
+/* 63*/
+/* 64*/
+/* 65*/
+/* 66*/
+/* 67*/
+/* 68*/
+/* 69*/
+/* 6A*/
+/* 6B*/
+/* 6C*/
+/* 6D*/
+/* 6E*/
+/* 6F*/
+/* 70*/
+/* 71*/
+/* 72*/
+/* 73*/
+/* 74*/
+/* 75*/
+/* 76*/
+/* 77*/
+/* 78*/
+/* 79*/
+/* 7A*/
+/* 7B*/
+/* 7C*/
 
 	.macro if_random param addr
 	.byte 0x7D
@@ -466,7 +466,7 @@
 	.4byte \addr
 	.endm
 
-@ 7E
+/* 7E*/
 
 	.macro jump addr
 	.byte 0x7F
@@ -496,8 +496,8 @@
 	.4byte \addr
 	.endm
 
-@ 85
-@ 86
+/* 85*/
+/* 86*/
 
 	.macro if_effect_in_user_moveset param addr
 	.byte 0x87

@@ -1,4 +1,4 @@
-@ These are event scripts. They should not be moved to C.
+/* These are event scripts. They should not be moved to C.*/
 
 #include "constants/global.h"
 #include "constants/flags.h"
@@ -11,6 +11,8 @@
 	.include "asm/macros.inc"
 	.include "asm/macros/event.inc"
 	.include "constants/constants.inc"
+	.set ALLOCATE_SPECIAL_TABLE, 0
+	.include "data/specials.inc"
 
 	.section .rodata
 	

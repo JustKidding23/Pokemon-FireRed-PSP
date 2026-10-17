@@ -166,7 +166,7 @@ VermilionCity_EventScript_ChooseSeagallopDestTriPass::
 	case 127, EventScript_CancelSail
 	end
 
-@ Unreachable
+/* Unreachable*/
 Vermilion_EventScript_Unused::
 	release
 	end

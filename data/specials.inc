@@ -1,20 +1,28 @@
 .macro def_special ptr
+.if ALLOCATE_SPECIAL_TABLE
 .global SPECIAL_\ptr
 .set SPECIAL_\ptr, __special__
-.set __special__, __special__ + 1
 	.4byte \ptr
+.else
+/* Define the id locally too, so scripts outside event_scripts.s don't need a
+   16-bit relocation against it, which MIPS objects can't hold. */
+.set SPECIAL_\ptr, __special__
+.endif
+.set __special__, __special__ + 1
 	.endm
 
 .set __special__, 0
+.if ALLOCATE_SPECIAL_TABLE
 	.align 2
 gSpecials::
+.endif
 	def_special HealPlayerParty
 	def_special SetCableClubWarp
 	def_special DoCableClubWarp
 	def_special ReturnFromLinkRoom
 	def_special CleanupLinkRoomState
 	def_special ExitLinkRoom
-	def_special NullFieldSpecial  @ Secret Base specials
+	def_special NullFieldSpecial  /* Secret Base specials*/
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
@@ -51,7 +59,7 @@ gSpecials::
 	def_special LoadPlayerParty
 	def_special ChooseHalfPartyForBattle
 	def_special Script_ShowLinkTrainerCard
-	def_special NullFieldSpecial  @ Berry Tree specials
+	def_special NullFieldSpecial  /* Berry Tree specials*/
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
@@ -70,7 +78,7 @@ gSpecials::
 	def_special StartRematchBattle
 	def_special ShowPokemonStorageSystemPC
 	def_special HasEnoughMonsForDoubleBattle
-	def_special NullFieldSpecial  @ Hoenn TV specials
+	def_special NullFieldSpecial  /* Hoenn TV specials*/
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
@@ -78,7 +86,7 @@ gSpecials::
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special HasLeadMonBeenRenamed
-	def_special NullFieldSpecial  @ Contest specials
+	def_special NullFieldSpecial  /* Contest specials*/
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
@@ -105,7 +113,7 @@ gSpecials::
 	def_special DoWateringBerryTreeAnim
 	def_special ShowEasyChatScreen
 	def_special ShowEasyChatMessage
-	def_special NullFieldSpecial  @ Mauville Man specials
+	def_special NullFieldSpecial  /* Mauville Man specials*/
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
@@ -142,33 +150,33 @@ gSpecials::
 	def_special CalculatePlayerPartyCount
 	def_special CountPartyNonEggMons
 	def_special CountPartyAliveNonEggMons_IgnoreVar0x8004Slot
-	def_special NullFieldSpecial  @ Contest specials
+	def_special NullFieldSpecial  /* Contest specials*/
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
-	def_special NullFieldSpecial  @ Mauville Gym specials
+	def_special NullFieldSpecial  /* Mauville Gym specials*/
 	def_special NullFieldSpecial
 	def_special ShowFieldMessageStringVar4
 	def_special DrawWholeMapView
 	def_special GetPlayerXY
-	def_special NullFieldSpecial  @ Mauville/Petalburg Gym specials
+	def_special NullFieldSpecial  /* Mauville/Petalburg Gym specials*/
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special GetPlayerTrainerIdOnesDigit
 	def_special BufferBigGuyOrBigGirlString
 	def_special BufferSonOrDaughterString
 	def_special SetHiddenItemFlag
-	def_special NullFieldSpecial  @ Cable Car specials
+	def_special NullFieldSpecial  /* Cable Car specials*/
 	def_special NullFieldSpecial
 	def_special Overworld_PlaySpecialMapMusic
-	def_special NullFieldSpecial  @ Wall Clock specials
+	def_special NullFieldSpecial  /* Wall Clock specials*/
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special StartOldManTutorialBattle
 	def_special ChangePokemonNickname
 	def_special ChoosePartyMon
-	def_special NullFieldSpecial  @ Berry Blender/Roulette specials
+	def_special NullFieldSpecial  /* Berry Blender/Roulette specials*/
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special Script_IsFanClubMemberFanOfPlayer
@@ -180,7 +188,7 @@ gSpecials::
 	def_special Script_UpdateTrainerFanClubGameClear
 	def_special Script_TryGainNewFanFromCounter
 	def_special RockSmashWildEncounter
-	def_special NullFieldSpecial  @ Gabby and Ty specials
+	def_special NullFieldSpecial  /* Gabby and Ty specials*/
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
@@ -209,13 +217,13 @@ gSpecials::
 	def_special SubtractMoneyFromVar0x8005
 	def_special TryFieldPoisonWhiteOut
 	def_special SetCB2WhiteOut
-	def_special NullFieldSpecial  @ Rotating gate puzzle specials
+	def_special NullFieldSpecial  /* Rotating gate puzzle specials*/
 	def_special NullFieldSpecial
-	def_special NullFieldSpecial  @ SS Tidal specials
+	def_special NullFieldSpecial  /* SS Tidal specials*/
 	def_special NullFieldSpecial
 	def_special EnterSafariMode
 	def_special ExitSafariMode
-	def_special NullFieldSpecial  @ Misc Hoenn specials
+	def_special NullFieldSpecial  /* Misc Hoenn specials*/
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
@@ -225,7 +233,7 @@ gSpecials::
 	def_special AnimatePcTurnOn
 	def_special AnimatePcTurnOff
 	def_special GetElevatorFloor
-	def_special NullFieldSpecial  @ Lottery Corner specials
+	def_special NullFieldSpecial  /* Lottery Corner specials*/
 	def_special NullFieldSpecial
 	def_special ChooseMonForMoveRelearner
 	def_special SelectMoveDeleterMove
@@ -233,7 +241,7 @@ gSpecials::
 	def_special BufferMoveDeleterNicknameAndMove
 	def_special GetNumMovesSelectedMonHas
 	def_special TeachMoveRelearnerMove
-	def_special NullFieldSpecial  @ Hoenn Cycling Road specials
+	def_special NullFieldSpecial  /* Hoenn Cycling Road specials*/
 	def_special NullFieldSpecial
 	def_special GetPlayerAvatarBike
 	def_special NullFieldSpecial
@@ -264,7 +272,7 @@ gSpecials::
 	def_special CreateInGameTradePokemon
 	def_special DoInGameTradeScene
 	def_special GetTradeSpecies
-	def_special NullFieldSpecial  @ Misc Hoenn specials
+	def_special NullFieldSpecial  /* Misc Hoenn specials*/
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
@@ -273,7 +281,7 @@ gSpecials::
 	def_special CreatePCMenu
 	def_special HallOfFamePCBeginFade
 	def_special ShowDiploma
-	def_special NullFieldSpecial  @ Check lead mon Contest strength specials
+	def_special NullFieldSpecial  /* Check lead mon Contest strength specials*/
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
@@ -282,10 +290,10 @@ gSpecials::
 	def_special DoSoftReset
 	def_special EnterHallOfFame
 	def_special AnimateElevator
-	def_special NullFieldSpecial  @ ShowGlassWorkshopMenu
+	def_special NullFieldSpecial  /* ShowGlassWorkshopMenu*/
 	def_special SpawnCameraObject
 	def_special RemoveCameraObject
-	def_special NullFieldSpecial  @ Misc Hoenn specials
+	def_special NullFieldSpecial  /* Misc Hoenn specials*/
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
@@ -296,7 +304,7 @@ gSpecials::
 	def_special BufferEReaderTrainerName
 	def_special GetRandomSlotMachineId
 	def_special GetPlayerFacingDirection
-	def_special NullFieldSpecial  @ Abandoned Ship room key specials
+	def_special NullFieldSpecial  /* Abandoned Ship room key specials*/
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
 	def_special NullFieldSpecial
@@ -452,4 +460,6 @@ gSpecials::
 	def_special UpdateLoreleiDollCollection
 	def_special LoopWingFlapSound
 	def_special CreateEnemyEventMon
+.if ALLOCATE_SPECIAL_TABLE
 gSpecialsEnd::
+.endif

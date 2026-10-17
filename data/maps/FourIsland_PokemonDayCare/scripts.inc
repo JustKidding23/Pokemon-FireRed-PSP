@@ -161,7 +161,7 @@ FourIsland_PokemonDayCare_Movement_RetrieveMon::
 	walk_slower_down
 	step_end
 
-@ Unused. Possibly a commented script, or a typo end added to the above Movement script
+/* Unused. Possibly a commented script, or a typo end added to the above Movement script*/
 FourIsland_PokemonDayCare_EventScript_UnusedEnd::
 	end
 
@@ -177,7 +177,7 @@ FourIsland_PokemonDayCare_TwoMonsInDaycare::
 	release
 	end
 
-@ Unused
+/* Unused*/
 FourIsland_PokemonDayCare_EventScript_UnusedRetrieveMon::
 	special ShowDaycareLevelMenu
 	waitstate

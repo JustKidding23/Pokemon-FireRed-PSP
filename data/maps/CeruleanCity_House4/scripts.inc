@@ -19,13 +19,13 @@ CeruleanCity_House4_EventScript_WonderNewsBerryMan::
 	goto_if_eq REWARD_TYPE, NEWS_REWARD_AT_MAX,     CeruleanCity_House4_EventScript_AtMax
 	end
 
-@ Mystery Gift is not enabled, or the player has no saved Wonder News
+/* Mystery Gift is not enabled, or the player has no saved Wonder News*/
 CeruleanCity_House4_EventScript_NoNews::
 	msgbox CeruleanCity_House4_Text_NothingEntertaining
 	release
 	end
 
-@ Small reward for receiving Wonder News from friend
+/* Small reward for receiving Wonder News from friend*/
 CeruleanCity_House4_EventScript_Reward_RecvSmall::
 	call CeruleanCity_House4_EventScript_MovementReactionToNews
 	msgbox CeruleanCity_House4_Text_NewNewsInformativeHaveThis
@@ -34,7 +34,7 @@ CeruleanCity_House4_EventScript_Reward_RecvSmall::
 	release
 	end
 
-@ Big reward for receiving Wonder News from non-friend source
+/* Big reward for receiving Wonder News from non-friend source*/
 CeruleanCity_House4_EventScript_Reward_RecvBig::
 	call CeruleanCity_House4_EventScript_MovementReactionToNews
 	msgbox CeruleanCity_House4_Text_IncredibleNewsHaveBerries
@@ -43,7 +43,7 @@ CeruleanCity_House4_EventScript_Reward_RecvBig::
 	release
 	end
 
-@ Player has not recently sent Wonder News
+/* Player has not recently sent Wonder News*/
 CeruleanCity_House4_EventScript_Waiting::
 	applymovement LOCALID_WONDER_NEWS_BERRY_MAN, Common_Movement_FacePlayer
 	waitmovement 0
@@ -51,7 +51,7 @@ CeruleanCity_House4_EventScript_Waiting::
 	release
 	end
 
-@ Small reward for sending Wonder News every 1-3 times
+/* Small reward for sending Wonder News every 1-3 times*/
 CeruleanCity_House4_EventScript_Reward_SentSmall::
 	call CeruleanCity_House4_EventScript_MovementReactionToNews
 	msgbox CeruleanCity_House4_Text_ThanksForSpreadingNewsTakeThis
@@ -60,7 +60,7 @@ CeruleanCity_House4_EventScript_Reward_SentSmall::
 	release
 	end
 
-@ Big reward for sending Wonder News every 4th time
+/* Big reward for sending Wonder News every 4th time*/
 CeruleanCity_House4_EventScript_Reward_SentBig::
 	call CeruleanCity_House4_EventScript_MovementReactionToNews
 	msgbox CeruleanCity_House4_Text_MagnificentNewsSpreadHaveBerries
@@ -69,7 +69,7 @@ CeruleanCity_House4_EventScript_Reward_SentBig::
 	release
 	end
 
-@ Player has hit reward limit and must wait to receive new rewards
+/* Player has hit reward limit and must wait to receive new rewards*/
 CeruleanCity_House4_EventScript_AtMax::
 	applymovement LOCALID_WONDER_NEWS_BERRY_MAN, Common_Movement_FacePlayer
 	waitmovement 0

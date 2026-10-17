@@ -1,4 +1,4 @@
-@ Same as Hoenn's day-care text, used by the Four Island Day-Care. Unused text translated in Emerald
+/* Same as Hoenn's day-care text, used by the Four Island Day-Care. Unused text translated in Emerald*/
 
 DayCare_Text_ImDaycareManSpeakToMyWife::
 	.string "I'm the DAY-CARE MAN.\p"

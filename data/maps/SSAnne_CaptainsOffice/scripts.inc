@@ -22,7 +22,7 @@ SSAnne_CaptainsOffice_EventScript_Captain::
 	release
 	end
 
-@ Unused
+/* Unused*/
 SSAnne_CaptainsOffice_EventScript_NoRoomForCut::
 	msgbox SSAnne_CaptainsOffice_Text_YouHaveNoRoomForThis
 	closemessage

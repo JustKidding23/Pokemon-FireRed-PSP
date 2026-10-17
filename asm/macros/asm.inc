@@ -14,4 +14,4 @@
 	inc __enum__
 	.endm
 
-	.endif @ GUARD_ASM_MACROS_ASM_INC
+	.endif /* GUARD_ASM_MACROS_ASM_INC*/

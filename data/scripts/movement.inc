@@ -16,7 +16,7 @@ Common_Movement_FacePlayer::
 	face_player
 	step_end
 
-@ Unused
+/* Unused*/
 Common_Movement_FaceAwayPlayer::
 	face_away_player
 	step_end
@@ -57,7 +57,7 @@ Common_Movement_WalkUp5::
 	walk_up
 	step_end
 
-@ Unused
+/* Unused*/
 Common_Movement_WalkUp4::
 	walk_up
 	walk_up
@@ -70,12 +70,12 @@ Common_Movement_Delay32::
 	delay_16
 	step_end
 
-@ Unused
+/* Unused*/
 Common_Movement_WalkUp::
 	walk_up
 	step_end
 
-@ Unused
+/* Unused*/
 Common_Movement_WalkUp2::
 	walk_up
 	walk_up

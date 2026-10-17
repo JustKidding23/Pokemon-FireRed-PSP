@@ -55,7 +55,7 @@ SixIsland_DottedHole_SapphireRoom_EventScript_Sapphire::
 	release
 	end
 
-@ Lots of redundant scripts below
+/* Lots of redundant scripts below*/
 SixIsland_DottedHole_SapphireRoom_EventScript_PlayerFaceThiefLeft2::
 	applymovement LOCALID_PLAYER, Common_Movement_WalkInPlaceFasterLeft
 	waitmovement 0

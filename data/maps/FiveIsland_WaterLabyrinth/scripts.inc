@@ -40,8 +40,8 @@ FiveIsland_WaterLabyrinth_EventScript_TryGiveEgg::
 	goto FiveIsland_WaterLabyrinth_EventScript_PostEggComment
 	end
 
-@ If the player has a Togepi/Togetic from this game (assumed to be the one the man gave you) then comment on it
-@ Otherwise make normal comment
+/* If the player has a Togepi/Togetic from this game (assumed to be the one the man gave you) then comment on it*/
+/* Otherwise make normal comment*/
 FiveIsland_WaterLabyrinth_EventScript_PostEggComment::
 	bufferspeciesname STR_VAR_2, SPECIES_TOGEPI
 	setvar VAR_0x8004, SPECIES_TOGEPI

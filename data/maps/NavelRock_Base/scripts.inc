@@ -35,17 +35,17 @@ NavelRock_Base_EventScript_Lugia::
 	waitse
 	delay 20
 	playse SE_THUNDERSTORM_STOP
-	setvar VAR_0x8004, 0  @ Vertical pan
-	setvar VAR_0x8005, 3  @ Horizontal pan
-	setvar VAR_0x8006, 4  @ Num shakes
-	setvar VAR_0x8007, 2  @ Shake delay
+	setvar VAR_0x8004, 0  /* Vertical pan*/
+	setvar VAR_0x8005, 3  /* Horizontal pan*/
+	setvar VAR_0x8006, 4  /* Num shakes*/
+	setvar VAR_0x8007, 2  /* Shake delay*/
 	special ShakeScreen
 	delay 30
 	playse SE_THUNDERSTORM_STOP
-	setvar VAR_0x8004, 0  @ Vertical pan
-	setvar VAR_0x8005, 3  @ Horizontal pan
-	setvar VAR_0x8006, 4  @ Num shakes
-	setvar VAR_0x8007, 2  @ Shake delay
+	setvar VAR_0x8004, 0  /* Vertical pan*/
+	setvar VAR_0x8005, 3  /* Horizontal pan*/
+	setvar VAR_0x8006, 4  /* Num shakes*/
+	setvar VAR_0x8007, 2  /* Shake delay*/
 	special ShakeScreen
 	delay 30
 	delay 50

@@ -1,4 +1,4 @@
-@ Flavor text for interacting with various background objects
+/* Flavor text for interacting with various background objects*/
 
 Text_Bookshelf::
 	.string "It's crammed full of POKéMON\n"

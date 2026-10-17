@@ -76,7 +76,7 @@ FuchsiaCity_Text_KabutoSign::
     .string "An extremely rare POKéMON that was\l"
     .string "regenerated from a fossil.$"
 
-@ Unused. May have been meant to be the placeholder text for the zoo mons, similar to RB's "!" text
+/* Unused. May have been meant to be the placeholder text for the zoo mons, similar to RB's "!" text*/
 FuchsiaCity_Text_Ellipsis::
     .string "……$"
 

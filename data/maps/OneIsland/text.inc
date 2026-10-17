@@ -52,7 +52,7 @@ OneIsland_Text_PokemonNetCenterSign::
     .string "Expanding the POKéMON World!\n"
     .string "POKéMON NET CENTER$"
 
-@ Unused
+/* Unused*/
 OneIsland_Text_ReturnToCinnabar::
     .string "グレンタウンに　もどりますか？$"
 

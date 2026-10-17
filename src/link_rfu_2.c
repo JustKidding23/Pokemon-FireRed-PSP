@@ -313,6 +313,7 @@ void InitRFU(void)
     REG_IME = INTR_FLAG_VBLANK;
 }
 
+#ifndef PORTABLE
 void InitRFUAPI(void)
 {
     if (!rfu_initializeAPI(sRfuAPIBuffer, RFU_API_BUFF_SIZE_RAM, &gIntrTable[1], TRUE))
@@ -324,6 +325,7 @@ void InitRFUAPI(void)
         rfu_setTimerInterrupt(3, &gIntrTable[2]);
     }
 }
+#endif
 
 static void Task_ParentSearchForChildren(u8 taskId)
 {

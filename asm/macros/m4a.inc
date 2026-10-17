@@ -2,6 +2,7 @@
 	.4byte \label
 	.2byte \music_player
 	.2byte \unknown
+	space64 4
 	.endm
 
 	.macro music_player info_struct, track_struct, unknown_1, unknown_2

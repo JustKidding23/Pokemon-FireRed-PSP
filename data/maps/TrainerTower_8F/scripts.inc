@@ -4,7 +4,7 @@ TrainerTower_8F_MapScripts::
 	map_script MAP_SCRIPT_ON_FRAME_TABLE, TrainerTower_OnFrame
 	.byte 0
 
-@ Below scripts are unused, the identical versions in the 1F script are used instead
+/* Below scripts are unused, the identical versions in the 1F script are used instead*/
 
 TrainerTower_8F_EventScript_DoublesTrainer1::
 	call TrainerTower_EventScript_SpeakToDoublesTrainer1

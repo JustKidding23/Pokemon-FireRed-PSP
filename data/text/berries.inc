@@ -1,4 +1,4 @@
-@ The text here is a copy/paste from Hoenn's various berry NPCs, all unused and untranslated
+/* The text here is a copy/paste from Hoenn's various berry NPCs, all unused and untranslated*/
 
 PetalburgCity_Gym_Text_GiveEnigmaBerry::
 	.string "パパ“やあ　{PLAYER}！\p"

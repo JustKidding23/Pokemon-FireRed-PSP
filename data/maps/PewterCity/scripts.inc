@@ -7,8 +7,8 @@ PewterCity_OnTransition::
 	setvar VAR_MAP_SCENE_PEWTER_CITY_MUSEUM_1F, 0
 	end
 
-@ Impossible to speak to this NPC from a facing dir != DIR_EAST normally, so they arent checked
-@ Additionally, no movement script exists for facing DIR_SOUTH, which would necessitate walking out of bounds
+/* Impossible to speak to this NPC from a facing dir != DIR_EAST normally, so they arent checked*/
+/* Additionally, no movement script exists for facing DIR_SOUTH, which would necessitate walking out of bounds*/
 PewterCity_EventScript_GymGuide::
 	lock
 	faceplayer
@@ -35,7 +35,7 @@ PewterCity_EventScript_WalkToGymEast::
 	waitmovement 0
 	return
 
-@ Unused
+/* Unused*/
 PewterCity_EventScript_WalkToGymWest::
 	applymovement LOCALID_PLAYER, PewterCity_Movement_PlayerWaitForGuideWest
 	applymovement LOCALID_PEWTER_GYM_GUIDE, PewterCity_Movement_GuideMoveToLeadWest
@@ -45,7 +45,7 @@ PewterCity_EventScript_WalkToGymWest::
 	waitmovement 0
 	return
 
-@ Unused
+/* Unused*/
 PewterCity_EventScript_WalkToGymNorth::
 	applymovement LOCALID_PLAYER, PewterCity_Movement_PlayerWaitForGuideNorth
 	applymovement LOCALID_PEWTER_GYM_GUIDE, PewterCity_Movement_GuideMoveToLeadNorth
@@ -271,7 +271,7 @@ PewterCity_EventScript_GymGuideTriggerBottom::
 	goto PewterCity_EventScript_GymGuideTrigger
 	end
 
-@ This trigger is inaccessible and its corresponding movement script isnt linked
+/* This trigger is inaccessible and its corresponding movement script isnt linked*/
 PewterCity_EventScript_GymGuideTriggerRight::
 	lockall
 	setvar VAR_TEMP_1, 3
@@ -320,7 +320,7 @@ PewterCity_EventScript_WalkToGymBottom::
 	waitmovement 0
 	return
 
-@ Unused
+/* Unused*/
 PewterCity_EventScript_WalkToGymRight::
 	applymovement LOCALID_PEWTER_GYM_GUIDE, PewterCity_Movement_GuideApproachPlayerRight
 	waitmovement 0
@@ -728,7 +728,7 @@ PewterCity_EventScript_AideNoticePlayer::
 	waitmovement 0
 	return
 
-@ Aide already at player
+/* Aide already at player*/
 PewterCity_EventScript_AideApproachPlayer0::
 	closemessage
 	delay 20
@@ -837,7 +837,7 @@ PewterCity_Movement_AideExit3::
 	walk_left
 	step_end
 
-@ Unused
+/* Unused*/
 PewterCity_Movement_WalkInPlaceLeft::
 	walk_in_place_left
 	step_end

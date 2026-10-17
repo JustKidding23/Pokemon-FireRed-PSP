@@ -36,8 +36,8 @@ NavelRock_Summit_EventScript_HoOh::
 	lockall
 	setvar VAR_TEMP_1, 1
 	special SpawnCameraObject
-	setvar VAR_0x8004, 3  @ Num loops
-	setvar VAR_0x8005, 35 @ Delay
+	setvar VAR_0x8004, 3  /* Num loops*/
+	setvar VAR_0x8005, 35 /* Delay*/
 	special LoopWingFlapSound
 	applymovement LOCALID_NAVEL_ROCK_HO_OH, Movement_HoOhAppear
 	applymovement LOCALID_CAMERA, Movement_CameraPanUp
@@ -50,8 +50,8 @@ NavelRock_Summit_EventScript_HoOh::
 	delay 30
 	waitmoncry
 	delay 60
-	setvar VAR_0x8004, 3  @ Num loops
-	setvar VAR_0x8005, 35 @ Delay
+	setvar VAR_0x8004, 3  /* Num loops*/
+	setvar VAR_0x8005, 35 /* Delay*/
 	special LoopWingFlapSound
 	applymovement LOCALID_CAMERA, Movement_CameraPanDown
 	applymovement LOCALID_NAVEL_ROCK_HO_OH, Movement_HoOhApproach

@@ -6,6 +6,8 @@
 
 	.bss
 
+/* The portable builds define the tracks in C (see music_player.c)*/
+.ifndef PORTABLE
 gMPlayTrack_BGM::
 	.space TRACK_SIZE * NUM_TRACKS_BGM
 	.size gMPlayTrack_BGM, .-gMPlayTrack_BGM
@@ -21,6 +23,7 @@ gMPlayTrack_SE2::
 gMPlayTrack_SE3::
 	.space TRACK_SIZE * NUM_TRACKS_SE3
 	.size gMPlayTrack_SE3, .-gMPlayTrack_SE3
+.endif
 
 	.section .rodata
 

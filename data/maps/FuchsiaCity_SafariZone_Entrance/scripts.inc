@@ -8,7 +8,7 @@ FuchsiaCity_SafariZone_Entrance_OnFrame::
 	map_script_2 VAR_MAP_SCENE_FUCHSIA_CITY_SAFARI_ZONE_ENTRANCE, 3, FuchsiaCity_SafariZone_Entrance_EventScript_ExitWalkIn
 	.2byte 0
 
-@ When player runs out of balls mid-battle
+/* When player runs out of balls mid-battle*/
 FuchsiaCity_SafariZone_Entrance_EventScript_ExitWalkIn::
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
@@ -23,7 +23,7 @@ FuchsiaCity_SafariZone_Entrance_EventScript_ExitWalkIn::
 	releaseall
 	end
 
-@ When player runs of out balls after catching a pokemon, or runs out of steps
+/* When player runs of out balls after catching a pokemon, or runs out of steps*/
 FuchsiaCity_SafariZone_Entrance_EventScript_ExitWarpIn::
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
@@ -36,7 +36,7 @@ FuchsiaCity_SafariZone_Entrance_EventScript_ExitWarpIn::
 	releaseall
 	end
 
-@ When player re-enters the entrance building with balls/steps remaining
+/* When player re-enters the entrance building with balls/steps remaining*/
 FuchsiaCity_SafariZone_Entrance_EventScript_ExitEarly::
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE

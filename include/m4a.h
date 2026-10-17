@@ -23,6 +23,9 @@ extern struct MusicPlayerInfo gMPlayInfo_SE1;
 extern struct MusicPlayerInfo gMPlayInfo_SE2;
 extern struct MusicPlayerInfo gMPlayInfo_SE3;
 extern struct SoundInfo gSoundInfo;
+#ifdef PORTABLE
+extern bool8 gSoundInit;
+#endif
 
 extern const struct SongHeader mus_victory_gym_leader;
 

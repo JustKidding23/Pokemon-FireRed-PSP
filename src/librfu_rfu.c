@@ -124,6 +124,7 @@ static const char str_checkMbootLL[] = "RFU-MBOOT";
         *_dst++ = *_src++;                          \
 } while (0)
 
+#ifndef PORTABLE
 u16 rfu_initializeAPI(u32 *APIBuffer, u16 buffByteSize, IntrFunc *sioIntrTable_p, bool8 copyInterruptToRam)
 {
     u16 i;
@@ -191,6 +192,7 @@ u16 rfu_initializeAPI(u32 *APIBuffer, u16 buffByteSize, IntrFunc *sioIntrTable_p
     gRfuFixed->fastCopyPtr = (void *)gRfuFixed->fastCopyBuffer + 1;
     return 0;
 }
+#endif
 
 static void rfu_STC_clearAPIVariables(void)
 {
@@ -328,6 +330,7 @@ u16 rfu_getRFUStatus(u8 *rfuState)
  * }
  * Returns 1 if the packet to inherit is malformed.
  */
+#ifndef PORTABLE
 u16 rfu_MBOOT_CHILD_inheritanceLinkStatus(void)
 {
     const char *s1 = str_checkMbootLL;
@@ -352,6 +355,7 @@ u16 rfu_MBOOT_CHILD_inheritanceLinkStatus(void)
     gRfuStatic->flags |= 0x80; // mboot
     return 0;
 }
+#endif
 
 void rfu_REQ_stopMode(void)
 {
@@ -434,7 +438,11 @@ void rfu_REQ_configSystem(u16 availSlotFlag, u8 maxMFrame, u8 mcTimer)
         u16 IMEBackup = REG_IME;
 
         REG_IME = 0;
+#ifndef PORTABLE
         gRfuStatic->linkEmergencyLimit = Div(600, mcTimer);
+#else
+        gRfuStatic->linkEmergencyLimit = 600 / mcTimer;
+#endif
         REG_IME = IMEBackup;
     }
 }
@@ -593,10 +601,10 @@ static void rfu_CB_pollAndEndSearchChild(u8 reqCommand, u16 reqResult)
 
 static void rfu_STC_readChildList(void)
 {
-    u32 stwiParam;
+    u32 UNUSED stwiParam;
     u8 numSlots = gRfuFixed->STWIBuffer->rxPacketAlloc.rfuPacket8.data[1];
     u8 *data_p;
-    u8 i;
+    u8 UNUSED i;
     u8 bm_slot_id;
 #if LIBRFU_VERSION < 1026
     u8 true_slots[RFU_CHILD_MAX];
@@ -1791,7 +1799,7 @@ static void rfu_constructSendLLFrame(void)
         }
         if (pakcketSize != 0)
         {
-            while ((u32)llf_p & 3)
+            while ((uintptr_t)llf_p & 3)
                 *llf_p++ = 0;
             gRfuFixed->LLFBuffer[0] = pakcketSize;
             if (gRfuLinkStatus->parentChild == MODE_CHILD)

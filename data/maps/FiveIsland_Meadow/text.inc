@@ -1,4 +1,4 @@
-@ Unused
+/* Unused*/
 FiveIsland_Meadow_Text_DoorNeedsTwoPasswords::
     .string "とびらを　あけるには\n"
     .string "パスワードが　2つ　いるようだ$"

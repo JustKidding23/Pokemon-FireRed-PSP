@@ -50,7 +50,7 @@ FuchsiaCity_WardensHouse_Text_ExplainStrength::
     .string "Oh yes, did you find the SECRET\n"
     .string "HOUSE in the SAFARI ZONE?$"
 
-@ Unused
+/* Unused*/
 FuchsiaCity_WardensHouse_Text_YouHaveTooMuchStuff::
     .string "なんや　にもつ\n"
     .string "いっぱいやんけ！$"

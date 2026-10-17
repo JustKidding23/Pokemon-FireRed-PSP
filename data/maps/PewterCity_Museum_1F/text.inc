@@ -34,7 +34,7 @@ PewterCity_Museum_1F_Text_AmberIsFossilizedSap::
     .string "The ancient sap fossilized over\n"
     .string "time to become rock-hard AMBER.$"
 
-@ Unused
+/* Unused*/
 PewterCity_Museum_1F_Text_PleaseGoAround::
     .string "あちらへ　おまわりください$"
 

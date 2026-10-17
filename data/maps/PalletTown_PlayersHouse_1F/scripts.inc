@@ -30,7 +30,7 @@ PalletTown_PlayersHouse_1F_EventScript_MomHeal::
 	release
 	end
 
-@ Displays special text if interacted with from side or back (which are normally inaccessible)
+/* Displays special text if interacted with from side or back (which are normally inaccessible)*/
 PalletTown_PlayersHouse_1F_EventScript_TV::
 	lockall
 	goto_if_eq VAR_FACING, DIR_NORTH, PalletTown_PlayersHouse_1F_EventScript_TVScreen

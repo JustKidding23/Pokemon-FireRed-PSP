@@ -9,16 +9,16 @@
 	.include "asm/macros/battle_anim_script.inc"
 	.include "constants/constants.inc"
 
-	.section script_data, "aw", %progbits
+	.section script_data, "aw"
 
-	.align 2
+	ptr_align
 gMovesWithQuietBGM::
 	.2byte MOVE_SING
 	.2byte MOVE_PERISH_SONG
 	.2byte MOVE_GRASS_WHISTLE
 	.2byte 0xFFFF
 
-	.align 2
+	ptr_align
 gBattleAnims_Moves::
 	.4byte Move_NONE
 	.4byte Move_POUND
@@ -375,60 +375,60 @@ gBattleAnims_Moves::
 	.4byte Move_WATER_PULSE
 	.4byte Move_DOOM_DESIRE
 	.4byte Move_PSYCHO_BOOST
-	.4byte Move_COUNT @ cannot be reached, because last move is Psycho Boost
+	.4byte Move_COUNT /* cannot be reached, because last move is Psycho Boost*/
 
 	.align 2
 gBattleAnims_StatusConditions::
-	.4byte Status_Poison                    @ B_ANIM_STATUS_PSN
-	.4byte Status_Confusion                 @ B_ANIM_STATUS_CONFUSION
-	.4byte Status_Burn                      @ B_ANIM_STATUS_BRN
-	.4byte Status_Infatuation               @ B_ANIM_STATUS_INFATUATION
-	.4byte Status_Sleep                     @ B_ANIM_STATUS_SLP
-	.4byte Status_Paralysis                 @ B_ANIM_STATUS_PRZ
-	.4byte Status_Freeze                    @ B_ANIM_STATUS_FRZ
-	.4byte Status_Curse                     @ B_ANIM_STATUS_CURSED
-	.4byte Status_Nightmare                 @ B_ANIM_STATUS_NIGHTMARE
+	ptrvalue Status_Poison                    /* B_ANIM_STATUS_PSN*/
+	ptrvalue Status_Confusion                 /* B_ANIM_STATUS_CONFUSION*/
+	ptrvalue Status_Burn                      /* B_ANIM_STATUS_BRN*/
+	ptrvalue Status_Infatuation               /* B_ANIM_STATUS_INFATUATION*/
+	ptrvalue Status_Sleep                     /* B_ANIM_STATUS_SLP*/
+	ptrvalue Status_Paralysis                 /* B_ANIM_STATUS_PRZ*/
+	ptrvalue Status_Freeze                    /* B_ANIM_STATUS_FRZ*/
+	ptrvalue Status_Curse                     /* B_ANIM_STATUS_CURSED*/
+	ptrvalue Status_Nightmare                 /* B_ANIM_STATUS_NIGHTMARE*/
 
-	.align 2
+	ptr_align
 gBattleAnims_General::
-	.4byte General_CastformChange           @ B_ANIM_CASTFORM_CHANGE
-	.4byte General_StatsChange              @ B_ANIM_STATS_CHANGE
-	.4byte General_SubstituteFade           @ B_ANIM_SUBSTITUTE_FADE
-	.4byte General_SubstituteAppear         @ B_ANIM_SUBSTITUTE_APPEAR
-	.4byte General_BaitThrow                @ B_ANIM_BAIT_THROW
-	.4byte General_ItemKnockoff             @ B_ANIM_ITEM_KNOCKOFF
-	.4byte General_TurnTrap                 @ B_ANIM_TURN_TRAP
-	.4byte General_HeldItemEffect           @ B_ANIM_HELD_ITEM_EFFECT
-	.4byte General_SmokeballEscape          @ B_ANIM_SMOKEBALL_ESCAPE
-	.4byte General_FocusBand                @ B_ANIM_FOCUS_BAND
-	.4byte General_Rain                     @ B_ANIM_RAIN_CONTINUES
-	.4byte General_Sun                      @ B_ANIM_SUN_CONTINUES
-	.4byte General_Sandstorm                @ B_ANIM_SANDSTORM_CONTINUES
-	.4byte General_Hail                     @ B_ANIM_HAIL_CONTINUES
-	.4byte General_LeechSeedDrain           @ B_ANIM_LEECH_SEED_DRAIN
-	.4byte General_MonHit                   @ B_ANIM_MON_HIT
-	.4byte General_ItemSteal                @ B_ANIM_ITEM_STEAL
-	.4byte General_SnatchMove               @ B_ANIM_SNATCH_MOVE
-	.4byte General_FutureSightHit           @ B_ANIM_FUTURE_SIGHT_HIT
-	.4byte General_DoomDesireHit            @ B_ANIM_DOOM_DESIRE_HIT
-	.4byte General_FocusPunchSetUp          @ B_ANIM_FOCUS_PUNCH_SETUP
-	.4byte General_IngrainHeal              @ B_ANIM_INGRAIN_HEAL
-	.4byte General_WishHeal                 @ B_ANIM_WISH_HEAL
-	.4byte General_MonScared                @ B_ANIM_MON_SCARED
-	.4byte General_GhostGetOut              @ B_ANIM_GHOST_GET_OUT
-	.4byte General_SilphScoped              @ B_ANIM_SILPH_SCOPED
-	.4byte General_SafariRockThrow          @ B_ANIM_ROCK_THROW
-	.4byte General_SafariReaction           @ B_ANIM_SAFARI_REACTION
+	.4byte General_CastformChange           /* B_ANIM_CASTFORM_CHANGE*/
+	.4byte General_StatsChange              /* B_ANIM_STATS_CHANGE*/
+	.4byte General_SubstituteFade           /* B_ANIM_SUBSTITUTE_FADE*/
+	.4byte General_SubstituteAppear         /* B_ANIM_SUBSTITUTE_APPEAR*/
+	.4byte General_BaitThrow                /* B_ANIM_BAIT_THROW*/
+	.4byte General_ItemKnockoff             /* B_ANIM_ITEM_KNOCKOFF*/
+	.4byte General_TurnTrap                 /* B_ANIM_TURN_TRAP*/
+	.4byte General_HeldItemEffect           /* B_ANIM_HELD_ITEM_EFFECT*/
+	.4byte General_SmokeballEscape          /* B_ANIM_SMOKEBALL_ESCAPE*/
+	.4byte General_FocusBand                /* B_ANIM_FOCUS_BAND*/
+	.4byte General_Rain                     /* B_ANIM_RAIN_CONTINUES*/
+	.4byte General_Sun                      /* B_ANIM_SUN_CONTINUES*/
+	.4byte General_Sandstorm                /* B_ANIM_SANDSTORM_CONTINUES*/
+	.4byte General_Hail                     /* B_ANIM_HAIL_CONTINUES*/
+	.4byte General_LeechSeedDrain           /* B_ANIM_LEECH_SEED_DRAIN*/
+	.4byte General_MonHit                   /* B_ANIM_MON_HIT*/
+	.4byte General_ItemSteal                /* B_ANIM_ITEM_STEAL*/
+	.4byte General_SnatchMove               /* B_ANIM_SNATCH_MOVE*/
+	.4byte General_FutureSightHit           /* B_ANIM_FUTURE_SIGHT_HIT*/
+	.4byte General_DoomDesireHit            /* B_ANIM_DOOM_DESIRE_HIT*/
+	.4byte General_FocusPunchSetUp          /* B_ANIM_FOCUS_PUNCH_SETUP*/
+	.4byte General_IngrainHeal              /* B_ANIM_INGRAIN_HEAL*/
+	.4byte General_WishHeal                 /* B_ANIM_WISH_HEAL*/
+	.4byte General_MonScared                /* B_ANIM_MON_SCARED*/
+	.4byte General_GhostGetOut              /* B_ANIM_GHOST_GET_OUT*/
+	.4byte General_SilphScoped              /* B_ANIM_SILPH_SCOPED*/
+	.4byte General_SafariRockThrow          /* B_ANIM_ROCK_THROW*/
+	.4byte General_SafariReaction           /* B_ANIM_SAFARI_REACTION*/
 
 	.align 2
 gBattleAnims_Special::
-	.4byte Special_LevelUp                  @ B_ANIM_LVL_UP
-	.4byte Special_SwitchOutPlayerMon       @ B_ANIM_SWITCH_OUT_PLAYER_MON
-	.4byte Special_SwitchOutOpponentMon     @ B_ANIM_SWITCH_OUT_OPPONENT_MON
-	.4byte Special_BallThrow                @ B_ANIM_BALL_THROW
-	.4byte Special_BallThrowWithTrainer     @ B_ANIM_BALL_THROW_WITH_TRAINER
-	.4byte Special_SubstituteToMon          @ B_ANIM_SUBSTITUTE_TO_MON
-	.4byte Special_MonToSubstitute          @ B_ANIM_MON_TO_SUBSTITUTE
+	ptrvalue Special_LevelUp                  /* B_ANIM_LVL_UP*/
+	ptrvalue Special_SwitchOutPlayerMon       /* B_ANIM_SWITCH_OUT_PLAYER_MON*/
+	ptrvalue Special_SwitchOutOpponentMon     /* B_ANIM_SWITCH_OUT_OPPONENT_MON*/
+	ptrvalue Special_BallThrow                /* B_ANIM_BALL_THROW*/
+	ptrvalue Special_BallThrowWithTrainer     /* B_ANIM_BALL_THROW_WITH_TRAINER*/
+	ptrvalue Special_SubstituteToMon          /* B_ANIM_SUBSTITUTE_TO_MON*/
+	ptrvalue Special_MonToSubstitute          /* B_ANIM_MON_TO_SUBSTITUTE*/
 
 Move_NONE:
 Move_MIRROR_MOVE:
@@ -708,7 +708,7 @@ Move_FLAME_WHEEL:
 	clearmonbg ANIM_DEF_PARTNER
 	end
 
-FlameWheel1: @ Unused
+FlameWheel1: /* Unused*/
 	createsprite gFireSpiralOutwardSpriteTemplate, ANIM_ATTACKER, 3, 0, 0, 50
 	delay 4
 	return
@@ -2127,9 +2127,9 @@ Move_LOCK_ON:
 	createsprite gLockOnMoveTargetSpriteTemplate, ANIM_ATTACKER, 40, 1
 	createsprite gLockOnMoveTargetSpriteTemplate, ANIM_ATTACKER, 40, 2
 	createsprite gLockOnMoveTargetSpriteTemplate, ANIM_ATTACKER, 40, 3
-	createsprite gLockOnMoveTargetSpriteTemplate, ANIM_ATTACKER, 40, 4  @ Also transitions to red target
+	createsprite gLockOnMoveTargetSpriteTemplate, ANIM_ATTACKER, 40, 4  /* Also transitions to red target*/
 	delay 120
-	setarg 7, 0xFFFF  @ Signal target to flash/disappear
+	setarg 7, 0xFFFF  /* Signal target to flash/disappear*/
 	waitforvisualfinish
 	end
 
@@ -3551,7 +3551,7 @@ Move_HEAT_WAVE:
 	createsprite gFlyingSandCrescentSpriteTemplate, ANIM_ATTACKER, 40, 60, 2560, 96, 1
 	end
 
-@ Also used by Hail weather
+/* Also used by Hail weather*/
 Move_HAIL:
 	loadspritegfx ANIM_TAG_HAIL
 	loadspritegfx ANIM_TAG_ICE_CRYSTALS
@@ -4201,7 +4201,7 @@ Move_CRUSH_CLAW:
 	createsprite gClawSlashSpriteTemplate, ANIM_TARGET, 2, 10, 10, 1
 	playsewithpan SE_M_RAZOR_WIND, SOUND_PAN_TARGET
 	waitforvisualfinish
-	waitforvisualfinish  @ Redundant
+	waitforvisualfinish  /* Redundant*/
 	blendoff
 	clearmonbg ANIM_TARGET
 	end
@@ -4276,7 +4276,7 @@ Move_AIR_CUTTER:
 	monbg ANIM_DEF_PARTNER
 	setalpha 12, 8
 	delay 0
-	createvisualtask AnimTask_AirCutterProjectile, 2, 32, -24, 6 * 256, 2, 128  @ 6 * 256 == Q_8_8(6)
+	createvisualtask AnimTask_AirCutterProjectile, 2, 32, -24, 6 * 256, 2, 128  /* 6 * 256 == Q_8_8(6)*/
 	waitforvisualfinish
 	playsewithpan SE_M_CUT, SOUND_PAN_TARGET
 	createsprite gAirCutterSliceSpriteTemplate, ANIM_ATTACKER, 2, 40, -32, 0, 2
@@ -4563,7 +4563,7 @@ Move_CALM_MIND:
 	playsewithpan SE_M_SUPERSONIC, SOUND_PAN_ATTACKER
 	waitforvisualfinish
 	createvisualtask AnimTask_SetAllNonAttackersInvisiblity, 5, FALSE
-	visible ANIM_ATTACKER  @ Redundant
+	visible ANIM_ATTACKER  /* Redundant*/
 	waitforvisualfinish
 	createvisualtask AnimTask_BlendBattleAnimPalExclude, 5, ANIM_ATTACKER, 0, 16, 0, RGB_BLACK
 	waitforvisualfinish
@@ -6244,7 +6244,7 @@ MegahornContinue:
 	delay 3
 	createsprite gSlideMonToOriginalPosSpriteTemplate, ANIM_ATTACKER, 2, 1, 0, 7
 	waitforvisualfinish
-	waitforvisualfinish  @ Redundant
+	waitforvisualfinish  /* Redundant*/
 	clearmonbg ANIM_DEF_PARTNER
 	blendoff
 	restorebg
@@ -6452,7 +6452,7 @@ FlamethrowerCreateFlames:
 	delay 2
 	return
 
-@ Also used by Sandstorm weather
+/* Also used by Sandstorm weather*/
 Move_SANDSTORM:
 	loadspritegfx ANIM_TAG_FLYING_DIRT
 	playsewithpan SE_M_SANDSTORM, 0
@@ -6648,7 +6648,7 @@ Move_DOUBLE_KICK:
 	createvisualtask AnimTask_ShakeMon, 5, ANIM_TARGET, 4, 0, 6, 1
 	playsewithpan SE_M_VITAL_THROW2, SOUND_PAN_TARGET
 	waitforvisualfinish
-	waitforvisualfinish  @ Redundant
+	waitforvisualfinish  /* Redundant*/
 	clearmonbg ANIM_DEF_PARTNER
 	blendoff
 	end
@@ -6836,7 +6836,7 @@ SubmissionHit:
 	delay 8
 	return
 
-@ Also used by Sunny weather
+/* Also used by Sunny weather*/
 Move_SUNNY_DAY:
 	loadspritegfx ANIM_TAG_SUNLIGHT
 	monbg ANIM_ATK_PARTNER
@@ -6984,7 +6984,7 @@ Move_RAZOR_LEAF:
 	end
 
 Move_NATURE_POWER:
-	@ No actual animation, uses the animation of a move from sNaturePowerMoves instead
+	/* No actual animation, uses the animation of a move from sNaturePowerMoves instead*/
 
 Move_ANCIENT_POWER:
 	loadspritegfx ANIM_TAG_ROCKS
@@ -10208,7 +10208,7 @@ IceCrystalEffectLong:
 	playsewithpan SE_M_ICY_WIND, SOUND_PAN_TARGET
 	return
 
-IceSpikesEffectShort: @ Unused
+IceSpikesEffectShort: /* Unused*/
 	loopsewithpan SE_M_ICY_WIND, SOUND_PAN_TARGET, 6, 4
 	createsprite gIceGroundSpikeSpriteTemplate, ANIM_TARGET, 2, 0, 24, 0
 	delay 4
@@ -10770,7 +10770,7 @@ General_MonHit:
 General_ItemSteal:
 	loadspritegfx ANIM_TAG_ITEM_BAG
 	createvisualtask AnimTask_SetAnimAttackerAndTargetForEffectAtk, 2
-	createvisualtask AnimTask_SetTargetToEffectBattler, 2  @ Redundant with above
+	createvisualtask AnimTask_SetTargetToEffectBattler, 2  /* Redundant with above*/
 	delay 1
 	createsprite gItemStealSpriteTemplate, ANIM_ATTACKER, 2, 0, -5, 10, 2, -1
 	end
@@ -11030,7 +11030,7 @@ SnatchMoveSwapMonForSubstitute:
 	waitforvisualfinish
 	goto SnatchMoveTrySwapToSubstituteEnd
 
-@ Healthbox blue flash effect on level up
+/* Healthbox blue flash effect on level up*/
 Special_LevelUp:
 	playsewithpan SE_EXP_MAX, 0
 	createvisualtask AnimTask_LoadHealthboxPalsForLevelUp, 2

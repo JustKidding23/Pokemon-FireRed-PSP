@@ -1,4 +1,4 @@
-@ Unused
+/* Unused*/
 Text_ItemfinderResponding::
 	.string "おッ！　ダウジングマシンが\n"
 	.string "はんのう　してるぞ！\p"

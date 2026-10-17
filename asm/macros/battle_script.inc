@@ -1,4 +1,5 @@
-@ commands
+	.include "asm/macros/bit_width.inc"
+/* commands*/
 	.macro attackcanceler
 	.byte 0x0
 	.endm
@@ -113,14 +114,14 @@
 	.byte 0x19
 	.byte \battler
 	.byte FALSE
-	.4byte NULL
+	ptrvalue NULL
 	.endm
 
 	.macro tryfaintmon_spikes battler:req, ptr:req
 	.byte 0x19
 	.byte \battler
 	.byte TRUE
-	.4byte \ptr
+	ptrvalue \ptr
 	.endm
 
 	.macro dofaintanimation battler:req
@@ -137,28 +138,28 @@
 	.byte 0x1c
 	.byte \battler
 	.4byte \status1
-	.4byte \ptr
+	ptrvalue \ptr
 	.endm
 
 	.macro jumpifstatus2 battler:req, status2:req, ptr:req
 	.byte 0x1d
 	.byte \battler
 	.4byte \status2
-	.4byte \ptr
+	ptrvalue \ptr
 	.endm
 
 	.macro jumpifability param0:req, ability:req, ptr:req
 	.byte 0x1e
 	.byte \param0
 	.byte \ability
-	.4byte \ptr
+	ptrvalue \ptr
 	.endm
 
 	.macro jumpifsideaffecting battler:req, sidestatus:req, ptr:req
 	.byte 0x1f
 	.byte \battler
 	.2byte \sidestatus
-	.4byte \ptr
+	ptrvalue \ptr
 	.endm
 
 	.macro jumpifstat battler:req, ifflag:req, stat:req, value:req, ptr
@@ -167,7 +168,7 @@
 	.byte \ifflag
 	.byte \stat
 	.byte \value
-	.4byte \ptr
+	ptrvalue \ptr
 	.endm
 
 	.macro jumpifstatus3condition battler:req, status3:req, param2:req, ptr:req
@@ -182,7 +183,7 @@
 	.byte 0x22
 	.byte \battler
 	.byte \type
-	.4byte \ptr
+	ptrvalue \ptr
 	.endm
 
 	.macro getexp battler:req
@@ -367,13 +368,13 @@
 	.byte 0x42
 	.byte \battler
 	.byte \type
-	.4byte \ptr
+	ptrvalue \ptr
 	.endm
 
 	.macro jumpifabilitypresent ability:req, ptr:req
 	.byte 0x43
 	.byte \ability
-	.4byte \ptr
+	ptrvalue \ptr
 	.endm
 
 	.macro endselectionscript
@@ -384,14 +385,14 @@
 	.byte 0x45
 	.byte \battler
 	.byte \animType
-	.4byte \arg
+	ptrvalue \arg
 	.endm
 
 	.macro playanimation_var battler:req, animType:req, arg=NULL
 	.byte 0x46
 	.byte \battler
-	.4byte \animType
-	.4byte \arg
+	ptrvalue \animType
+	ptrvalue \arg
 	.endm
 
 	.macro setgraphicalstatchangevalues
@@ -411,33 +412,33 @@
 	.byte \param1
 	.endm
 
-	@ Help macros for 5 uses of moveend command
+	/* Help macros for 5 uses of moveend command*/
 
-	@ All cases
+	/* All cases*/
 	.macro moveendall
 	setbyte sMOVEEND_STATE, 0
 	moveend 0, 0
 	.endm
 
-	@ Chosen case
+	/* Chosen case*/
 	.macro moveendcase case:req
 	setbyte sMOVEEND_STATE, \case
 	moveend 1, 0
 	.endm
 
-	@ All cases from (inclusive)
+	/* All cases from (inclusive)*/
 	.macro moveendfrom from:req
 	setbyte sMOVEEND_STATE, \from
 	moveend 0, 0
 	.endm
 
-	@ All cases from 0 to (not inclusive)
+	/* All cases from 0 to (not inclusive)*/
 	.macro moveendto to:req
 	setbyte sMOVEEND_STATE, 0
 	moveend 2, \to
 	.endm
 
-	@ Cases from (inclusive) to (not inclusive)
+	/* Cases from (inclusive) to (not inclusive)*/
 	.macro moveendfromto from:req, to:req
 	setbyte sMOVEEND_STATE, \from
 	moveend 2, \to
@@ -470,7 +471,7 @@
 	.macro jumpifcantswitch battler:req, ptr:req
 	.byte 0x4f
 	.byte \battler
-	.4byte \ptr
+	ptrvalue \ptr
 	.endm
 
 	.macro openpartyscreen param0:req, param1:req
@@ -942,7 +943,7 @@
 	.macro jumpifconfusedandstatmaxed stat:req, ptr:req
 	.byte 0xb4
 	.byte \stat
-	.4byte \ptr
+	ptrvalue \ptr
 	.endm
 
 	.macro furycuttercalc
@@ -1249,7 +1250,7 @@
 	.byte 0xf7
 	.endm
 
-@ various command changed to more readable macros
+/* various command changed to more readable macros*/
 	.macro cancelmultiturnmoves battler:req
 	various \battler, VARIOUS_CANCEL_MULTI_TURN_MOVES
 	.endm
@@ -1302,7 +1303,7 @@
 	various \battler, VARIOUS_WAIT_FANFARE
 	.endm
 
-@ helpful macros
+/* helpful macros*/
 	.macro setstatchanger stat:req, stages:req, down:req
 	setbyte sSTATCHANGER \stat | \stages << 4 | \down << 7
 	.endm

@@ -971,6 +971,9 @@ static bool8 SetUpCopyrightScreen(void)
             gMain.state++;
             if (sGcmb.gcmb_field_2 != 0)
             {
+#ifndef PORTABLE
+                // A GameCube sending a program over the link cable, which the
+                // portable builds don't have
                 if (sGcmb.gcmb_field_2 == 2)
                 {
                     if (*(u32 *)(EWRAM_START + 0xAC) == COLOSSEUM_GAME_CODE)
@@ -980,6 +983,7 @@ static bool8 SetUpCopyrightScreen(void)
                     }
                     GameCubeMultiBoot_ExecuteProgram(&sGcmb);
                 }
+#endif
             }
             else
             {

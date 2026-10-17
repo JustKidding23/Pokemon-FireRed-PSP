@@ -30,7 +30,7 @@ SevenIsland_TrainerTower_Text_TrainerTowerSign::
 SevenIsland_TrainerTower_Text_TrainerTowerAhead::
     .string "TRAINER TOWER AHEAD$"
 
-@ Unused text perhaps indicating Trainer Tower was planned to be unlocked by something
+/* Unused text perhaps indicating Trainer Tower was planned to be unlocked by something*/
 SevenIsland_TrainerTower_Text_LooksLikeTrainerTowerIsClosed::
     .string "トレーナータワーには\n"
     .string "いまは　はいれない　みたい‥$"

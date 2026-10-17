@@ -1,9 +1,18 @@
 #ifndef GUARD_GLOBAL_H
 #define GUARD_GLOBAL_H
 
+#include <stdio.h>
+#include <string.h>
+#include <limits.h>
+
+#ifdef PORTABLE
+    #define DBGPRINTF(...) printf(__VA_ARGS__)
+#else
+    #define DBGPRINTF(...)
+#endif
+
 #include "config.h"
 #include "gba/gba.h"
-#include <string.h>
 #include "constants/global.h"
 #include "constants/flags.h"
 #include "constants/vars.h"
@@ -16,15 +25,19 @@
 #define BLOCK_CROSS_JUMP asm("");
 
 // to help in decompiling
+#ifdef PORTABLE
+#define asm_comment(x)
+#else
 #define asm_comment(x) asm volatile("@ -- " x " -- ")
+#endif
 #define asm_unified(x) asm(".syntax unified\n" x "\n.syntax divided")
 
 #if __STDC_VERSION__ < 202311L
 #define asm __asm__
 #endif
 
-// IDE support
-#if defined(__APPLE__) || defined(__CYGWIN__) || defined(__INTELLISENSE__)
+// IDE support (not for the portable builds)
+#if (!defined(PORTABLE) && (defined(__APPLE__) || defined(__CYGWIN__))) || defined(__INTELLISENSE__)
 // We define these when using certain IDEs to fool preproc
 #define _(x)        (x)
 #define __(x)       (x)
@@ -35,6 +48,9 @@
 #define INCBIN_S8   INCBIN
 #define INCBIN_S16  INCBIN
 #define INCBIN_S32  INCBIN
+void * memcpy(void *, const void *, size_t);
+void * memset(void *, int, size_t);
+int strcmp(const char *, const char*);
 #endif // IDE support
 
 #define ARRAY_COUNT(array) (sizeof(array) / sizeof((array)[0]))
@@ -103,16 +119,50 @@
 // as these below. Because of this, there is a theory (Two Team Theory) that states that these
 // programming projects had more than 1 "programming team" which utilized different macros for
 // each of the files that were worked on.
+#ifdef PORTABLE
+// Script data packs 64-bit values at any byte offset
+static inline u64 ReadUnalignedU64(const void *ptr)
+{
+    u64 value;
+    memcpy(&value, ptr, sizeof(value));
+    return value;
+}
+#else
+#define ReadUnalignedU64(ptr) (*(u64 *)(ptr))
+#endif
+
 #define T1_READ_8(ptr)  ((ptr)[0])
 #define T1_READ_16(ptr) ((ptr)[0] | ((ptr)[1] << 8))
 #define T1_READ_32(ptr) ((ptr)[0] | ((ptr)[1] << 8) | ((ptr)[2] << 16) | ((ptr)[3] << 24))
+#define T1_READ_64(ptr) ReadUnalignedU64(ptr)
+
+#ifdef VER_64BIT
+#define T1_READ_PTR(ptr) (u8 *) T1_READ_64(ptr)
+#define T1_READ_PTRSIZE(ptr) T1_READ_64(ptr)
+#else
 #define T1_READ_PTR(ptr) (u8 *) T1_READ_32(ptr)
+#define T1_READ_PTRSIZE(ptr) T1_READ_32(ptr)
+#endif
 
 // T2_READ_8 is a duplicate to remain consistent with each group.
 #define T2_READ_8(ptr)  ((ptr)[0])
 #define T2_READ_16(ptr) ((ptr)[0] + ((ptr)[1] << 8))
 #define T2_READ_32(ptr) ((ptr)[0] + ((ptr)[1] << 8) + ((ptr)[2] << 16) + ((ptr)[3] << 24))
+#define T2_READ_64(ptr) ReadUnalignedU64(ptr)
+
+#ifdef VER_64BIT
+#define T2_READ_PTR(ptr) (void *) T2_READ_64(ptr)
+#define T2_READ_PTRSIZE(ptr) T2_READ_64(ptr)
+#else
 #define T2_READ_PTR(ptr) (void *) T2_READ_32(ptr)
+#define T2_READ_PTRSIZE(ptr) T2_READ_32(ptr)
+#endif
+
+#define DSIZE8BIT 1
+#define DSIZE16BIT 2
+#define DSIZE32BIT 4
+#define DSIZE64BIT 8
+#define DSIZEPTR (sizeof(void*))
 
 // This macro is required to prevent the compiler from optimizing
 // a dpad up/down check in sub_812CAD8 (fame_checker.c).
@@ -188,7 +238,7 @@ struct Time
     /*0x02*/ s8 hours;
     /*0x03*/ s8 minutes;
     /*0x04*/ s8 seconds;
-};
+} ALIGNED(4);
 
 struct Pokedex
 {
@@ -412,7 +462,7 @@ struct Pokeblock
     u8 bitter;
     u8 sour;
     u8 feel;
-};
+} ALIGNED(4);
 
 struct Roamer
 {
@@ -519,7 +569,7 @@ typedef union OldMan
     struct MauvilleOldManTrader trader;
     struct MauvilleManStoryteller storyteller;
     u8 filler[0x40];
-} OldMan;
+} ALIGNED(4) OldMan;
 
 struct Mail
 {
@@ -528,7 +578,7 @@ struct Mail
     /*0x1A*/ u8 trainerId[TRAINER_ID_LENGTH];
     /*0x1E*/ u16 species;
     /*0x20*/ u16 itemId;
-};
+} ALIGNED(4);
 
 struct DayCareMail
 {

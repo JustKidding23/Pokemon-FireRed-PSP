@@ -95,7 +95,7 @@ PewterCity_Text_CitySign::
     .string "PEWTER CITY\n"
     .string "A Stone Gray City$"
 
-@ The below 3 JP texts are unused. Possibly a cut NPC meant to give the player the Berry Pouch
+/* The below 3 JP texts are unused. Possibly a cut NPC meant to give the player the Berry Pouch*/
 PewterCity_Text_DefeatedBrockYouCanHaveTreasure::
     .string "あッれー！\n"
     .string "その　ジムバッジ‥‥\l"

@@ -1044,6 +1044,9 @@ static bool8 PatternWeave_CircularMask(struct Task *task)
     {
         DmaStop(0);
         FadeScreenBlack();
+        #ifdef PORTABLE
+        SetHBlankCallback(NULL); //prevents use after free crash in HBlankCB_Phase2_Mugshots
+        #endif
         DestroyTask(FindTaskIdByFunc(Task_BigPokeball)); // FindTaskIdByFunc(task->func) in Emerald to accomdate other functions
     }
     if (!task->tVBlankSet)

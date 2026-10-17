@@ -3534,6 +3534,7 @@ void InitUnionRoom(void)
 #endif
 }
 
+#ifndef PORTABLE
 static void Task_InitUnionRoom(u8 taskId)
 {
     s32 i;
@@ -3602,6 +3603,12 @@ static void Task_InitUnionRoom(u8 taskId)
         break;
     }
 }
+#else
+// Union Room needs a wireless adapter
+static void Task_InitUnionRoom(u8 taskId)
+{
+}
+#endif
 
 bool16 BufferUnionRoomPlayerName(void)
 {

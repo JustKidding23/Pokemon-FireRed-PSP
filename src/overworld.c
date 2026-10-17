@@ -705,10 +705,13 @@ void SetContinueGameWarpToDynamicWarp(int unused)
 
 static const struct MapConnection * GetMapConnection(u8 dir)
 {
+#ifdef UBFIX
+    if (gMapHeader.connections == NULL)
+        return NULL;
+#endif
     s32 i;
     s32 count = gMapHeader.connections->count;
     const struct MapConnection *connection = gMapHeader.connections->connections;
-
     if (connection == NULL)
         return NULL;
 
@@ -1445,6 +1448,14 @@ static void DoCB1_Overworld_QuestLogPlayback(void)
     }
     FieldClearPlayerInput(&gQuestLogFieldInput);
 }
+
+#ifdef PORTABLE
+// For the headless tests (src/platform/test_state.c): CB2_Overworld is static
+bool32 IsOverworldRunning(void)
+{
+    return gMain.callback2 == CB2_Overworld;
+}
+#endif
 
 void CB1_Overworld(void)
 {

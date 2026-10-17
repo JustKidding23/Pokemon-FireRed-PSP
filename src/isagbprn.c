@@ -1,3 +1,6 @@
+// Debug printing to GBA emulators and flash carts, which the portable builds
+// do with printf (see DBGPRINTF)
+#ifndef PORTABLE
 #include <stdarg.h>
 #include <stdio.h>
 #include "config.h"
@@ -263,3 +266,4 @@ void MgbaAssert(const char *pFile, s32 nLine, const char *pExpression, bool32 nS
 #endif
 
 #endif
+#endif // PORTABLE

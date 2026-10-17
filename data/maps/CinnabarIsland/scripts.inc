@@ -187,7 +187,7 @@ CinnabarIsland_Movement_BillReEnterPokeCenter::
 	set_invisible
 	step_end
 
-@ Can be triggered outside, or after talking to Bill in the poke center
+/* Can be triggered outside, or after talking to Bill in the poke center*/
 CinnabarIsland_EventScript_SailToOneIsland::
 	call_if_set FLAG_TEMP_2, CinnabarIsland_EventScript_ApproachShore
 	addobject LOCALID_CINNABAR_SEAGALLOP
@@ -307,7 +307,7 @@ CinnabarIsland_Movement_PlayerBoardBoatFromShore::
 	set_invisible
 	step_end
 
-@ Triggered when VAR_TEMP_1 is 0
+/* Triggered when VAR_TEMP_1 is 0*/
 CinnabarIsland_EventScript_GymDoorLocked::
 	lockall
 	applymovement LOCALID_PLAYER, Common_Movement_WalkInPlaceFasterUp

@@ -11,8 +11,8 @@ PokemonTower_2F_Text_RivalDefeat::
     .string "You stinker!\p"
     .string "I took it easy on you, too!$"
 
-@ Unused. Translated below
-@ Aw, man! They really kicked the bucket! Weak! Do them a favor and raise them more properly.
+/* Unused. Translated below*/
+/* Aw, man! They really kicked the bucket! Weak! Do them a favor and raise them more properly.*/
 PokemonTower_2F_Text_RivalVictory::
     .string "{RIVAL}“あーあ‥！\n"
     .string "ほんとに　くたばっちまったぞ！\l"

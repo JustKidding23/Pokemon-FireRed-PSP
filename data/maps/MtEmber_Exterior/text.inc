@@ -20,7 +20,7 @@ Text_ExplosionTaught::
     .string "volcano…\p"
     .string "What a terrifying thrill!$"
 
-@ Below 4 are unused JP versions of the above texts
+/* Below 4 are unused JP versions of the above texts*/
 Text_ExplosionTeachJP::
     .string "こ　この　かざんが\n"
     .string "もし　だいばくはつ　したら\l"

@@ -610,7 +610,7 @@ Route21_North_Text_WadeRematchIntro::
 Route21_North_Text_SpencerRematchIntro::
 	.string "The sea cleanses my body and soul!$"
 
-@ Unused trainer from RB that had a rematch intro added
+/* Unused trainer from RB that had a rematch intro added*/
 Route21_North_Text_CueBallRematchIntro::
 	.string "きょうも　およぎに\n"
 	.string "きちまったぜ$"

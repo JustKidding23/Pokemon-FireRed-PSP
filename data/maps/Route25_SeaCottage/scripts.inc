@@ -61,7 +61,7 @@ Route25_SeaCottage_EventScript_BillAskForHelp::
 	release
 	end
 
-@ Just returns after message, execution continues as if player had said yes
+/* Just returns after message, execution continues as if player had said yes*/
 Route25_SeaCottage_EventScript_DeclineHelpBill::
 	checkplayergender
 	call_if_eq VAR_RESULT, MALE, Route25_SeaCottage_EventScript_DeclineHelpBillMale

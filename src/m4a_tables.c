@@ -3,6 +3,7 @@
 // Some of these functions have different signatures, so we need to make this
 // an array of void pointers or a struct. It's simpler to just make it an array
 // for now.
+#ifndef PORTABLE
 void *const gMPlayJumpTableTemplate[] =
 {
     ply_fine,
@@ -42,6 +43,47 @@ void *const gMPlayJumpTableTemplate[] =
     RealClearChain,
     SoundMainBTM,
 };
+#else
+void *const gMPlayJumpTableTemplate[] =
+{
+    MP2K_event_fine,
+    MP2K_event_goto,
+    MP2K_event_patt,
+    MP2K_event_pend,
+    MP2K_event_rept,
+    MP2K_event_fine,
+    MP2K_event_fine,
+    MP2K_event_fine,
+    MP2K_event_fine,
+    MP2K_event_prio,
+    MP2K_event_tempo,
+    MP2K_event_keysh,
+    MP2K_event_voice,
+    MP2K_event_vol,
+    MP2K_event_pan,
+    MP2K_event_bend,
+    MP2K_event_bendr,
+    MP2K_event_lfos,
+    MP2K_event_lfodl,
+    MP2K_event_mod,
+    MP2K_event_modt,
+    MP2K_event_fine,
+    MP2K_event_fine,
+    MP2K_event_tune,
+    MP2K_event_fine,
+    MP2K_event_fine,
+    MP2K_event_fine,
+    MP2K_event_port,
+    MP2K_event_fine,
+    MP2K_event_endtie,
+    SampleFreqSet,
+    TrackStop,
+    FadeOutBody,
+    TrkVolPitSet,
+    MP2KClearChain,
+    SoundMainBTM,
+};
+#endif
 
 // This is a table of deltas between sample values in compressed PCM data.
 const s8 gDeltaEncodingTable[] =
@@ -112,7 +154,11 @@ const u16 gPcmSamplesPerVBlankTable[] =
     528,
     608,
     672,
+    #ifndef PORTABLE
     704,
+    #else
+    701,
+    #endif
 };
 
 const u8 gCgbScaleTable[] =
@@ -227,6 +273,7 @@ const u8 gClockTable[] =
     0x60,
 };
 
+#define W00    0x80
 #define FINE   0xb1
 #define GOTO   0xb2
 #define PATT   0xb3
@@ -243,6 +290,7 @@ const u8 gClockTable[] =
 #define BENDR  0xc1
 #define LFOS   0xc2
 #define LFODL  0xc3
+#undef MOD
 #define MOD    0xc4
 #define MODT   0xc5
 #define TUNE   0xc8
@@ -258,35 +306,39 @@ const u8 gClockTable[] =
 
 const struct PokemonCrySong gPokemonCrySongTemplate =
 {
-    1, // track count
-    0, // block count
-    255, // priority
-    0, // reverb
-    (struct ToneData *)&voicegroup000,
-    NULL,
-    NULL,
-    0,
-    TUNE, // part 0
-    C_V, // TUNE value
-    GOTO,
-    0, // GOTO target address
-    TUNE, // part 1
-    C_V + 16, // TUNE value
-    {VOICE, 0}, // part 0 jumps here with GOTO
-    VOL,
-    127, // volume
-    {XCMD, 0x0D},
-    0, // unk value
-    {XCMD, xRELE},
-    0, // release
-    PAN,
-    C_V, // PAN value
-    TIE,
-    60, // TIE key (default is Cn3)
-    127, // TIE velocity
-    {XCMD, xWAIT},
-    60, // frames to wait
-    {EOT, FINE} // end
+    .trackCount = 1,
+    .blockCount = 0,
+    .priority = 255,
+    .reverb = 0,
+    .tone = (struct ToneData *)&voicegroup000,
+    .part = {NULL, NULL},
+    .gap = 0,
+    .part0 = TUNE,
+    .tuneValue = C_V,
+#ifdef VER_64BIT
+    // Padding before the pointer, but it's inside track 0's commands: waits
+    // of length 0 do nothing, while zeros would repeat TUNE with a value of 0
+    .gap2 = {W00, W00, W00, W00},
+#endif
+    .gotoCmd = GOTO,
+    .gotoTarget = 0,
+    .part1 = TUNE,
+    .tuneValue2 = C_V + 16,
+    .cont = {VOICE, 0}, // part0 jumps here with gotoCmd
+    .volCmd = VOL,
+    .volumeValue = 127,
+    .unkCmd0D = {XCMD, 0x0D},
+    .unkCmd0DParam = 0,
+    .xreleCmd = {XCMD, xRELE},
+    .releaseValue = 0,
+    .panCmd = PAN,
+    .panValue = C_V,
+    .tieCmd = TIE,
+    .tieKeyValue = 60, // default is Cn3
+    .tieVelocityValue = 127,
+    .xwaitCmd = {XCMD, xWAIT},
+    .length = 60, // frames to wait
+    .end = {EOT, FINE}
 };
 
 const XcmdFunc gXcmdTable[] =

@@ -87,7 +87,10 @@ struct GFRomHeader
 
 // This seems to need to be in the text section for some reason.
 // To avoid a changed section attributes warning it's put in a special .text.consts section.
+// Not on PC, where there is no ROM to lay out, and macOS names sections differently.
+#ifndef PORTABLE
 __attribute__((section(".text.consts")))
+#endif
 static const struct GFRomHeader sGFRomHeader = {
     .version = GAME_VERSION,
     .language = GAME_LANGUAGE,
@@ -169,3 +172,9 @@ static const struct GFRomHeader sGFRomHeader = {
     .moveDescriptions = NULL,
     .unk20 = 0xFFFFFFFF, // 0x00000000 in Emerald
 };
+
+#ifdef PORTABLE
+// From the ROM header (rom_header.s), which the portable builds don't have
+const char RomHeaderGameCode[GAME_CODE_LENGTH] = {'B', 'P', 'R', 'E'};
+const char RomHeaderSoftwareVersion = 0;
+#endif

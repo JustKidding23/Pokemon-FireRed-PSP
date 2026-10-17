@@ -10,6 +10,9 @@
 #include "pokemon_storage_system.h"
 #include "gba/flash_internal.h"
 #include "sloopsvc.h"
+#ifdef PORTABLE
+#include "platform.h"
+#endif
 
 static u8 HandleWriteSector(u16 sectorId, const struct SaveSectorLocation *locations);
 static u8 TryWriteSector(u8 sectorNum, u8 *data);
@@ -451,6 +454,13 @@ static u8 CopySaveSlotData(u16 sectorId, const struct SaveSectorLocation *locati
         if (id == 0)
             gLastWrittenSector = i;
 
+#ifdef UBFIX
+        // An erased sector reads as 0xFF, so its id is past the end of
+        // locations. On the GBA its checksum reads garbage and the sector is
+        // skipped because its signature is wrong.
+        if (id >= NUM_SECTORS_PER_SLOT)
+            continue;
+#endif
         checksum = CalculateChecksum(gSaveDataBufferPtr->data, locations[id].size);
         if (gSaveDataBufferPtr->signature == SECTOR_SIGNATURE && gSaveDataBufferPtr->checksum == checksum)
         {
@@ -695,6 +705,10 @@ u8 HandleSavingData(u8 saveType)
 #if REVISION >= 0xA
     svc_FinishSave();
 #endif
+#ifdef PORTABLE
+    // Write the flash out to the save file once the whole save is done
+    Platform_StoreSaveFile();
+#endif
     return 0;
 }
 
@@ -757,6 +771,9 @@ bool8 LinkFullSave_SetLastSectorSignature(void)
     CopySectorSignatureByte(NUM_SECTORS_PER_SLOT, gRamSaveSectorLocations);
     if (gDamagedSaveSectors)
         DoSaveFailedScreen(SAVE_NORMAL);
+#ifdef PORTABLE
+    Platform_StoreSaveFile();
+#endif
 
     return FALSE;
 }
@@ -793,6 +810,9 @@ bool8 WriteSaveBlock1Sector(void)
     {
         WriteSectorSignatureByte(sectorId, gRamSaveSectorLocations);
         finished = TRUE;
+#ifdef PORTABLE
+        Platform_StoreSaveFile();
+#endif
     }
     if (gDamagedSaveSectors)
         DoSaveFailedScreen(SAVE_LINK);

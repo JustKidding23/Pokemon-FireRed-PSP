@@ -1,4 +1,4 @@
-@ The text here is a copy/paste from Hoenn's Eon Ticket event, all unused and untranslated
+/* The text here is a copy/paste from Hoenn's Eon Ticket event, all unused and untranslated*/
 
 Text_DadLetterArrivedForYouPlayer::
 	.string "パパ“{PLAYER}！　よく　きたな！\n"

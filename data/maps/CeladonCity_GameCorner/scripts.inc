@@ -249,7 +249,7 @@ CeladonCity_GameCorner_EventScript_SlotMachine::
 	setfieldeffectargument 1, MAP_NUM(MAP_CELADON_CITY_GAME_CORNER)
 	setfieldeffectargument 2, MAP_GROUP(MAP_CELADON_CITY_GAME_CORNER)
 .else
-	@ Map num/group were provided in the wrong order
+	/* Map num/group were provided in the wrong order*/
 	setfieldeffectargument 1, MAP_GROUP(MAP_CELADON_CITY_GAME_CORNER)
 	setfieldeffectargument 2, MAP_NUM(MAP_CELADON_CITY_GAME_CORNER)
 .endif

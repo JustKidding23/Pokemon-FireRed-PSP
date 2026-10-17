@@ -1775,6 +1775,11 @@ static u8 GetPlayerBet(void)
 
 static bool32 GetWinFlagByLine(int lineId)
 {
+#ifdef PORTABLE
+        SetVBlankCallback(NULL);
+        ResetTasks();
+        ResetSpriteData();
+#endif
     return sSlotMachineState->winFlags[lineId];
 }
 

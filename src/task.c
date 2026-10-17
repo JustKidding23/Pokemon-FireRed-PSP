@@ -1,5 +1,8 @@
 #include "global.h"
 #include "task.h"
+#ifdef PORTABLE
+#include "platform.h"
+#endif
 
 #define HEAD_SENTINEL 0xFE
 #define TAIL_SENTINEL 0xFF
@@ -122,6 +125,9 @@ void RunTasks(void)
     {
         do
         {
+#ifdef PORTABLE
+            Platform_TraceCall(gTasks[taskId].func);
+#endif
             gTasks[taskId].func(taskId);
             taskId = gTasks[taskId].next;
         } while (taskId != TAIL_SENTINEL);

@@ -1,7 +1,13 @@
 #include "global.h"
+#include "malloc.h"
 
 static void *sHeapStart;
 static u32 sHeapSize;
+
+#ifdef PORTABLE
+// The GBA build places gHeap with the linker script
+ALIGNED(8) u8 gHeap[HEAP_SIZE];
+#endif
 
 static EWRAM_DATA struct MemBlock *head = NULL;
 static EWRAM_DATA struct MemBlock *pos = NULL;
@@ -53,8 +59,13 @@ void *AllocInternal(void *heapStart, u32 size)
     pos = head;
 
     // Alignment
+#ifdef PORTABLE
+    // 8 bytes on PC, for the pointers in what gets allocated
+    size = (size + 7) & ~7;
+#else
     if (size & 3)
         size = 4 * ((size / 4) + 1);
+#endif
 
     for (;;) {
         // Loop through the blocks looking for unused block that's big enough.

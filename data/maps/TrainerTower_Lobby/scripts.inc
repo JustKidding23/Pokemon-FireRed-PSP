@@ -11,7 +11,7 @@ TrainerTower_Lobby_OnResume::
 	ttower_resumetimer
 	ttower_shouldexit
 	goto_if_eq VAR_RESULT, FALSE, TrainerTower_Lobby_OnResumeEnd
-	@ Never reached, above always FALSE
+	/* Never reached, above always FALSE*/
 	setvar VAR_TEMP_0, 0
 	setobjectxy LOCALID_PLAYER, 9, 7
 	applymovement LOCALID_PLAYER, TrainerTower_Lobby_Movement_FaceReceptionist
@@ -77,7 +77,7 @@ TrainerTower_Lobby_EventScript_LostChallenge::
 	msgbox TrainerTower_Lobby_Text_TooBadComeBackTryAgain
 	goto TrainerTower_Lobby_EventScript_ExitChallenge
 
-@ Presumably E-Reader related
+/* Presumably E-Reader related*/
 TrainerTower_Lobby_EventScript_ExitChallengeSpeakToReceptionist::
 	lock
 	faceplayer

@@ -163,12 +163,12 @@ OneIsland_PokemonCenter_1F_Movement_BillWalkToCelio::
 	walk_in_place_faster_right
 	step_end
 
-@ Unused
+/* Unused*/
 OneIsland_PokemonCenter_1F_Movement_WalkUp:
 	walk_up
 	step_end
 
-@ Unused
+/* Unused*/
 OneIsland_PokemonCenter_1F_Movement_StepAsideLeft::
 	walk_left
 	walk_in_place_faster_right
@@ -531,7 +531,7 @@ OneIsland_PokemonCenter_1F_Movement_PlayerWalkToBillBottom::
 	walk_in_place_faster_right
 	step_end
 
-@ Unused
+/* Unused*/
 OneIsland_PokemonCenter_1F_Movement_DelayWalkInPlaceLeft::
 	delay_16
 	delay_16
@@ -539,7 +539,7 @@ OneIsland_PokemonCenter_1F_Movement_DelayWalkInPlaceLeft::
 	walk_in_place_faster_left
 	step_end
 
-@ Unused
+/* Unused*/
 OneIsland_PokemonCenter_1F_Movement_WalkInPlaceDown::
 	walk_in_place_fast_down
 	step_end

@@ -21,7 +21,7 @@ Route22_Text_EarlyRivalPostBattle::
 	.string "You should quit dawdling and get a\n"
 	.string "move on!$"
 
-@ Translated in RB as "{RIVAL}: What? Why do I have 2 POKéMON? You should catch some more too!"
+/* Translated in RB as "{RIVAL}: What? Why do I have 2 POKéMON? You should catch some more too!"*/
 Route22_Text_RivalShouldCatchSomeMons::
 	.string "{RIVAL}“なんだ？\n"
 	.string "ポケモン　2ひきも\l"
@@ -51,7 +51,7 @@ Route22_Text_LateRivalPostBattle::
 	.string "But hey, you know that!\n"
 	.string "I'm out of here. Smell ya!$"
 
-@ Translated in RB as "{RIVAL}: Hahaha! {PLAYER}! That's your best? You're nowhere near as good as me, pal! Go train some more! You loser!"
+/* Translated in RB as "{RIVAL}: Hahaha! {PLAYER}! That's your best? You're nowhere near as good as me, pal! Go train some more! You loser!"*/
 Route22_Text_LateRivalVictory::
 	.string "{RIVAL}“ひゃははッ　{PLAYER}ー！\n"
 	.string "それで　がんばってるのかよ！\l"

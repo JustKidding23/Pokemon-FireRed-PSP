@@ -1139,11 +1139,11 @@ static void ClearVramOamPltt_LoadHofPal(void)
         }
     }
 
-    oamOffset = OAM;
+    oamOffset = (uintptr_t)OAM;
     oamSize = OAM_SIZE;
     DmaFill32(3, 0, oamOffset, oamSize);
 
-    plttOffset = PLTT;
+    plttOffset = (uintptr_t)PLTT;
     plttSize = PLTT_SIZE;
     DmaFill16(3, 0, plttOffset, plttSize);
 

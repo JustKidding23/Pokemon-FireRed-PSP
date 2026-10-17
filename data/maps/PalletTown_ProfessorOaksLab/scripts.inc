@@ -51,7 +51,7 @@ PalletTown_ProfessorOaksLab_OnFrame::
 	map_script_2 VAR_MAP_SCENE_PALLET_TOWN_PROFESSOR_OAKS_LAB, 7, PalletTown_ProfessorOaksLab_EventScript_EnterForNationalDexScene
 	.2byte 0
 
-PalletTown_ProfessorOaksLab_EventScript_EnterForNationalDexScene:: @ 8169002 
+PalletTown_ProfessorOaksLab_EventScript_EnterForNationalDexScene:: /* 8169002 */
 	lockall
 	setvar VAR_FACING, DIR_NORTH
 	textcolor NPC_TEXT_COLOR_MALE
@@ -301,9 +301,9 @@ PalletTown_ProfessorOaksLab_EventScript_RivalBattle::
 	goto_if_eq VAR_STARTER_MON, 2, PalletTown_ProfessorOaksLab_EventScript_RivalApproachForBattleSquirtle
 	end
 
-@ The scripts for the rival approaching the player for battle are a bit bloated because
-@ both the player and rival can be in 3 different positions, so theres 9 different approaches
-@ NOTE: Names below refer to the Rival's mon (e.g. for RivalBattleSquirtle, player has Charmander)
+/* The scripts for the rival approaching the player for battle are a bit bloated because*/
+/* both the player and rival can be in 3 different positions, so theres 9 different approaches*/
+/* NOTE: Names below refer to the Rival's mon (e.g. for RivalBattleSquirtle, player has Charmander)*/
 
 PalletTown_ProfessorOaksLab_EventScript_RivalApproachForBattleSquirtle::
 	goto_if_eq VAR_TEMP_2, 1, PalletTown_ProfessorOaksLab_EventScript_RivalApproachForBattleSquirtleLeft
@@ -777,7 +777,7 @@ PalletTown_ProfessorOaksLab_EventScript_RatePokedexOrTryGiveBalls::
 	copyvar VAR_0x8009, VAR_0x8006
 	buffernumberstring STR_VAR_1, VAR_0x8008
 	buffernumberstring STR_VAR_2, VAR_0x8009
-	goto_if_eq VAR_0x8009, 1, PalletTown_ProfessorOaksLab_EventScript_CheckIfPlayerNeedsBalls  @ Player only has starter
+	goto_if_eq VAR_0x8009, 1, PalletTown_ProfessorOaksLab_EventScript_CheckIfPlayerNeedsBalls  /* Player only has starter*/
 	goto PalletTown_ProfessorOaksLab_EventScript_RatePokedex
 	end
 
@@ -861,7 +861,7 @@ PalletTown_ProfessorOaksLab_Movement_OakExcitedWest::
 	walk_in_place_right
 	step_end
 
-@ Unused
+/* Unused*/
 PalletTown_ProfessorOaksLab_Movement_Search:
 	walk_left
 	walk_in_place_faster_down
@@ -889,7 +889,7 @@ PalletTown_ProfessorOaksLab_Movement_Search:
 	walk_left
 	step_end
 
-@ Unused
+/* Unused*/
 PalletTown_ProfessorOaksLab_Movement_VerticalPacing:
 	walk_up
 	walk_down

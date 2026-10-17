@@ -43,7 +43,7 @@
 	.set FALSE, 0
 	.set TRUE,  1
 
-	.section script_data, "aw", %progbits
+	.section script_data, "aw"
 
 	.include "data/script_cmd_table.inc"
 
@@ -71,20 +71,21 @@ gSpecialVars::
 	.4byte gSpecialVar_PrevTextColor
 	.4byte gSpecialVar_0x8014
 
+	.set ALLOCATE_SPECIAL_TABLE, 1
 	.include "data/specials.inc"
 
 	.align 2
 gStdScripts::
-	.4byte Std_ObtainItem           @ STD_OBTAIN_ITEM
-	.4byte Std_FindItem             @ STD_FIND_ITEM
-	.4byte Std_MsgboxNPC            @ MSGBOX_NPC
-	.4byte Std_MsgboxSign           @ MSGBOX_SIGN
-	.4byte Std_MsgboxDefault        @ MSGBOX_DEFAULT
-	.4byte Std_MsgboxYesNo          @ MSGBOX_YESNO
-	.4byte Std_MsgboxAutoclose      @ MSGBOX_AUTOCLOSE
-	.4byte Std_ObtainDecoration     @ STD_OBTAIN_DECORATION
-	.4byte Std_PutItemAway          @ STD_PUT_ITEM_AWAY
-	.4byte Std_ReceivedItem         @ STD_RECEIVED_ITEM
+	.4byte Std_ObtainItem           /* STD_OBTAIN_ITEM*/
+	.4byte Std_FindItem             /* STD_FIND_ITEM*/
+	.4byte Std_MsgboxNPC            /* MSGBOX_NPC*/
+	.4byte Std_MsgboxSign           /* MSGBOX_SIGN*/
+	.4byte Std_MsgboxDefault        /* MSGBOX_DEFAULT*/
+	.4byte Std_MsgboxYesNo          /* MSGBOX_YESNO*/
+	.4byte Std_MsgboxAutoclose      /* MSGBOX_AUTOCLOSE*/
+	.4byte Std_ObtainDecoration     /* STD_OBTAIN_DECORATION*/
+	.4byte Std_PutItemAway          /* STD_PUT_ITEM_AWAY*/
+	.4byte Std_ReceivedItem         /* STD_RECEIVED_ITEM*/
 gStdScriptsEnd::
 
 	.include "data/maps/BattleColosseum_2P/scripts.inc"
@@ -807,28 +808,28 @@ gStdScriptsEnd::
 	.include "data/scripts/std_msgbox.inc"
 	.include "data/scripts/trainer_battle.inc"
 
-@ Unused
+/* Unused*/
 Text_WouldYouLikeToMixRecords::
 	.string "Would you like to mix records with\n"
 	.string "other TRAINERS?$"
 
-@ Unused
+/* Unused*/
 Text_WeHopeToSeeYouAgain2::
 	.string "We hope to see you again!$"
 
 	.include "data/text/pc.inc"
 
-@ Unused
+/* Unused*/
 Text_WelcomeTradeCenter::
 	.string "Welcome to the POKéMON CABLE CLUB\n"
 	.string "TRADE CENTER.$"
 
-@ Unused
+/* Unused*/
 Text_WelcomeColosseum::
 	.string "Welcome to the POKéMON CABLE CLUB\n"
 	.string "COLOSSEUM.$"
 
-@ Unused
+/* Unused*/
 Text_WelcomeTimeCapsule::
 	.string "Welcome to the POKéMON CABLE CLUB\n"
 	.string "TIME CAPSULE.$"
@@ -836,12 +837,12 @@ Text_WelcomeTimeCapsule::
 Text_PleaseComeAgain::
 	.string "Please come again!$"
 
-@ Unused
+/* Unused*/
 Text_HavingDiscountSaleToday::
 	.string "Welcome!\p"
 	.string "We're having a discount sale today!$"
 
-@ Unused
+/* Unused*/
 Text_PlayerWhatCanIDoForYou::
 	.string "{PLAYER}{KUN}, welcome!\p"
 	.string "What can I do for you?$"
@@ -858,7 +859,7 @@ Text_BagItemCanBeRegistered::
 	.string "An item in the BAG can be\n"
 	.string "registered to SELECT for easy use.$"
 
-@ Unused (email from R/S Rivals computer)
+/* Unused (email from R/S Rivals computer)*/
 Text_TrainerSchoolEmail::
 	.string "パソコンに\n"
 	.string "ポケモン　トレーナー　こうざの\l"
@@ -872,11 +873,11 @@ Text_TrainerSchoolEmail::
 Text_PlayerBootedUpPC::
 	.string "{PLAYER} booted up the PC.$"
 
-@ Unused
+/* Unused*/
 Text_LinkWasCanceled::
 	.string "つうしんは　キャンセルされました$"
 
-@ Unused
+/* Unused*/
 Text_GiveNicknameToReceivedMon::
 	.string "Want to give a nickname to the\n"
 	.string "{STR_VAR_2} you received?$"
@@ -904,12 +905,12 @@ Text_RestoredPkmnToFullHealth::
 
 	.include "data/text/surf.inc"
 
-@ Unused, from R/S
+/* Unused, from R/S*/
 Text_DoorOpenedFarAway::
 	.string "どこか　とおくの　とびらが\n"
 	.string "ひらいたような　おとだ‥‥$"
 
-@ Unused, from R/S
+/* Unused, from R/S*/
 Text_BigHoleInTheWall::
 	.string "かべに\n"
 	.string "おおきな　あなが　あいている！$"
@@ -960,7 +961,7 @@ Text_VoiceRangOutDontRunAway::
 	.string "Someone's voice rang out,\n"
 	.string "“Don't run away!”$"
 
-@ Uncear what the below unused JP texts were for
+/* Uncear what the below unused JP texts were for*/
 Text_IdLikeToSeeRequest::
 	.string "えっとー\n"
 	.string "{STR_VAR_2}が　みてみたいなー\p"
@@ -1002,7 +1003,7 @@ Text_FoundTMHMContainsMove::
 
 	.include "data/text/seagallop.inc"
 
-@ Call for legendary bird trio
+/* Call for legendary bird trio*/
 Text_Gyaoo::
 	.string "Gyaoo!$"
 
@@ -1078,7 +1079,7 @@ Common_ShowEasyChatScreen::
 	.include "data/scripts/set_gym_trainers.inc"
 	.include "data/scripts/bag_full.inc"
 
-@ Unused
+/* Unused*/
 EventScript_GymBadgeFanfare::
 	playfanfare MUS_OBTAIN_BADGE
 	waitfanfare
@@ -1112,7 +1113,7 @@ EventScript_ChangePokemonNickname::
 	waitstate
 	return
 
-@ Unused
+/* Unused*/
 EventScript_HandOverItem::
 	bufferitemname STR_VAR_1, VAR_0x8004
 	playfanfare MUS_OBTAIN_TMHM
@@ -1174,7 +1175,7 @@ EventScript_ReleaseEnd::
 
 	.include "data/scripts/pokemon_mansion.inc"
 
-@ Unused
+/* Unused*/
 EventScript_DelayedLookAround::
 	lockall
 	applymovement VAR_0x8004, Common_Movement_WalkInPlaceFasterLeft
@@ -1326,8 +1327,8 @@ EventScript_NoMoreRoomForPokemon::
 	.include "data/text/braille.inc"
 	.include "data/scripts/trainers.inc"
 
-@ Test message!
-@ Welcome to the world of Pokémon!
+/* Test message!*/
+/* Welcome to the world of Pokémon!*/
 Text_TestMsg::
 	.string "テストよう　メッセージです！\n"
 	.string "ポケモンの　せかいへ　ようこそ！$"

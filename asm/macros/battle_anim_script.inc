@@ -1,4 +1,5 @@
-@ commands
+	.include "asm/macros/bit_width.inc"
+/* commands*/
 
 	.macro loadspritegfx tag:req
 	.byte 0x0
@@ -12,7 +13,7 @@
 
 .macro createsprite template:req, anim_battler:req, subpriority_offset:req, argv:vararg
 	.byte 0x02
-	.4byte \template
+	ptrvalue \template
 	.if \anim_battler == ANIM_TARGET
 	.byte ANIMSPRITE_IS_TARGET | (\subpriority_offset & 0x7F)
 	.else
@@ -26,7 +27,7 @@
 
 	.macro createvisualtask addr:req, priority:req, argv:vararg
 	.byte 0x03
-	.4byte \addr
+	ptrvalue \addr
 	.byte \priority
 	.byte (.Lcreatetask_\@_2 - .Lcreatetask_\@_1) / 2
 .Lcreatetask_\@_1:
@@ -81,7 +82,7 @@
 
 	.macro call ptr:req
 	.byte 0xe
-	.4byte \ptr
+	ptrvalue \ptr
 	.endm
 
 	.macro return
@@ -96,19 +97,19 @@
 
 	.macro choosetwoturnanim ptr1:req, ptr2:req
 	.byte 0x11
-	.4byte \ptr1
-	.4byte \ptr2
+	ptrvalue \ptr1
+	ptrvalue \ptr2
 	.endm
 
 	.macro jumpifmoveturn value:req, ptr:req
 	.byte 0x12
 	.byte \value
-	.4byte \ptr
+	ptrvalue \ptr
 	.endm
 
 	.macro goto ptr:req
 	.byte 0x13
-	.4byte \ptr
+	ptrvalue \ptr
 	.endm
 
 	.macro fadetobg bg:req
@@ -175,7 +176,7 @@
 
 	.macro createsoundtask addr:req, argv:vararg
 	.byte 0x1F
-	.4byte \addr
+	ptrvalue \addr
 	.byte (.Lcreatetask_1F_\@_2 - .Lcreatetask_1F_\@_1) / 2
 .Lcreatetask_1F_\@_1:
 	.2byte \argv
@@ -190,7 +191,7 @@
 	.byte 0x21
 	.byte \argId
 	.2byte \value
-	.4byte \ptr
+	ptrvalue \ptr
 	.endm
 
 	.macro monbg_static battler:req
@@ -205,7 +206,7 @@
 
 	.macro jumpifcontest ptr:req
 	.byte 0x24
-	.4byte \ptr
+	ptrvalue \ptr
 	.endm
 
 	.macro fadetobgfromset bgOpponent:req, bgPlayer:req, bgContest:req
@@ -271,7 +272,7 @@
 	.byte 0x2f
 	.endm
 	
-@ useful macros
+/* useful macros*/
 	.macro jumpreteq value:req, ptr:req
 	jumpargeq ARG_RET_ID, \value, \ptr
 	.endm

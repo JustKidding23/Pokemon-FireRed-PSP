@@ -1,4 +1,4 @@
-@ All unused / leftover scripts from RS
+/* All unused / leftover scripts from RS*/
 CaveOfOrigin_EventScript_Shake1::
 	lockall
 	setvar VAR_TEMP_1, 1

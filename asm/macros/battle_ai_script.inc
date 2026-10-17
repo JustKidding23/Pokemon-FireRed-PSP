@@ -4,20 +4,20 @@
 	.4byte \ptr
 	.endm
 
-	@ unused
+	/* unused*/
 	.macro if_random_greater_than percent:req, ptr:req
 	.byte 0x01
 	.byte \percent
 	.4byte \ptr
 	.endm
 
-	@ unused
+	/* unused*/
 	.macro if_random_equal ptr:req
 	.byte 0x02
 	.4byte \ptr
 	.endm
 
-	@ unused
+	/* unused*/
 	.macro if_random_not_equal ptr:req
 	.byte 0x03
 	.4byte \ptr
@@ -215,7 +215,7 @@
 	.byte \byte
 	.endm
 
-	@ unused
+	/* unused*/
 	.macro get_considered_move_power
 	.byte 0x23
 	.endm
@@ -235,7 +235,7 @@
 	.4byte \ptr
 	.endm
 
-	@ unused
+	/* unused*/
 	.macro if_not_equal_ type:req, ptr:req
 	.byte 0x27
 	.byte \type
@@ -254,12 +254,12 @@
 	.4byte \ptr
 	.endm
 
-	@ nullsub
+	/* nullsub*/
 	.macro ai_2a
 	.byte 0x2a
 	.endm
 
-	@ nullsub
+	/* nullsub*/
 	.macro ai_2b
 	.byte 0x2b
 	.endm
@@ -269,7 +269,7 @@
 	.byte \battler
 	.endm
 
-	@ unused
+	/* unused*/
 	.macro get_considered_move
 	.byte 0x2d
 	.endm
@@ -283,7 +283,7 @@
 	.byte \battler
 	.endm
 
-	@ unused
+	/* unused*/
 	.macro get_highest_type_effectiveness
 	.byte 0x30
 	.endm
@@ -294,12 +294,12 @@
 	.4byte \ptr
 	.endm
 
-	@ nullsub
+	/* nullsub*/
 	.macro ai_32
 	.byte 0x32
 	.endm
 
-	@ nullsub
+	/* nullsub*/
 	.macro ai_33
 	.byte 0x33
 	.endm
@@ -311,7 +311,7 @@
 	.4byte \ptr
 	.endm
 
-	@ bugged
+	/* bugged*/
 	.macro if_status_not_in_party battler:req, status:req, ptr:req
 	.byte 0x35
 	.byte \battler
@@ -377,7 +377,7 @@
 	.4byte \ptr
 	.endm
 
-	@ unused
+	/* unused*/
 	.macro if_has_move battler:req, move:req, ptr:req
 	.byte 0x3f
 	.byte \battler
@@ -385,7 +385,7 @@
 	.4byte \ptr
 	.endm
 
-	@ unused
+	/* unused*/
 	.macro if_doesnt_have_move battler:req, move:req, ptr:req
 	.byte 0x40
 	.byte \battler
@@ -479,37 +479,37 @@
 	.byte \battler
 	.endm
 
-	@ nullsub
+	/* nullsub*/
 	.macro ai_52
 	.byte 0x52
 	.endm
 
-	@ nullsub
+	/* nullsub*/
 	.macro ai_53
 	.byte 0x53
 	.endm
 
-	@ nullsub
+	/* nullsub*/
 	.macro ai_54
 	.byte 0x54
 	.endm
 
-	@ nullsub
+	/* nullsub*/
 	.macro ai_55
 	.byte 0x55
 	.endm
 
-	@ nullsub
+	/* nullsub*/
 	.macro ai_56
 	.byte 0x56
 	.endm
 
-	@ nullsub
+	/* nullsub*/
 	.macro ai_57
 	.byte 0x57
 	.endm
 
-	@ unused
+	/* unused*/
 	.macro call ptr:req
 	.byte 0x58
 	.4byte \ptr
@@ -542,7 +542,7 @@
 	if_level_cond 2, \ptr
 	.endm
 
-	@ unused
+	/* unused*/
 	.macro if_target_taunted ptr:req
 	.byte 0x5c
 	.4byte \ptr
@@ -553,7 +553,7 @@
 	.4byte \ptr
 	.endm
 
-@ useful script macros
+/* useful script macros*/
 	.macro get_curr_move_type
 	get_type AI_TYPE_MOVE
 	.endm

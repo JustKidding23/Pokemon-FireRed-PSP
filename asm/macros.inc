@@ -1,4 +1,5 @@
 	.include "asm/macros/asm.inc"
+	.include "asm/macros/bit_width.inc"
 	.include "asm/macros/function.inc"
 	.include "asm/macros/movement.inc"
 	.include "asm/macros/ec.inc"
@@ -27,7 +28,7 @@
 	.macro obj_pal address, tag
 	.4byte \address
 	.2byte \tag
-	.2byte 0 @ padding
+	.2byte 0 /* padding*/
 	.endm
 
 	.macro null_obj_pal
@@ -36,15 +37,15 @@
 
 	.macro paired_pals tag, address
 	.2byte \tag
-	.2byte 0 @ padding
+	.2byte 0 /* padding*/
 	.4byte \address
 	.endm
 
-@ For object animation frames.
+/* For object animation frames.*/
 	.macro obj_frame_tiles address, uncompressed_size
 	.4byte \address
 	.2byte \uncompressed_size
-	.2byte 0 @ padding
+	.2byte 0 /* padding*/
 	.endm
 
 	.macro spr_template tile_tag, pal_tag, oam, anims, images, affine_anims, callback
@@ -57,9 +58,9 @@
 	.4byte \callback
 	.endm
 
-@ Berry trees have a table defining the palette slot used for each of their 5
-@ stages. However, the first 2 stages always use the same slots regardless of
-@ the type of tree and the slots of the last 3 stages always equal each other.
+/* Berry trees have a table defining the palette slot used for each of their 5*/
+/* stages. However, the first 2 stages always use the same slots regardless of*/
+/* the type of tree and the slots of the last 3 stages always equal each other.*/
 	.macro berry_tree_palette_slot_table slot
 	.byte 3, 4, \slot, \slot, \slot
 	.endm
@@ -73,24 +74,24 @@
 	.macro obj_image_anim_frame pic_id, duration, flags = 0
 	.2byte \pic_id
 	.byte (\flags) | (\duration)
-	.byte 0 @ padding
+	.byte 0 /* padding*/
 	.endm
 
 	.macro obj_image_anim_loop count
 	.2byte 0xfffd
 	.byte \count
-	.byte 0 @ padding
+	.byte 0 /* padding*/
 	.endm
 
 	.macro obj_image_anim_jump target_index
 	.2byte 0xfffe
 	.byte \target_index
-	.byte 0 @ padding
+	.byte 0 /* padding*/
 	.endm
 
 	.macro obj_image_anim_end
 	.2byte 0xffff
-	.2byte 0 @ padding
+	.2byte 0 /* padding*/
 	.endm
 
 	.macro obj_rot_scal_anim_frame delta_x_scale, delta_y_scale, delta_angle, duration
@@ -98,31 +99,31 @@
 	.2byte \delta_y_scale
 	.byte \delta_angle
 	.byte \duration
-	.2byte 0 @ padding
+	.2byte 0 /* padding*/
 	.endm
 
 	.macro obj_rot_scal_anim_loop count
 	.2byte 0x7ffd
 	.2byte \count
-	.4byte 0 @ padding
+	.4byte 0 /* padding*/
 	.endm
 
 	.macro obj_rot_scal_anim_jump target_index
 	.2byte 0x7ffe
 	.2byte \target_index
-	.4byte 0 @ padding
+	.4byte 0 /* padding*/
 	.endm
 
 	.macro obj_rot_scal_anim_end unknown=0
 	.2byte 0x7fff
 	.2byte \unknown
-	.fill 4 @ padding
+	.fill 4 /* padding*/
 	.endm
 
 	.macro overworld_frame ptr:req, width:req, height:req, frame:req
 	.4byte (\ptr + (\width * \height * \frame * 64) / 2)
 	.2byte (\width * \height * 64) / 2
-	.2byte 0 @ padding
+	.2byte 0 /* padding*/
 	.endm
 
 	.macro credits_entry number, text
@@ -132,7 +133,7 @@
 
 	.macro door_anim_frame unknown, offset
 	.byte \unknown
-	.byte 0 @ padding
+	.byte 0 /* padding*/
 	.2byte \offset
 	.endm
 

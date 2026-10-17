@@ -1634,6 +1634,8 @@ void LinkPlayerFromBlock(u32 who)
     }
 }
 
+// The portable builds have no link cable, see stub.c
+#ifndef PORTABLE
 // When this function returns TRUE the callbacks are skipped
 bool8 HandleLinkConnection(void)
 {
@@ -1686,6 +1688,7 @@ bool8 HandleLinkConnection(void)
     }
     return FALSE;
 }
+#endif
 
 void SetWirelessCommType1(void)
 {

@@ -69,7 +69,7 @@ SeafoamIslands_B4F_OnFrame::
 	map_script_2 VAR_TEMP_1, 1, SeafoamIslands_B4F_EventScript_EnterByFalling
 	.2byte 0
 
-@ The current the player is forced in on from B3F
+/* The current the player is forced in on from B3F*/
 SeafoamIslands_B4F_EventScript_EnterOnCurrent::
 	lockall
 	applymovement LOCALID_PLAYER, SeafoamIslands_B4F_Movement_EnterOnCurrent
@@ -84,7 +84,7 @@ SeafoamIslands_B4F_Movement_EnterOnCurrent::
 	walk_fast_up
 	step_end
 
-@ The current the player lands on when entering the map by falling
+/* The current the player lands on when entering the map by falling*/
 SeafoamIslands_B4F_EventScript_EnterByFalling::
 	lockall
 	setvar NUM_BOULDERS_PRESENT, 0
@@ -139,7 +139,7 @@ SeafoamIslands_B4F_Movement_RideCurrentClose::
 	walk_up
 	step_end
 
-@ Triggers blocking re-entry to B3F
+/* Triggers blocking re-entry to B3F*/
 SeafoamIslands_B4F_EventScript_UpwardCurrent::
 	lockall
 	applymovement LOCALID_PLAYER, SeafoamIslands_B4F_Movement_WalkUp

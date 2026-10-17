@@ -135,7 +135,7 @@ TwoIsland_JoyfulGameCorner_EventScript_GetGamesGoingSoon::
 	release
 	end
 
-@ Only referred to as Lostelles Daddy in text
+/* Only referred to as Lostelles Daddy in text*/
 TwoIsland_JoyfulGameCorner_EventScript_LostellesDaddy::
 	lock
 	faceplayer

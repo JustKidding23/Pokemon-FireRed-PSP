@@ -127,8 +127,8 @@ FiveIsland_ResortGorgeous_House_Movement_ButlerApproachPlayerEast::
 	walk_down
 	step_end
 
-@ Very odd. If the player is talking to Selphy facing West, then the player has clipped through the table
-@ In this case rather than approach the player the Butler walks up, which clips the Butler into a wall
+/* Very odd. If the player is talking to Selphy facing West, then the player has clipped through the table*/
+/* In this case rather than approach the player the Butler walks up, which clips the Butler into a wall*/
 FiveIsland_ResortGorgeous_House_Movement_ButlerApproachPlayerWest::
 	walk_up
 	step_end
@@ -137,7 +137,7 @@ FiveIsland_ResortGorgeous_House_Movement_ButlerEnter::
 	walk_in_place_down
 	step_end
 
-@ Addressed as "Sebastian" but speaks only as "Butler"
+/* Addressed as "Sebastian" but speaks only as "Butler"*/
 FiveIsland_ResortGorgeous_House_EventScript_Butler::
 	msgbox FiveIsland_ResortGorgeous_House_Text_LadySelphySmileHasBrillianceOfSun, MSGBOX_NPC
 	end

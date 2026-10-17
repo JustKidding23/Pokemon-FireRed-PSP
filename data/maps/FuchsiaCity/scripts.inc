@@ -56,7 +56,7 @@ FuchsiaCity_EventScript_WardensHomeSign::
 	msgbox FuchsiaCity_Text_WardensHomeSign, MSGBOX_SIGN
 	end
 
-@ Unused
+/* Unused*/
 FuchsiaCity_EventScript_SafariZoneOfficeSign::
 	msgbox FuchsiaCity_Text_SafariZoneOfficeSign, MSGBOX_SIGN
 	end

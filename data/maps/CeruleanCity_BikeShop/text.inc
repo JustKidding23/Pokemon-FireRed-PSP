@@ -46,7 +46,7 @@ CeruleanCity_BikeShop_Text_WowYourBikeIsCool::
     .string "Wow.\n"
     .string "Your BIKE is really cool!$"
 
-@ Unused
+/* Unused*/
 CeruleanCity_BikeShop_Text_GermanFoldableBicyleFinallyOnMarket::
     .string "ついに　はつばい！\p"
     .string "ドイツ　せい　さいこうきゅう\n"

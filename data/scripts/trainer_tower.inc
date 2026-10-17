@@ -8,7 +8,7 @@
 .equ DISABLE_DOUBLES_TRIGGER,  VAR_TEMP_F
 
 
-@@ Map scripts
+/*@ Map scripts*/
 
 TrainerTower_OnResume::
 	setvar VAR_TEMP_2, 0
@@ -57,7 +57,7 @@ TrainerTower_EventScript_SetObjectsDoublesAlreadyBeaten::
 	setobjectmovementtype LOCALID_TOWER_TRAINER_DOUBLES2, MOVEMENT_TYPE_FACE_DOWN
 	goto TrainerTower_EventScript_HideOwner
 
-@ Knockout challenge re-uses trainer objects
+/* Knockout challenge re-uses trainer objects*/
 TrainerTower_EventScript_SetObjectsKnockout::
 	setflag HIDE_TRAINER_DOUBLES2
 	setvar DISABLE_DOUBLES_TRIGGER, TRUE
@@ -86,13 +86,13 @@ TrainerTower_EventScript_EndEnterFloor:
 	goto_if_eq VAR_RESULT, TRUE, TrainerTower_EventScript_WarpToLobby
 	end
 
-@ Never reached
+/* Never reached*/
 TrainerTower_EventScript_WarpToLobby::
 	warp MAP_TRAINER_TOWER_LOBBY, 9, 7
 	waitstate
 
 
-@@ Battle scripts
+/*@ Battle scripts*/
 
 TrainerTower_EventScript_TriggerBattle::
 	ttower_getchallengetype
@@ -215,7 +215,7 @@ TrainerTower_EventScript_WarpToLobbyLost::
 	waitstate
 
 
-@@ Speaking to trainers after battle
+/*@ Speaking to trainers after battle*/
 
 TrainerTower_EventScript_SpeakToDoublesTrainer1::
 	ttower_getchallengetype
@@ -260,7 +260,7 @@ TrainerTower_EventScript_DoPostBattleText:
 	return
 
 
-@@ Speaking to owner
+/*@ Speaking to owner*/
 
 TrainerTower_EventScript_SpeakToOwner::
 	lock
@@ -323,7 +323,7 @@ TrainerTower_EventScript_ShowTime::
 	end
 
 
-@@ Battle triggers
+/*@ Battle triggers*/
 
 TrainerTower_EventScript_SingleBattleTrigger::
 	goto TrainerTower_EventScript_TriggerBattle

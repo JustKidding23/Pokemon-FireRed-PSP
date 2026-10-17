@@ -1,4 +1,4 @@
-@ For the NPC in Pallet Town that talks about the Trainer Tips sign
+/* For the NPC in Pallet Town that talks about the Trainer Tips sign*/
 
 PalletTown_Text_HmmIsThatRight::
 	.string "Hmm…\n"
@@ -11,7 +11,7 @@ PalletTown_Text_OhLookLook::
 PalletTown_Text_ReadItReadIt::
 	.string "Read it, read it!$"
 
-@ Used by sign
+/* Used by sign*/
 PalletTown_Text_PressStartToOpenMenu::
 	.string "TRAINER TIPS\p"
 	.string "Press START to open the MENU!$"
@@ -24,7 +24,7 @@ PalletTown_Text_LookCopiedTrainerTipsSign::
 	.string "I copied what it said on one of\n"
 	.string "those TRAINER TIPS signs!$"
 
-@ Used by NPC
+/* Used by NPC*/
 PalletTown_Text_PressStartToOpenMenuCopy::
 	.string "TRAINER TIPS!\p"
 	.string "Press START to open the MENU!$"

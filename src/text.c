@@ -224,6 +224,12 @@ static const u8 sFontNormalLatinGlyphWidths[] =
      8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,
      8,  8,  8,  8,  8,  8,  8,  6
 };
+
+#ifdef PORTABLE
+// For the PSP's own menu (src/platform/psp.c), which writes in the game's font
+const u16 *const gFontNormalLatinGlyphs = sFontNormalLatinGlyphs;
+const u8 *const gFontNormalLatinGlyphWidths = sFontNormalLatinGlyphWidths;
+#endif
 static const u16 sFontNormalJapaneseGlyphs[] = INCBIN_U16("graphics/fonts/japanese_normal.fwjpnfont");
 static const u8 sFontNormalJapaneseGlyphWidths[] =
 {

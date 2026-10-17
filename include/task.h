@@ -19,7 +19,25 @@ struct Task
     u8 prev;
     u8 next;
     u8 priority;
+#ifdef PORTABLE
+    // Some tasks keep structs with pointers in data (e.g. ListMenu)
+    ALIGNED(8) s16 data[NUM_TASK_DATA];
+#else
     s16 data[NUM_TASK_DATA];
+#endif
+    TaskFunc followupFunc;
+    union {
+        void *genericPtr[2];
+#ifdef PORTABLE
+        uintptr_t intPtr[NUM_TASK_DATA]; // indexed like data[] by Set/GetWordTaskArg
+#else
+        uintptr_t intPtr[2];
+#endif
+        void (*funcPtr)(void);
+        TaskFunc funcPtr_task;
+        struct Sprite *spritePtr;
+        struct Pokemon *monPtr;
+    } ptr;
 };
 
 extern struct Task gTasks[];

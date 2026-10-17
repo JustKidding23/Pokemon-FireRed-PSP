@@ -42,7 +42,7 @@ CeruleanCity_Text_ExplainFameCheckerSmellYa::
     .string "All right, this time I really am\n"
     .string "gone. Smell ya!$"
 
-@ RB translation: "Heh! You're no match for my genius!"
+/* RB translation: "Heh! You're no match for my genius!"*/
 CeruleanCity_Text_RivalVictory::
     .string "なんたって！\n"
     .string "おれは　てんさい　だからよ！$"

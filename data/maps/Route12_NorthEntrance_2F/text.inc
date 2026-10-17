@@ -1,4 +1,4 @@
-@ Male and female text identical, differ (presumably) in JP
+/* Male and female text identical, differ (presumably) in JP*/
 Route12_NorthEntrance_2F_Text_TakeTMDontNeedAnymoreMale::
     .string "My POKéMON's ashes are stored in\n"
     .string "POKéMON TOWER.\p"

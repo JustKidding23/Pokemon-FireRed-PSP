@@ -16,6 +16,7 @@
 #include "save_failed_screen.h"
 #include "quest_log.h"
 #include "sloopsvc.h"
+#include "platform.h"
 
 extern u32 intr_main[];
 
@@ -102,7 +103,9 @@ void AgbMain()
 #if REVISION >= 0xA
     svc_stubbed();
 #endif
-#if MODERN
+#ifdef PORTABLE
+    // The portable builds' memory starts out cleared
+#elif MODERN
     // Modern compilers are liberal with the stack on entry to this function,
     // so RegisterRamReset may crash if it resets IWRAM.
     RegisterRamReset(RESET_ALL & ~RESET_IWRAM);
@@ -139,13 +142,18 @@ void AgbMain()
 #else
     *(vu16 *)BG_PLTT = RGB_WHITE;
 #endif
+#ifdef PORTABLE
+    REG_VCOUNT = 161; // prep for being in VBlank period
+#endif
     InitGpuRegManager();
     REG_WAITCNT = WAITCNT_PREFETCH_ENABLE | WAITCNT_WS0_S_1 | WAITCNT_WS0_N_3;
     InitKeys();
     InitIntrHandlers();
     m4aSoundInit();
     EnableVCountIntrAtLine150();
+#ifndef PORTABLE
     InitRFU();
+#endif
     CheckForFlashMemory();
     InitMainCallbacks();
     InitMapMusic();
@@ -168,53 +176,63 @@ void AgbMain()
 #endif
 #endif
 
-#if REVISION >= 1
+#if REVISION >= 1 && !defined(PORTABLE)
     if (gFlashMemoryPresent != TRUE)
         SetMainCallback2(NULL);
 #endif
 
     gLinkTransferringData = FALSE;
 
+#ifndef PORTABLE
     for (;;)
-    {
-        ReadKeys();
-
-        if (gSoftResetDisabled == FALSE
-         && (gMain.heldKeysRaw & A_BUTTON)
-         && (gMain.heldKeysRaw & B_START_SELECT) == B_START_SELECT)
-        {
-            rfu_REQ_stopMode();
-#if REVISION < 0xA
-            rfu_waitREQComplete();
+        MainLoop();
 #endif
-            DoSoftReset();
-        }
+}
 
-        if (Overworld_SendKeysToLinkIsRunning() == TRUE)
+// One frame of the game. The portable builds call it from their own frame
+// loop (src/platform), since they can't stay inside AgbMain.
+void MainLoop(void)
+{
+    ReadKeys();
+
+    if (gSoftResetDisabled == FALSE
+     && (gMain.heldKeysRaw & A_BUTTON)
+     && (gMain.heldKeysRaw & B_START_SELECT) == B_START_SELECT)
+    {
+#ifndef PORTABLE
+        // The wireless adapter isn't set up on the portable builds (see InitRFU in AgbMain)
+        rfu_REQ_stopMode();
+#if REVISION < 0xA
+        rfu_waitREQComplete();
+#endif
+#endif
+        DoSoftReset();
+    }
+
+    if (Overworld_SendKeysToLinkIsRunning() == TRUE)
+    {
+        gLinkTransferringData = TRUE;
+        UpdateLinkAndCallCallbacks();
+        gLinkTransferringData = FALSE;
+    }
+    else
+    {
+        gLinkTransferringData = FALSE;
+        UpdateLinkAndCallCallbacks();
+
+        if (Overworld_RecvKeysFromLinkIsRunning() == 1)
         {
+            gMain.newKeys = 0;
+            ClearSpriteCopyRequests();
             gLinkTransferringData = TRUE;
             UpdateLinkAndCallCallbacks();
             gLinkTransferringData = FALSE;
         }
-        else
-        {
-            gLinkTransferringData = FALSE;
-            UpdateLinkAndCallCallbacks();
-
-            if (Overworld_RecvKeysFromLinkIsRunning() == 1)
-            {
-                gMain.newKeys = 0;
-                ClearSpriteCopyRequests();
-                gLinkTransferringData = TRUE;
-                UpdateLinkAndCallCallbacks();
-                gLinkTransferringData = FALSE;
-            }
-        }
-
-        PlayTimeCounter_Update();
-        MapMusicMain();
-        WaitForVBlank();
     }
+
+    PlayTimeCounter_Update();
+    MapMusicMain();
+    WaitForVBlank();
 }
 
 static void UpdateLinkAndCallCallbacks(void)
@@ -243,10 +261,16 @@ static void CallCallbacks(void)
     if (!RunSaveFailedScreen() && !RunHelpSystemCallback())
     {
         if (gMain.callback1)
+        {
+            Platform_TraceCall(gMain.callback1);
             gMain.callback1();
+        }
 
         if (gMain.callback2)
+        {
+            Platform_TraceCall(gMain.callback2);
             gMain.callback2();
+        }
     }
 }
 
@@ -295,7 +319,11 @@ void InitKeys(void)
 
 static void ReadKeys(void)
 {
+#ifndef PORTABLE
     u16 keyInput = REG_KEYINPUT ^ KEYS_MASK;
+#else
+    u16 keyInput = Platform_GetKeyInput();
+#endif
     gMain.newKeysRaw = keyInput & ~gMain.heldKeysRaw;
     gMain.newKeys = gMain.newKeysRaw;
     gMain.newAndRepeatedKeys = gMain.newKeysRaw;
@@ -344,9 +372,12 @@ void InitIntrHandlers(void)
     for (i = 0; i < INTR_COUNT; i++)
         gIntrTable[i] = gIntrTableTemplate[i];
 
+#ifndef PORTABLE
+    // The portable builds call the handlers from their own frame loop
     DmaCopy32(3, intr_main, IntrMain_Buffer, sizeof(IntrMain_Buffer));
 
     INTR_VECTOR = IntrMain_Buffer;
+#endif
 
     SetVBlankCallback(NULL);
     SetHBlankCallback(NULL);
@@ -403,7 +434,10 @@ static void VBlankIntr(void)
 #if !defined(NDEBUG) || REVISION >= 0xA
     sVcountBeforeSound = REG_VCOUNT;
 #endif
+#ifndef PORTABLE
+    // The portable builds mix the sound in their own audio code
     m4aSoundMain();
+#endif
 #if !defined(NDEBUG) || REVISION >= 0xA
     sVcountAfterSound = REG_VCOUNT;
 #endif
@@ -436,7 +470,9 @@ static void VCountIntr(void)
 #if !defined(NDEBUG) || REVISION >= 0xA
     sVcountAtIntr = REG_VCOUNT;
 #endif
+#ifndef PORTABLE
     m4aSoundVSync();
+#endif
     INTR_CHECK |= INTR_FLAG_VCOUNT;
     gMain.intrCheck |= INTR_FLAG_VCOUNT;
 }
@@ -461,10 +497,14 @@ static void IntrDummy(void)
 
 static void WaitForVBlank(void)
 {
+#ifdef PORTABLE
+    VBlankIntrWait();
+#else
     gMain.intrCheck &= ~INTR_FLAG_VBLANK;
 
     while (!(gMain.intrCheck & INTR_FLAG_VBLANK))
         ;
+#endif
 }
 
 void SetVBlankCounter1Ptr(u32 *ptr)

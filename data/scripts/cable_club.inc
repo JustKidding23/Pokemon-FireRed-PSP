@@ -17,7 +17,7 @@ CableClub_EventScript_MysteryGiftMan::
 	special QuestLog_CutRecording
 	trywondercardscript
 
-@ Unused
+/* Unused*/
 EventScript_MysteryGiftThankYou::
 	msgbox Text_ThankYouForAccessingMysteryGift, MSGBOX_NPC
 	end
@@ -314,7 +314,7 @@ CableClub_EventScript_EnterColosseum::
 	waitstate
 	end
 
-@ Unused
+/* Unused*/
 CableClub_EventScript_PlayerApproachLinkRoomRight::
 	applymovement LOCALID_PLAYER, Movement_PlayerApproachLinkRoomRight
 	waitmovement 0
@@ -354,7 +354,7 @@ CableClub_EventScript_AbortLinkWrongNumberForSingleBattle::
 	end
 
 CableClub_EventScript_ConfirmNumberAndRestart::
-	special CloseLink  @ Redundant
+	special CloseLink  /* Redundant*/
 	special HelpSystem_Enable
 	msgbox CableClub_Text_PleaseConfirmNumberAndRestart
 	release
@@ -429,7 +429,7 @@ CableClub_EventScript_CantTradeEnigmaBerry::
 	setvar VAR_RESULT, FALSE
 	return
 
-@ Record Corner is nopped in FRLG
+/* Record Corner is nopped in FRLG*/
 CableClub_EventScript_RecordCorner::
 	end
 
@@ -482,7 +482,7 @@ CableClub_EventScript_AbortMinigame::
 	release
 	end
 
-@ Unused
+/* Unused*/
 CableClub_EventScript_CableClubWarp::
 	special SetCableClubWarp
 	special DoCableClubWarp
@@ -517,7 +517,7 @@ Movement_AttendantFaceDown::
 	face_down
 	step_end
 
-@ Unused
+/* Unused*/
 Movement_AttendantFaceRight::
 	face_right
 	step_end
@@ -547,7 +547,7 @@ Movement_PlayerEnterLinkRoom::
 	walk_up
 	step_end
 
-@ Unused
+/* Unused*/
 Movement_PlayerFaceAttendantLeft::
 	face_left
 	step_end
@@ -648,7 +648,7 @@ TradeCenter_EventScript_Chair1::
 	waitstate
 	end
 
-@ Unused
+/* Unused*/
 TradeCenter_EventScript_Chair2::
 	setvar VAR_0x8005, 2
 	textcolor NPC_TEXT_COLOR_NEUTRAL
@@ -656,7 +656,7 @@ TradeCenter_EventScript_Chair2::
 	waitstate
 	end
 
-@ Unused
+/* Unused*/
 TradeCenter_EventScript_Chair3::
 	setvar VAR_0x8005, 3
 	textcolor NPC_TEXT_COLOR_NEUTRAL
@@ -664,8 +664,8 @@ TradeCenter_EventScript_Chair3::
 	waitstate
 	end
 
-@ Nop in FRLG
-@ Separate labels to match GetDirectionForEventScript
+/* Nop in FRLG*/
+/* Separate labels to match GetDirectionForEventScript*/
 RecordCorner_EventScript_Spot0::
 RecordCorner_EventScript_Spot1::
 RecordCorner_EventScript_Spot2::
@@ -710,7 +710,7 @@ TradeCenter_EventScript_Attendant::
 	closemessage
 	end
 
-@ Nop in FRLG
+/* Nop in FRLG*/
 RecordCorner_EventScript_Attendant::
 	end
 
@@ -1306,7 +1306,7 @@ CableClub_Text_BattleUsingLinkCable::
 	.string "You may battle another TRAINER\n"
 	.string "using a GBA Game Link cable.$"
 
-@ Unused, translated in Emerald
+/* Unused, translated in Emerald*/
 CableClub_Text_CloseThisMenu::
 	.string "おわります$"
 
@@ -1340,7 +1340,7 @@ CableClub_Text_AwaitingLinkupBCancel::
 	.string "Awaiting linkup…\n"
 	.string "… … B Button: Cancel$"
 
-@ Unused, translated in Emerald
+/* Unused, translated in Emerald*/
 CableClub_Text_OkayToSaveProgress::
 	.string "はじめる　まえに　レポートを\n"
 	.string "かきますが　よろしいですか？$"
@@ -1417,7 +1417,7 @@ Text_TakeSeatStartTrade::
 	.string "Please take your seat and start\n"
 	.string "your trade.$"
 
-@ Unused, leftover from RS
+/* Unused, leftover from RS*/
 RecordCorner_Text_ThanksForComing::
 	.string "ごりよう　ありがとう　ございました$"
 
@@ -1449,11 +1449,11 @@ CableClub_Text_ParticipantsStepUpToCounter::
 	.string "Participants are asked to step up\n"
 	.string "to the reception counter.$"
 
-@ Unused, translated in Emerald
+/* Unused, translated in Emerald*/
 CableClub_Text_Hello::
 	.string "こんにちは！$"
 
-@ Unused, translated in Emerald
+/* Unused, translated in Emerald*/
 CableClub_Text_PleaseWait::
 	.string "しょうしょう　おまちください$"
 
@@ -1469,7 +1469,7 @@ CableClub_Text_CanMakeBerryPowder::
 	.string "Two to five TRAINERS can make\n"
 	.string "BERRY POWDER together.$"
 
-@ Unused, Record Mix nopped
+/* Unused, Record Mix nopped*/
 CableClub_Text_CanMixRecords::
 	.string "ワイヤレス　クラブでの\n"
 	.string "あそびかたを　せつめいします$"
@@ -1477,11 +1477,11 @@ CableClub_Text_CanMixRecords::
 CableClub_Text_CancelSelectedItem::
 	.string "Cancels the selected MENU item.$"
 
-@ Unused, translated in Emerald
+/* Unused, translated in Emerald*/
 CableClub_Text_WhichBattleMode::
 	.string "どちらの　しょうぶに　しますか？$"
 
-@ Unused, translated in Emerald
+/* Unused, translated in Emerald*/
 CableClub_Text_ReturnsToPreviousStep::
 	.string "ひとつ　まえに　もどります$"
 
@@ -1504,7 +1504,7 @@ CableClub_Text_UnionRoomAdapterNotConnected::
 	.string "Adapter is not connected properly.\p"
 	.string "Please do come again.$"
 
-@ Unused, translated in Emerald
+/* Unused, translated in Emerald*/
 CableClub_Text_OhExcuseMe::
 	.string "あ‥‥\n"
 	.string "おきゃくさま！$"
@@ -1571,7 +1571,7 @@ Text_AllGoodToGo::
 	.string "Okay, you're all good to go.\n"
 	.string "Don't let the others beat you!$"
 
-@ Unused, translated in Emerald
+/* Unused, translated in Emerald*/
 Text_LeavingDoComeAgain::
 	.string "きょうは　けえるのか？\n"
 	.string "またこいよ！$"
@@ -1597,7 +1597,7 @@ Text_OnlyDodrioAllowed::
 	.string "You have to have a DODRIO to play\n"
 	.string "this game.$"
 
-@ Unused, translated in Emerald
+/* Unused, translated in Emerald*/
 Text_RetryFromStartPlease::
 	.string "もういちど　はじめから\n"
 	.string "やりなおして　みて　くれ$"

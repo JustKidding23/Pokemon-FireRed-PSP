@@ -77,7 +77,7 @@ ViridianCity_EventScript_Boy::
 	msgbox ViridianCity_Text_CanCarryMonsAnywhere, MSGBOX_NPC
 	end
 
-@ Other old man, not the tutorial old man
+/* Other old man, not the tutorial old man*/
 ViridianCity_EventScript_OldMan::
 	lock
 	faceplayer
@@ -125,13 +125,13 @@ ViridianCity_EventScript_TutorialStart::
 	release
 	end
 
-@ Unused
+/* Unused*/
 ViridianCity_EventScript_WatchToLearnBasics::
 	msgbox ViridianCity_Text_WatchThatToLearnBasics
 	release
 	end
 
-@ Unused. Starts battle after the post battle text, which is odd.
+/* Unused. Starts battle after the post battle text, which is odd.*/
 ViridianCity_EventScript_TutorialUnused::
 	msgbox ViridianCity_Text_ThatWasEducationalTakeThis
 	goto_if_questlog EventScript_ReleaseEnd

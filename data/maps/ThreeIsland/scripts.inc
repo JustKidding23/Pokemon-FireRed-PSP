@@ -89,7 +89,7 @@ ThreeIsland_EventScript_PlayerFaceUp::
 	waitmovement 0
 	return
 
-@ Unused
+/* Unused*/
 ThreeIsland_EventScript_PlayerFaceDown::
 	applymovement LOCALID_PLAYER, Common_Movement_WalkInPlaceFasterDown
 	waitmovement 0

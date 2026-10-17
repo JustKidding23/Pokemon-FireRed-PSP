@@ -1,6 +1,7 @@
-	.section script_data, "aw", %progbits
+	.include "asm/macros/bit_width.inc"
+	.section script_data, "aw"
 
-	.align 2
+	ptr_align
 gMysteryEventScriptCmdTable::
 	.4byte MEScrCmd_nop
 	.4byte MEScrCmd_checkcompat

@@ -1,4 +1,4 @@
-@ All Trainer Tower text (Lobby and Roof) is interleaved here
+/* All Trainer Tower text (Lobby and Roof) is interleaved here*/
 
 TrainerTower_Lobby_Text_WelcomeToTrainerTower::
     .string "Hello!\p"

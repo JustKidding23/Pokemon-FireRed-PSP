@@ -1,7 +1,9 @@
 #include "global.h"
 #include "multiboot.h"
 
-static u16 MultiBoot_required_data[MULTIBOOT_NCHILD];
+static u16 UNUSED MultiBoot_required_data[MULTIBOOT_NCHILD];
+// No link cable on the portable builds
+#ifndef PORTABLE
 
 static int MultiBootSend(struct MultiBootParam *mp, u16 data);
 static int MultiBootHandShake(struct MultiBootParam *mp);
@@ -414,3 +416,4 @@ static void MultiBootWaitSendDone(void)
     for (i = 0; (i < 31069) && (REG_SIOCNT & SIO_START); i++);
     MultiBootWaitCycles(600);
 }
+#endif

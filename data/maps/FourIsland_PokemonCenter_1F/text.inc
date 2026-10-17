@@ -1,4 +1,4 @@
-@ The 5 texts below are supposed to be in FourIsland_House1
+/* The 5 texts below are supposed to be in FourIsland_House1*/
 Text_BodySlamTeach::
     .string "Ready?\n"
     .string "Boing!\p"

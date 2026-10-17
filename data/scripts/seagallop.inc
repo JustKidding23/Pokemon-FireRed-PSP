@@ -1,4 +1,4 @@
-@ Separate selection menus for before the Rainbow Pass is obtained
+/* Separate selection menus for before the Rainbow Pass is obtained*/
 EventScript_ChooseDestFromOneIsland::
 	goto_if_ge VAR_MAP_SCENE_ONE_ISLAND_POKEMON_CENTER_1F, 5, EventScript_SeviiDestinationsPage1
 	goto_if_ge VAR_MAP_SCENE_CINNABAR_ISLAND, 4, EventScript_ChooseDestFromOneIslandVermilionAllowed

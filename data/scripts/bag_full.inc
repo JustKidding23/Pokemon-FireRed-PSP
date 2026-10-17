@@ -4,18 +4,18 @@ EventScript_BagIsFull::
 	release
 	end
 
-@ Unused
+/* Unused*/
 EventScript_BagIsFullRet::
 	msgbox Text_TooBadBagFull
 	return
 
-@ Unused
+/* Unused*/
 EventScript_NoRoomForAnotherDecor::
 	msgbox Text_NoRoomForAnotherDecor
 	release
 	end
 
-@ Unused
+/* Unused*/
 EventScript_NoRoomForAnotherDecorRet::
 	msgbox Text_NoRoomForAnotherDecor
 	return

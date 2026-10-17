@@ -52,7 +52,7 @@ VictoryRoad_2F_Text_GregoryPostBattle::
     .string "Many TRAINERS give up their\n"
     .string "challenge here and go home.$"
 
-@ Unused, old text for Moltres
+/* Unused, old text for Moltres*/
 VictoryRoad_2F_Text_Gyaoo::
     .string "ギヤーオ！$"
 
