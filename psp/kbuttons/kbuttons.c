@@ -12,6 +12,8 @@ struct KernelButtons
 {
     volatile unsigned int run;
     volatile unsigned int buttons;
+    // The game's main thread, set before the module starts
+    SceUID gameThread;
 };
 
 static struct KernelButtons *sShared;
@@ -19,14 +21,26 @@ static struct KernelButtons *sShared;
 // game's memory belongs to the XMB, and reading run from it there could keep
 // this thread writing into the XMB
 static volatile int sStop;
+static SceUID sGameThread;
 static SceUID sThread = -1;
 
 static int ButtonThread(SceSize args, void *argp)
 {
-    // The game clears run, and stops the module, before it exits
-    while (!sStop && sShared->run)
+    // The game clears run before it exits, and the system stops the module.
+    // In case neither happens in time, the thread also ends as soon as the
+    // game's thread is gone, before touching the game's memory again.
+    for (;;)
     {
         SceCtrlData pad;
+        SceKernelThreadInfo info;
+
+        if (sStop)
+            break;
+        info.size = sizeof(info);
+        if (sceKernelReferThreadStatus(sGameThread, &info) < 0)
+            break;
+        if (!sShared->run)
+            break;
 
         sceCtrlPeekBufferPositive(&pad, 1);
         sShared->buttons = pad.Buttons;
@@ -44,6 +58,7 @@ int module_start(SceSize args, void *argp)
     if (args != sizeof(struct KernelButtons *))
         return -1;
     sShared = *(struct KernelButtons **)argp;
+    sGameThread = sShared->gameThread;
     thread = sceKernelCreateThread("EmeraldButtons", ButtonThread, 0x18, 0x800, 0, NULL);
     if (thread < 0)
         return thread;
