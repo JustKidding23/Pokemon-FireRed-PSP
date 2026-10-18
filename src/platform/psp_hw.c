@@ -204,6 +204,7 @@ static struct
     volatile unsigned int buttons;
 } sKernelButtons;
 static bool sKernelButtonsRunning;
+static SceUID sKernelButtonsModule = -1;
 
 bool PspHw_StartKernelButtons(const char *path)
 {
@@ -224,6 +225,7 @@ bool PspHw_StartKernelButtons(const char *path)
         sKernelButtons.run = 0;
         return false;
     }
+    sKernelButtonsModule = module;
     sKernelButtonsRunning = true;
     return true;
 }
@@ -238,8 +240,13 @@ void PspHw_Exit(void)
     // Stop the kernel thread before the game's memory goes away
     if (sKernelButtonsRunning)
     {
+        int status;
+
         sKernelButtons.run = 0;
-        sceKernelDelayThread(50 * 1000);
+        sKernelButtonsRunning = false;
+        // Its module_stop waits for its thread to end
+        sceKernelStopModule(sKernelButtonsModule, 0, NULL, &status, NULL);
+        sceKernelUnloadModule(sKernelButtonsModule);
     }
     sceKernelExitGame();
 }

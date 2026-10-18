@@ -15,11 +15,16 @@ struct KernelButtons
 };
 
 static struct KernelButtons *sShared;
+// Kept in the module's own (kernel) memory: once the game has exited, the
+// game's memory belongs to the XMB, and reading run from it there could keep
+// this thread writing into the XMB
+static volatile int sStop;
+static SceUID sThread = -1;
 
 static int ButtonThread(SceSize args, void *argp)
 {
-    // The game clears run before it exits
-    while (sShared->run)
+    // The game clears run, and stops the module, before it exits
+    while (!sStop && sShared->run)
     {
         SceCtrlData pad;
 
@@ -42,11 +47,19 @@ int module_start(SceSize args, void *argp)
     thread = sceKernelCreateThread("EmeraldButtons", ButtonThread, 0x18, 0x800, 0, NULL);
     if (thread < 0)
         return thread;
+    sThread = thread;
     sceKernelStartThread(thread, 0, NULL);
     return 0;
 }
 
+// Called when the game unloads the module, and by the system when the game
+// exits without doing so: the thread is gone before the game's memory is
 int module_stop(SceSize args, void *argp)
 {
+    SceUInt timeout = 200 * 1000;
+
+    sStop = 1;
+    if (sThread >= 0)
+        sceKernelWaitThreadEnd(sThread, &timeout);
     return 0;
 }
