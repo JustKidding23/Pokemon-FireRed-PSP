@@ -213,6 +213,7 @@ int main(int argc, char **argv)
         SDL_PauseAudio(0);
     }
 
+    ResetIoRegisters();
     AgbMain();
 
     double accumulator = 0.0;
@@ -484,6 +485,7 @@ void VDraw(SDL_Texture *texture)
 
 int DoMain(void *data)
 {
+    ResetIoRegisters();
     AgbMain();
     return 0;
 }
@@ -832,6 +834,7 @@ static int RunTestMode(void)
     static uint16_t image[DISPLAY_WIDTH * DISPLAY_HEIGHT];
 
     cgb_audio_init(AUDIO_SAMPLE_RATE);
+    ResetIoRegisters();
     AgbMain();
 
     for (sTestFrame = 0; ReadTestInput(&sTestButtons); sTestFrame++)

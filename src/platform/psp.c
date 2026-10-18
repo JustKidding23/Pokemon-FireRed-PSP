@@ -1241,6 +1241,7 @@ int main(int argc, char **argv)
     cgb_audio_init(AUDIO_SAMPLE_RATE);
     PspHw_AudioInit(AUDIO_SAMPLE_RATE);
     PspHw_StartWatchdog();
+    ResetIoRegisters();
     AgbMain();
 
     clockStart = speedStart = PspHw_Microseconds();

@@ -15,6 +15,7 @@
 #define AUDIO_SAMPLE_RATE (60 * AUDIO_SAMPLES_PER_FRAME)
 
 void RunDMAsAndVBlank(void);
+void ResetIoRegisters(void);
 void AudioUpdate(void);
 bool8 RunMainLoop(void);
 void RequestSoftReset(void);

@@ -106,7 +106,19 @@ void RegisterRamReset(u32 resetFlags)
 		memset(OAM, 0, sizeof(OAM));
 	// The game always resets all of the registers together
 	if (resetFlags & (RESET_SIO_REGS | RESET_SOUND_REGS | RESET_REGS))
-		memset(REG_BASE, 0, sizeof(REG_BASE));
+		ResetIoRegisters();
+}
+
+// The I/O registers as the GBA starts with them: all 0 but the affine
+// backgrounds' scale, which is 1 (0x100), like mGBA's GBAIOInit. Games such
+// as FireRed show affine backgrounds without setting it.
+void ResetIoRegisters(void)
+{
+	memset(REG_BASE, 0, sizeof(REG_BASE));
+	REG_BG2PA = 0x100;
+	REG_BG2PD = 0x100;
+	REG_BG3PA = 0x100;
+	REG_BG3PD = 0x100;
 }
 
 // On the GBA, SoftReset clears the RAM and starts the ROM over. Here it clears
