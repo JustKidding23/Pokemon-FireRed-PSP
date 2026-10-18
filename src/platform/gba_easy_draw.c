@@ -223,7 +223,12 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
             else
             {
                 for (unsigned int tileX = xx % 8, end = tileX + run; tileX < end; tileX++, x++)
-                    line[x] = pal[row[flipX ? 7 - tileX : tileX]] | 0x8000;
+                {
+                    uint8_t pixel = row[flipX ? 7 - tileX : tileX];
+
+                    // Color 0 is clear in 256-color tiles too
+                    line[x] = pixel != 0 ? (pal[pixel] | 0x8000) : 0;
+                }
             }
         }
         return;
@@ -290,7 +295,8 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
             if (pixel != 0)
                 line[x] = pal[16 * paletteNum + pixel] | 0x8000;
         }
-        else {
+        else if (pixel != 0) {
+            // Color 0 is clear in 256-color tiles too
             line[x] = pal[pixel] | 0x8000;
         }
     }
