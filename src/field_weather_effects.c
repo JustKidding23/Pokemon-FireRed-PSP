@@ -1,4 +1,5 @@
 #include "global.h"
+#include "fieldmap.h"
 #include "gflib.h"
 #include "battle_anim.h"
 #include "event_object_movement.h"
@@ -1389,12 +1390,22 @@ bool8 FogHorizontal_Finish(void)
 static void FogHorizontalSpriteCallback(struct Sprite *sprite)
 {
     sprite->y2 = (u8)gSpriteCoordOffsetY;
+#ifdef WIDE_OVERWORLD
+    // Six columns, starting one further left: a column whose left edge is
+    // past the wider view's right edge moves to the left of the others, so
+    // they always cover the view, margins and all
+    sprite->x = gWeatherPtr->fogHScrollPosX + 32 + (sprite->tSpriteColumn - 1) * 64;
+    if (sprite->x - 32 >= DISPLAY_WIDTH + WIDE_VIEW_MARGIN)
+        sprite->x -= (NUM_FOG_HORIZONTAL_SPRITES / 4) * 64;
+    sprite->x &= 0x1FF;
+#else
     sprite->x = gWeatherPtr->fogHScrollPosX + 32 + sprite->tSpriteColumn * 64;
     if (sprite->x >= DISPLAY_WIDTH + 32)
     {
         sprite->x = (DISPLAY_WIDTH * 2) + gWeatherPtr->fogHScrollPosX - (4 - sprite->tSpriteColumn) * 64;
         sprite->x &= 0x1FF;
     }
+#endif
 }
 
 static void CreateFogHorizontalSprites(void)
@@ -1417,9 +1428,9 @@ static void CreateFogHorizontalSprites(void)
             if (spriteId != MAX_SPRITES)
             {
                 sprite = &gSprites[spriteId];
-                sprite->tSpriteColumn = i % 5;
-                sprite->x = (i % 5) * 64 + 32;
-                sprite->y = (i / 5) * 64 + 32;
+                sprite->tSpriteColumn = i % (NUM_FOG_HORIZONTAL_SPRITES / 4);
+                sprite->x = (i % (NUM_FOG_HORIZONTAL_SPRITES / 4)) * 64 + 32;
+                sprite->y = (i / (NUM_FOG_HORIZONTAL_SPRITES / 4)) * 64 + 32;
                 gWeatherPtr->sprites.s2.fogHSprites[i] = sprite;
             }
             else

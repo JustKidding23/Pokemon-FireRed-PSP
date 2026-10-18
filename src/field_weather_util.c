@@ -15,6 +15,10 @@ void SetSavedWeather(u32 weather)
 
 u8 GetSav1Weather(void)
 {
+#ifdef TEST_FORCE_FOG
+    // Emulator tests only: fog everywhere, to see it in the wider view
+    return WEATHER_FOG_HORIZONTAL;
+#endif
     return gSaveBlock1Ptr->weather;
 }
 

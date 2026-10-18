@@ -3,7 +3,13 @@
 
 #define MAX_RAIN_SPRITES             24
 #define NUM_CLOUD_SPRITES            3
+#if defined(PORTABLE) && defined(__PSP__)
+// Six columns of four instead of five, to cover the PSP's wider view
+// (WIDE_VIEW_MARGIN) wherever the fog has scrolled to
+#define NUM_FOG_HORIZONTAL_SPRITES   24
+#else
 #define NUM_FOG_HORIZONTAL_SPRITES   20
+#endif
 #define NUM_ASH_SPRITES              20
 #define NUM_FOG_DIAGONAL_SPRITES     20
 #define NUM_SANDSTORM_SPRITES        20
