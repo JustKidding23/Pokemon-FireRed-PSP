@@ -1,4 +1,5 @@
 #include "global.h"
+#include "menu_helpers.h"
 #include "gflib.h"
 #include "decompress.h"
 #include "task.h"
@@ -1959,6 +1960,10 @@ static void DestroySlotMachine(void)
     }
     DestroyGfxManager();
     FreeAllWindowBuffers();
+#ifdef UBFIX
+    // HBlankCB_SlotMachine reads sSlotMachineGfxManager, freed above
+    SetVBlankHBlankCallbacksToNull();
+#endif
 }
 
 static void Task_SlotMachine(u8 taskId)

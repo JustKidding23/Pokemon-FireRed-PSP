@@ -54,14 +54,16 @@ struct bgPriority {
 // The columns of the line a text background draws on: all of them for a map
 // at least as wide as the line, like the overworld's, and only the GBA's 240
 // for a narrower one, which would just repeat itself in the margins
+extern bool8 gWideViewMargins;
+
 static inline unsigned int BgFirstColumn(unsigned int mapWidthInPixels)
 {
-    return mapWidthInPixels >= RENDER_WIDTH ? 0 : RENDER_MARGIN;
+    return gWideViewMargins && mapWidthInPixels >= RENDER_WIDTH ? 0 : RENDER_MARGIN;
 }
 
 static inline unsigned int BgEndColumn(unsigned int mapWidthInPixels)
 {
-    return mapWidthInPixels >= RENDER_WIDTH ? RENDER_WIDTH : RENDER_MARGIN + DISPLAY_WIDTH;
+    return gWideViewMargins && mapWidthInPixels >= RENDER_WIDTH ? RENDER_WIDTH : RENDER_MARGIN + DISPLAY_WIDTH;
 }
 
 static const uint16_t bgMapSizes[][2] =
@@ -992,8 +994,11 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     // A line is wide when a text background on it is wide enough to fill the
     // margins, like the overworld's 512-pixel maps. Then the windows and the
     // sprites reach into the margins too (see FillWindowSpan).
+    // Only on screens that say they fill the margins (gWideViewMargins):
+    // others, like the summary screen, have wide maps for scrolling whose
+    // other parts aren't meant to be seen.
     sWinExtendMargins = false;
-    for (bgnum = 0; bgnum < (mode == 0 ? 4 : 2); bgnum++)
+    for (bgnum = 0; gWideViewMargins && bgnum < (mode == 0 ? 4 : 2); bgnum++)
     {
         if (isbgEnabled(bgnum) && bgMapSizes[scanline.bgcnts[bgnum] >> 14][0] * 8 >= RENDER_WIDTH)
             sWinExtendMargins = true;

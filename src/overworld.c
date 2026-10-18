@@ -1365,6 +1365,7 @@ static void InitOverworldBgs(void)
         SetBgAttribute(1, BG_ATTR_SCREENSIZE, 1);
         SetBgAttribute(2, BG_ATTR_SCREENSIZE, 1);
         SetBgAttribute(3, BG_ATTR_SCREENSIZE, 1);
+        gWideViewMargins = TRUE;
     }
 #endif
     gBGTilemapBuffers2 = AllocZeroed(BG_SCREEN_SIZE * OVERWORLD_BG_TILEMAP_SCREENBLOCKS);
@@ -1392,6 +1393,7 @@ static void InitOverworldBgs_NoResetHeap(void)
         SetBgAttribute(1, BG_ATTR_SCREENSIZE, 1);
         SetBgAttribute(2, BG_ATTR_SCREENSIZE, 1);
         SetBgAttribute(3, BG_ATTR_SCREENSIZE, 1);
+        gWideViewMargins = TRUE;
     }
 #endif
     gBGTilemapBuffers2 = AllocZeroed(BG_SCREEN_SIZE * OVERWORLD_BG_TILEMAP_SCREENBLOCKS);

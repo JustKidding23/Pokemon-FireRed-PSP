@@ -674,6 +674,10 @@ void BattleInitBgsAndWindows(void)
 {
     ResetBgsAndClearDma3BusyFlags(FALSE);
     InitBgsFromTemplates(0, gBattleBgTemplates, NELEMS(gBattleBgTemplates));
+#ifdef PORTABLE
+    // The battle backdrop is 512 pixels wide and fills the margins well
+    gWideViewMargins = TRUE;
+#endif
     InitWindows(sStandardBattleWindowTemplates);
     DeactivateAllTextPrinters();
 }

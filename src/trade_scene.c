@@ -1,4 +1,5 @@
 #include "global.h"
+#include "menu_helpers.h"
 #include "gflib.h"
 #include "task.h"
 #include "util.h"
@@ -1796,6 +1797,10 @@ static bool8 DoTradeAnim_Cable(void)
                 Free(GetBgTilemapBuffer(0));
                 FreeMonSpritesGfx();
                 FREE_AND_SET_NULL(sTradeAnim);
+#ifdef UBFIX
+                // VBlankCB_TradeAnim reads sTradeAnim
+                SetVBlankHBlankCallbacksToNull();
+#endif
             }
             SetMainCallback2(CB2_ReturnToField);
             BufferInGameTradeMonName();
@@ -2296,6 +2301,10 @@ static bool8 DoTradeAnim_Wireless(void)
                 Free(GetBgTilemapBuffer(0));
                 FreeMonSpritesGfx();
                 FREE_AND_SET_NULL(sTradeAnim);
+#ifdef UBFIX
+                // VBlankCB_TradeAnim reads sTradeAnim
+                SetVBlankHBlankCallbacksToNull();
+#endif
             }
             SetMainCallback2(CB2_ReturnToField);
             BufferInGameTradeMonName();
@@ -2761,6 +2770,10 @@ static void CB2_FreeTradeAnim(void)
         Free(GetBgTilemapBuffer(0));
         FreeMonSpritesGfx();
         FREE_AND_SET_NULL(sTradeAnim);
+#ifdef UBFIX
+        // VBlankCB_TradeAnim reads sTradeAnim
+        SetVBlankHBlankCallbacksToNull();
+#endif
         if (gWirelessCommType != 0)
             DestroyWirelessStatusIndicatorSprite();
         SetMainCallback2(gMain.savedCallback);

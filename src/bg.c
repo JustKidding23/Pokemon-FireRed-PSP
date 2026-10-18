@@ -7,6 +7,12 @@
 #include "platform/system.h"
 #endif
 
+#ifdef PORTABLE
+// Whether the wider view shows the backgrounds in its margins, for screens
+// that fill them sensibly (the overworld, battles). Others keep black margins.
+bool8 gWideViewMargins;
+#endif
+
 #define DISPCNT_ALL_BG_AND_MODE_BITS    (DISPCNT_BG_ALL_ON | 0x7)
 
 struct BgControl
@@ -362,6 +368,11 @@ void ResetBgsAndClearDma3BusyFlags(bool32 enableWindowTileAutoAlloc)
 
 void InitBgsFromTemplates(u8 bgMode, const struct BgTemplate *templates, u8 numTemplates)
 {
+#ifdef PORTABLE
+    // A new screen: the wider view's margins stay black until it says
+    // otherwise (see gWideViewMargins)
+    gWideViewMargins = FALSE;
+#endif
     int i;
     u8 bg;
 

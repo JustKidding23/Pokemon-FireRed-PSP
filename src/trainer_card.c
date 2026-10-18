@@ -1,4 +1,5 @@
 #include "global.h"
+#include "menu_helpers.h"
 #include "gflib.h"
 #include "scanline_effect.h"
 #include "task.h"
@@ -477,6 +478,11 @@ static void CloseTrainerCard(u8 taskId)
     FreeAllWindowBuffers();
     FREE_AND_SET_NULL(sTrainerCardDataPtr);
     DestroyTask(taskId);
+#ifdef UBFIX
+    // VBlankCB_TrainerCard runs once more before the next screen sets its
+    // own, and reads the card's data through the NULL (the GBA's BIOS)
+    SetVBlankHBlankCallbacksToNull();
+#endif
 }
 
 // States for Task_TrainerCard. Skips the initial states, which are done once in order

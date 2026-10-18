@@ -125,4 +125,8 @@ bool32 IsTileMapOutsideWram(u8 bg);
 
 extern bool32 gWindowTileAutoAllocEnabled;
 
+#ifdef PORTABLE
+extern bool8 gWideViewMargins;
+#endif
+
 #endif // GUARD_BG_H

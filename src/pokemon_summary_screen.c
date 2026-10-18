@@ -2991,6 +2991,11 @@ static void Task_DestroyResourcesOnExit(u8 taskId)
 
     FREE_AND_SET_NULL_IF_SET(sMonSummaryScreen);
     FREE_AND_SET_NULL_IF_SET(sMonSkillsPrinterXpos);
+#ifdef UBFIX
+    // VBlankCB_PokemonSummaryScreen reads sMonSummaryScreen and runs once
+    // more before the next screen sets its own
+    SetVBlankHBlankCallbacksToNull();
+#endif
 }
 
 static void CB2_RunPokemonSummaryScreen(void)

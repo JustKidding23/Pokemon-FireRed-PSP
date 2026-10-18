@@ -1,4 +1,5 @@
 #include "global.h"
+#include "menu_helpers.h"
 #include "gflib.h"
 #include "data.h"
 #include "decompress.h"
@@ -2105,6 +2106,12 @@ static void FreePokeStorageData(void)
     TilemapUtil_Free();
     MultiMove_Free();
     FREE_AND_SET_NULL(gStorage);
+#ifdef UBFIX
+    // VBlankCB_PokeStorage and the box's sprites read gStorage, and would go
+    // on reading it through the NULL until the next screen replaces them
+    ResetSpriteData();
+    SetVBlankHBlankCallbacksToNull();
+#endif
     FreeAllWindowBuffers();
 }
 

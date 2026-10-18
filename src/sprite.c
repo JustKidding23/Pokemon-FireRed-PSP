@@ -888,6 +888,12 @@ void FreeSpriteOamMatrix(struct Sprite *sprite)
 
 void DestroySpriteAndFreeResources(struct Sprite *sprite)
 {
+#ifdef UBFIX
+    // FireRed calls it with sprites it hasn't made yet, like the summary
+    // screen's markings. The GBA reads its BIOS through the NULL.
+    if (sprite == NULL)
+        return;
+#endif
     FreeSpriteTiles(sprite);
     FreeSpritePalette(sprite);
     FreeSpriteOamMatrix(sprite);
