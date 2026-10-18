@@ -660,6 +660,10 @@ static void FillWindowSpan(uint16_t *mask, u16 left, u16 right, uint16_t value)
 
     if (right > DISPLAY_WIDTH)
         right = DISPLAY_WIDTH;
+    // An empty window, like WIN_RANGE(0, 0) at the start of a barn door wipe,
+    // covers nothing, even at the screen's edge
+    if (left == right)
+        return;
     if (left > right)
     {
         FillColumns(mask, lineStart, right, value);
