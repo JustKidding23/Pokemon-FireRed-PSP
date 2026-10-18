@@ -636,6 +636,9 @@ static bool alphaBlendSelectTargetB(struct scanlineData* scanline, uint16_t* col
 // where they are. Borrowed from pokeemerald-dualscreen's widescreen renderer.
 // (idea from Goldoire/pokeemerald-dualscreen)
 static bool sWinExtendMargins;
+// Whether the line's left and right margins were filled by carrying on the
+// GBA's edge columns (see ExtendEdges), so DrawLine leaves them
+static bool sExtendedLeft, sExtendedRight;
 
 static void FillColumns(uint16_t *mask, int from, int to, uint16_t value)
 {
@@ -963,6 +966,89 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
     }
 }
 
+// Whether a text background's pixel at the game's column gx, on line lineNum,
+// isn't clear
+static bool TextBgOpaqueAt(uint16_t control, uint16_t hoffs, uint16_t voffs, int lineNum, int gx)
+{
+    unsigned int charBaseBlock = (control >> 2) & 3;
+    unsigned int screenBaseBlock = (control >> 8) & 0x1F;
+    bool is8bpp = (control >> 7) & 1;
+    unsigned int mapWidthInPixels = bgMapSizes[control >> 14][0] * 8;
+    unsigned int mapHeightInPixels = bgMapSizes[control >> 14][1] * 8;
+    uint16_t *bgmap = (uint16_t *)BG_SCREEN_ADDR(screenBaseBlock);
+    unsigned int xx = (gx + hoffs) & 0x1FF;
+    unsigned int yy = (lineNum + voffs) & 0x1FF;
+    uint8_t *tiles = (uint8_t *)BG_CHAR_ADDR(charBaseBlock);
+
+    if (xx > 255 && mapWidthInPixels > 256)
+        bgmap += 0x400;
+    if (yy > 255 && mapHeightInPixels > 256)
+        bgmap += (mapWidthInPixels > 256) ? 0x800 : 0x400;
+    xx &= 0xFF;
+    yy &= 0xFF;
+
+    uint16_t entry = bgmap[(yy / 8) * 32 + xx / 8];
+    unsigned int tileX = (entry & (1 << 10)) ? 7 - xx % 8 : xx % 8;
+    unsigned int tileY = (entry & (1 << 11)) ? 7 - yy % 8 : yy % 8;
+
+    if (is8bpp)
+        return tiles[(uint16_t)((entry & 0x3FF) * 64) + tileY * 8 + tileX] != 0;
+    return (tiles[(uint16_t)((entry & 0x3FF) * 32) + tileY * 4 + tileX / 2] >> ((tileX & 1) * 4)) & 0xF;
+}
+
+// Boxes and backgrounds drawn to the GBA screen's edges, like the quest log's
+// bars, the start menu's help and menus' backgrounds, carry on across the
+// margins: where a background narrower than the line is the top one showing at
+// the screen's edge column, the line's margin on that side takes that column's
+// color. Boxes that stop short of the edges, like dialogue, stay as they are.
+static void ExtendEdges(uint16_t *pixels, int lineNum, const uint16_t *bgcnts, bool windowsEnabled, const uint16_t *winMask)
+{
+    static const int sEdgeColumns[2] = {0, DISPLAY_WIDTH - 1};
+    unsigned int mode = REG_DISPCNT & 3;
+
+    for (int side = 0; side < 2; side++)
+    {
+        int gx = sEdgeColumns[side];
+        int bestNarrow = 4, bestWide = 4;
+
+        for (int bgnum = 0; bgnum < (mode == 0 ? 4 : 2); bgnum++)
+        {
+            uint16_t control = bgcnts[bgnum];
+            int priority = control & 3;
+            bool wide = gWideViewMargins && bgMapSizes[control >> 14][0] * 8 >= RENDER_WIDTH;
+
+            if (!isbgEnabled(bgnum))
+                continue;
+            if (windowsEnabled && !(winMask[gx + RENDER_MARGIN] & (1 << bgnum)))
+                continue;
+            if (wide)
+            {
+                if (priority < bestWide)
+                    bestWide = priority;
+            }
+            else if (priority < bestNarrow
+                  && TextBgOpaqueAt(control, *(uint16_t *)(REG_ADDR_BG0HOFS + bgnum * 4),
+                                    *(uint16_t *)(REG_ADDR_BG0VOFS + bgnum * 4), lineNum, gx))
+            {
+                bestNarrow = priority;
+            }
+        }
+        if (bestNarrow < 4 && bestNarrow <= bestWide)
+        {
+            uint16_t color = pixels[gx + RENDER_MARGIN];
+
+            if (side == 0)
+                memsetu16(pixels, color, RENDER_MARGIN);
+            else
+                memsetu16(&pixels[RENDER_MARGIN + DISPLAY_WIDTH], color, RENDER_MARGIN);
+        }
+        if (side == 0)
+            sExtendedLeft = bestNarrow < 4 && bestNarrow <= bestWide;
+        else
+            sExtendedRight = bestNarrow < 4 && bestNarrow <= bestWide;
+    }
+}
+
 static void DrawScanline(uint16_t *pixels, uint16_t vcount)
 {
     unsigned int mode = REG_DISPCNT & 3;
@@ -1246,6 +1332,8 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
             memset(scanline.spriteLayers[prnum], 0, sizeof(scanline.spriteLayers[prnum]));
     }
     scanline.spritePriorities = 0;
+
+    ExtendEdges(pixels, vcount, scanline.bgcnts, windowsEnabled, scanline.winMask);
 }
 
 uint16_t *memsetu16(uint16_t *dst, uint16_t fill, size_t count)
@@ -1294,8 +1382,10 @@ static void DrawLine(uint16_t *line, int i)
     // color is often one the game never meant to be seen.
     if (!sWinExtendMargins)
     {
-        memset(line, 0, RENDER_MARGIN * sizeof(line[0]));
-        memset(&line[RENDER_MARGIN + DISPLAY_WIDTH], 0, RENDER_MARGIN * sizeof(line[0]));
+        if (!sExtendedLeft)
+            memset(line, 0, RENDER_MARGIN * sizeof(line[0]));
+        if (!sExtendedRight)
+            memset(&line[RENDER_MARGIN + DISPLAY_WIDTH], 0, RENDER_MARGIN * sizeof(line[0]));
     }
 }
 
