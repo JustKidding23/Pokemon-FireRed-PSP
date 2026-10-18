@@ -238,7 +238,7 @@ struct Time
     /*0x02*/ s8 hours;
     /*0x03*/ s8 minutes;
     /*0x04*/ s8 seconds;
-} ALIGNED(4);
+};
 
 struct Pokedex
 {
@@ -462,7 +462,7 @@ struct Pokeblock
     u8 bitter;
     u8 sour;
     u8 feel;
-} ALIGNED(4);
+};
 
 struct Roamer
 {
@@ -569,7 +569,7 @@ typedef union OldMan
     struct MauvilleOldManTrader trader;
     struct MauvilleManStoryteller storyteller;
     u8 filler[0x40];
-} ALIGNED(4) OldMan;
+} OldMan;
 
 struct Mail
 {
@@ -578,7 +578,7 @@ struct Mail
     /*0x1A*/ u8 trainerId[TRAINER_ID_LENGTH];
     /*0x1E*/ u16 species;
     /*0x20*/ u16 itemId;
-} ALIGNED(4);
+};
 
 struct DayCareMail
 {

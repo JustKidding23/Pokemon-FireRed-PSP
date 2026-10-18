@@ -494,7 +494,8 @@ u32 GetWindowAttribute(u8 windowId, u8 attributeId)
     case WINDOW_BASE_BLOCK:
         return gWindows[windowId].window.baseBlock;
     case WINDOW_TILE_DATA:
-        DBGPRINTF("WINDOW_TILE_DATA attribute can no longer be accessed by GetWindowAttribute");
+        // Fine with 32-bit pointers, like the GBA's and the PSP's
+        return (u32)(gWindows[windowId].tileData);
     default:
         return 0;
     }

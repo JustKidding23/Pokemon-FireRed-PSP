@@ -72,6 +72,13 @@ struct TransitionData
 };
 
 static EWRAM_DATA struct TransitionData *sTransitionData = NULL;
+#ifdef UBFIX
+// What sTransitionData points at once the transition is over. The transition's
+// VBlank and HBlank callbacks run a few more frames, until the battle sets its
+// own, and read through it. On the GBA they read the BIOS at address 0 (and the
+// screen is black by then), anywhere else NULL crashes.
+static struct TransitionData sNoTransitionData;
+#endif
 
 static bool8 TransitionIntro_FadeToGray(struct Task *task);
 static bool8 TransitionIntro_FadeFromGray(struct Task *task);
@@ -632,6 +639,10 @@ bool8 IsBattleTransitionDone(void)
     {
         InitTransitionData();
         FREE_AND_SET_NULL(sTransitionData);
+#ifdef UBFIX
+        memset(&sNoTransitionData, 0, sizeof(sNoTransitionData));
+        sTransitionData = &sNoTransitionData;
+#endif
         DestroyTask(taskId);
         return TRUE;
     }
