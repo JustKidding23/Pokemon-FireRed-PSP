@@ -338,7 +338,7 @@ static bool DeleteSlot(int slot)
     return PspHw_RemoveFile(path);
 }
 
-// Earlier builds and other ports keep one pokeemerald.sav. If there's one next
+// Earlier builds and other ports keep one pokefirered.sav. If there's one next
 // to the EBOOT and no save files yet, it becomes the first one.
 static void AdoptOldSave(void)
 {
@@ -349,7 +349,7 @@ static void AdoptOldSave(void)
     SlotPath(1, path, sizeof(path));
     if (PspHw_ReadFile(path, buffer, 1) >= 0)
         return;
-    snprintf(path, sizeof(path), "%spokeemerald.sav", sBaseDir);
+    snprintf(path, sizeof(path), "%spokefirered.sav", sBaseDir);
     size = PspHw_ReadFile(path, buffer, sizeof(buffer));
     if (size <= 0)
         return;
@@ -508,7 +508,7 @@ static void DrawSettings(void)
     char text[PSP_TEXT_COLUMNS + 1];
     int row = 2;
 
-    PspHw_Print(2, row, COLOR_YELLOW, "POKEMON EMERALD PSP SETTINGS");
+    PspHw_Print(2, row, COLOR_YELLOW, "POKEMON FIRERED PSP SETTINGS");
     row += 2;
     for (int i = 0; i < ROW_COUNT; i++, row++)
     {
@@ -562,7 +562,7 @@ static void DrawSettings(void)
 // (see Platform_OpenFileSelect). It's drawn like the game's CONTINUE
 // screen (see main_menu.c), with its font, window frame and colors, into an
 // image of the GBA's size.
-#define SAVES_BG_COLOR    RGB(17, 18, 31) // graphics/interface/main_menu_bg.pal
+#define SAVES_BG_COLOR    RGB(17, 18, 31) // graphics/main_menu/bg.gbapal
 #define TEXT_WHITE        RGB_WHITE
 #define TEXT_DARK         RGB(12, 12, 12)
 #define TEXT_SHADOW       RGB(26, 26, 25)
@@ -570,9 +570,9 @@ static void DrawSettings(void)
 #define TEXT_FEMALE       RGB(31, 3, 21)
 #define HELP_SHADOW       RGB(8, 8, 16)
 
-// Where the windows are, in tiles, like the main menu's
-#define FILE_WINDOW_LEFT  2
-#define FILE_WINDOW_WIDTH 26
+// Where the windows are, in tiles, like the main menu's (main_menu.c)
+#define FILE_WINDOW_LEFT  3
+#define FILE_WINDOW_WIDTH 24
 #define FILE_WINDOW_HEIGHT 4
 #define FILE_WINDOW_TOP(i) (1 + (i) * 6)
 
@@ -812,19 +812,20 @@ static void DrawFileWindow(int file)
     {
         u8 *end;
 
-        // Like MainMenu_FormatSavegamePlayer, Time and Badges
-        DrawStringRightAligned(info->name, x + 100, y + 1, infoColor, TEXT_SHADOW);
+        // Like the CONTINUE window's player, time and badges (main_menu.c),
+        // in two columns to fit a file in a smaller window
+        DrawStringRightAligned(info->name, x + 92, y + 1, infoColor, TEXT_SHADOW);
         DrawString(gText_MainMenuTime, x, y + 17, infoColor, TEXT_SHADOW);
         end = ConvertIntToDecimalStringN(text, info->hours, STR_CONV_MODE_LEFT_ALIGN, 3);
         *end++ = CHAR_COLON;
         ConvertIntToDecimalStringN(end, info->minutes, STR_CONV_MODE_LEADING_ZEROS, 2);
-        DrawStringRightAligned(text, x + 100, y + 17, infoColor, TEXT_SHADOW);
-        DrawString(gText_Badges, x + 0x6C, y + 17, infoColor, TEXT_SHADOW);
+        DrawStringRightAligned(text, x + 92, y + 17, infoColor, TEXT_SHADOW);
+        DrawString(gText_Badges, x + 104, y + 17, infoColor, TEXT_SHADOW);
         ConvertIntToDecimalStringN(text, info->badges, STR_CONV_MODE_LEADING_ZEROS, 1);
-        DrawStringRightAligned(text, x + 0xD0, y + 17, infoColor, TEXT_SHADOW);
+        DrawStringRightAligned(text, x + 186, y + 17, infoColor, TEXT_SHADOW);
     }
     if (file + 1 == sSettings.slot)
-        DrawAscii("PLAYING", x + 0x6C, y + 1, TEXT_DARK, TEXT_SHADOW);
+        DrawAscii("PLAYING", x + 104, y + 1, TEXT_DARK, TEXT_SHADOW);
     sDarken = false;
 }
 
@@ -835,7 +836,9 @@ static void DrawSavesScreen(void)
     const char *b = sSettings.circleIsA ? "X" : "O";
     char help[64];
 
-    FillRect(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, SAVES_BG_COLOR);
+    // FireRed's main menu darkens the background too, not only the windows
+    // that aren't selected
+    FillRect(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, DarkenColor(SAVES_BG_COLOR));
     for (int file = 0; file < NUM_SLOTS; file++)
         DrawFileWindow(file);
 
@@ -1204,7 +1207,7 @@ static void FindBaseDir(const char *exePath)
     }
     else
     {
-        strcpy(sBaseDir, "ms0:/PSP/GAME/EMERALD_PSP/");
+        strcpy(sBaseDir, "ms0:/PSP/GAME/FIRERED_PSP/");
     }
 }
 

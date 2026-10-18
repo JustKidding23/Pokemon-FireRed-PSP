@@ -4,7 +4,7 @@
 #include <pspkernel.h>
 #include <pspctrl.h>
 
-PSP_MODULE_INFO("EmeraldButtons", PSP_MODULE_KERNEL, 1, 0);
+PSP_MODULE_INFO("FireRedButtons", PSP_MODULE_KERNEL, 1, 0);
 PSP_NO_CREATE_MAIN_THREAD();
 
 // Shared with psp_hw.c
@@ -59,7 +59,7 @@ int module_start(SceSize args, void *argp)
         return -1;
     sShared = *(struct KernelButtons **)argp;
     sGameThread = sShared->gameThread;
-    thread = sceKernelCreateThread("EmeraldButtons", ButtonThread, 0x18, 0x800, 0, NULL);
+    thread = sceKernelCreateThread("FireRedButtons", ButtonThread, 0x18, 0x800, 0, NULL);
     if (thread < 0)
         return thread;
     sThread = thread;

@@ -16,7 +16,7 @@
 
 #include "platform/psp_hw.h"
 
-PSP_MODULE_INFO("Pokemon Emerald PSP", PSP_MODULE_USER, 1, 0);
+PSP_MODULE_INFO("Pokemon FireRed PSP", PSP_MODULE_USER, 1, 0);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
 // Everything but 1 MB for the system's threads and their stacks
 PSP_HEAP_SIZE_KB(-1024);
@@ -193,7 +193,7 @@ static void ShowHang(void)
     pspDebugScreenSetBackColor(0xFF804000);
     pspDebugScreenSetTextColor(0xFFFFFFFF);
     pspDebugScreenClear();
-    pspDebugScreenPrintf("Pokemon Emerald PSP stopped responding.\n");
+    pspDebugScreenPrintf("Pokemon FireRed PSP stopped responding.\n");
     pspDebugScreenPrintf("Please photograph this screen.\n\n");
     pspDebugScreenPrintf("Stuck in: %s\n", step < sizeof(sSteps) / sizeof(sSteps[0]) ? sSteps[step] : "?");
     pspDebugScreenPrintf("Frame %u\n\n", (unsigned)sDiag[PSP_DIAG_FRAME]);

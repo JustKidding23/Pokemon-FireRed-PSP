@@ -37,6 +37,9 @@
 #include "constants/songs.h"
 #include "constants/field_weather.h"
 #include "sloopsvc.h"
+#if defined(PORTABLE) && defined(__PSP__)
+#include "platform.h"
+#endif
 
 enum StartMenuOption
 {
@@ -49,6 +52,9 @@ enum StartMenuOption
     STARTMENU_EXIT,
     STARTMENU_RETIRE,
     STARTMENU_PLAYER2,
+#if defined(PORTABLE) && defined(__PSP__)
+    STARTMENU_FILE_SELECT,
+#endif
     MAX_STARTMENU_ITEMS
 };
 
@@ -88,6 +94,18 @@ static bool8 StartMenuOptionCallback(void);
 static bool8 StartMenuExitCallback(void);
 static bool8 StartMenuSafariZoneRetireCallback(void);
 static bool8 StartMenuLinkPlayerCallback(void);
+#if defined(PORTABLE) && defined(__PSP__)
+// The PSP's save files, under SAVE (see Platform_OpenFileSelect)
+static bool8 StartMenuFileSelectCallback(void);
+static const u8 sText_MenuFileSelect[] = _("FILE SELECT");
+static const u8 sStartMenuDesc_FileSelect[] = _("Play, copy or delete the other\nadventures saved on this PSP.");
+// With FILE SELECT the normal start menu has eight items. Spaced 13 pixels
+// apart instead of 15, they fill the window seven items take, which ends
+// where the help message window begins.
+#define START_MENU_LINE_HEIGHT (sNumStartMenuItems > 7 ? 13 : 15)
+#else
+#define START_MENU_LINE_HEIGHT 15
+#endif
 static bool8 StartCB_Save1(void);
 static bool8 StartCB_Save2(void);
 static void StartMenu_PrepareForSave(void);
@@ -122,7 +140,10 @@ static const struct MenuAction sStartMenuActionTable[] = {
     [STARTMENU_OPTION]  = { gText_MenuOption,  {.u8_void = StartMenuOptionCallback} },
     [STARTMENU_EXIT]    = { gText_MenuExit,    {.u8_void = StartMenuExitCallback} },
     [STARTMENU_RETIRE]  = { gText_MenuRetire,  {.u8_void = StartMenuSafariZoneRetireCallback} },
-    [STARTMENU_PLAYER2] = { gText_MenuPlayer,  {.u8_void = StartMenuLinkPlayerCallback} }
+    [STARTMENU_PLAYER2] = { gText_MenuPlayer,  {.u8_void = StartMenuLinkPlayerCallback} },
+#if defined(PORTABLE) && defined(__PSP__)
+    [STARTMENU_FILE_SELECT] = { sText_MenuFileSelect, {.u8_void = StartMenuFileSelectCallback} },
+#endif
 };
 
 static const struct WindowTemplate sSafariZoneStatsWindowTemplate = {
@@ -144,7 +165,10 @@ static const u8 *const sStartMenuDescPointers[] = {
     gStartMenuDesc_Option,
     gStartMenuDesc_Exit,
     gStartMenuDesc_Retire,
-    gStartMenuDesc_Player
+    gStartMenuDesc_Player,
+#if defined(PORTABLE) && defined(__PSP__)
+    sStartMenuDesc_FileSelect,
+#endif
 };
 
 static const struct BgTemplate sBGTemplates_AfterLinkSaveMessage[] = {
@@ -212,13 +236,21 @@ static void AppendToStartMenuItems(u8 newEntry)
 
 static void SetUpStartMenu_NormalField(void)
 {
+#ifdef START_MENU_FORCE_DEX
+    // Emulator tests only: the full menu, for screenshots of its layout
+    if (TRUE)
+#else
     if (FlagGet(FLAG_SYS_POKEDEX_GET) == TRUE)
+#endif
         AppendToStartMenuItems(STARTMENU_POKEDEX);
     if (FlagGet(FLAG_SYS_POKEMON_GET) == TRUE)
         AppendToStartMenuItems(STARTMENU_POKEMON);
     AppendToStartMenuItems(STARTMENU_BAG);
     AppendToStartMenuItems(STARTMENU_PLAYER);
     AppendToStartMenuItems(STARTMENU_SAVE);
+#if defined(PORTABLE) && defined(__PSP__)
+    AppendToStartMenuItems(STARTMENU_FILE_SELECT);
+#endif
     AppendToStartMenuItems(STARTMENU_OPTION);
     AppendToStartMenuItems(STARTMENU_EXIT);
 }
@@ -282,12 +314,12 @@ static s8 PrintStartMenuItems(s8 *cursor_p, u8 nitems)
     {
         if (sStartMenuOrder[i] == STARTMENU_PLAYER || sStartMenuOrder[i] == STARTMENU_PLAYER2)
         {
-            Menu_PrintFormatIntlPlayerName(GetStartMenuWindowId(), sStartMenuActionTable[sStartMenuOrder[i]].text, 8, i * 15);
+            Menu_PrintFormatIntlPlayerName(GetStartMenuWindowId(), sStartMenuActionTable[sStartMenuOrder[i]].text, 8, i * START_MENU_LINE_HEIGHT);
         }
         else
         {
             StringExpandPlaceholders(gStringVar4, sStartMenuActionTable[sStartMenuOrder[i]].text);
-            AddTextPrinterParameterized(GetStartMenuWindowId(), FONT_NORMAL, gStringVar4, 8, i * 15, 0xFF, NULL);
+            AddTextPrinterParameterized(GetStartMenuWindowId(), FONT_NORMAL, gStringVar4, 8, i * START_MENU_LINE_HEIGHT, 0xFF, NULL);
         }
         i++;
         if (i >= sNumStartMenuItems)
@@ -313,7 +345,12 @@ static s8 DoDrawStartMenu(void)
         break;
     case 2:
         LoadStdWindowFrameGfx();
+        #if defined(PORTABLE) && defined(__PSP__)
+        // Eight items at 13 pixels take as many tiles as seven at 15
+        DrawStdWindowFrame(CreateStartMenuWindow(sNumStartMenuItems > 7 ? 7 : sNumStartMenuItems), FALSE);
+#else
         DrawStdWindowFrame(CreateStartMenuWindow(sNumStartMenuItems), FALSE);
+#endif
         sDrawStartMenuState[0]++;
         break;
     case 3:
@@ -326,7 +363,7 @@ static s8 DoDrawStartMenu(void)
             sDrawStartMenuState[0]++;
         break;
     case 5:
-        sStartMenuCursorPos = Menu_InitCursor(GetStartMenuWindowId(), FONT_NORMAL, 0, 0, 15, sNumStartMenuItems, sStartMenuCursorPos);
+        sStartMenuCursorPos = Menu_InitCursor(GetStartMenuWindowId(), FONT_NORMAL, 0, 0, START_MENU_LINE_HEIGHT, sNumStartMenuItems, sStartMenuCursorPos);
         if (!MenuHelpers_IsLinkActive() && InUnionRoom() != TRUE && gSaveBlock2Ptr->optionsButtonMode == OPTIONS_BUTTON_MODE_HELP)
         {
             DrawHelpMessageWindowWithText(sStartMenuDescPointers[sStartMenuOrder[sStartMenuCursorPos]]);
@@ -447,6 +484,9 @@ static bool8 StartCB_HandleInput(void)
 static void StartMenu_FadeScreenIfLeavingOverworld(void)
 {
     if (sStartMenuCallback != StartMenuSaveCallback
+#if defined(PORTABLE) && defined(__PSP__)
+     && sStartMenuCallback != StartMenuFileSelectCallback
+#endif
      && sStartMenuCallback != StartMenuExitCallback
      && sStartMenuCallback != StartMenuSafariZoneRetireCallback)
     {
@@ -534,6 +574,17 @@ static bool8 StartMenuOptionCallback(void)
     }
     return FALSE;
 }
+
+#if defined(PORTABLE) && defined(__PSP__)
+// The save file screen goes over the game, and the start menu stays open
+// behind it
+static bool8 StartMenuFileSelectCallback(void)
+{
+    Platform_OpenFileSelect();
+    sStartMenuCallback = StartCB_HandleInput;
+    return FALSE;
+}
+#endif
 
 static bool8 StartMenuExitCallback(void)
 {

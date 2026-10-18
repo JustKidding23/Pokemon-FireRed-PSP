@@ -17,6 +17,9 @@
 #include "text_window.h"
 #include "text_window_graphics.h"
 #include "constants/songs.h"
+#if defined(PORTABLE) && defined(__PSP__)
+#include "platform.h"
+#endif
 
 enum MainMenuType
 {
@@ -32,6 +35,10 @@ enum MainMenuWindow
     MAIN_MENU_WINDOW_NEWGAME,
     MAIN_MENU_WINDOW_MYSTERYGIFT,
     MAIN_MENU_WINDOW_ERROR,
+#if defined(PORTABLE) && defined(__PSP__)
+    MAIN_MENU_WINDOW_FILESELECT_TOP,    // under NEW GAME, without a save
+    MAIN_MENU_WINDOW_FILESELECT_BOTTOM, // where MYSTERY GIFT would be
+#endif
     MAIN_MENU_WINDOW_COUNT
 };
 
@@ -117,8 +124,35 @@ static const struct WindowTemplate sWindowTemplate[] = {
         .paletteNum = 15,
         .baseBlock = 0x001
     }, 
+#if defined(PORTABLE) && defined(__PSP__)
+    [MAIN_MENU_WINDOW_FILESELECT_TOP] = {
+        .bg = 0,
+        .tilemapLeft = 3,
+        .tilemapTop = 5,
+        .width = 24,
+        .height = 2,
+        .paletteNum = 15,
+        .baseBlock = 0x031
+    },
+    [MAIN_MENU_WINDOW_FILESELECT_BOTTOM] = {
+        .bg = 0,
+        .tilemapLeft = 3,
+        .tilemapTop = 17,
+        .width = 24,
+        .height = 2,
+        .paletteNum = 15,
+        .baseBlock = 0x121
+    },
+#endif
     [MAIN_MENU_WINDOW_COUNT] = DUMMY_WIN_TEMPLATE
 };
+
+#if defined(PORTABLE) && defined(__PSP__)
+// The PSP's save files (see Platform_OpenFileSelect): FILE SELECT comes last,
+// when there's room. With MYSTERY GIFT the menu already fills the screen.
+static const u8 sText_FileSelect[] = _("FILE SELECT");
+#define FILE_SELECT_ITEM(menuType) ((menuType) == MAIN_MENU_NEWGAME ? 1 : (menuType) == MAIN_MENU_CONTINUE ? 2 : -1)
+#endif
 
 static const u16 sBg_Pal[] = INCBIN_U16("graphics/main_menu/bg.gbapal");
 static const u16 sTextbox_Pal[] = INCBIN_U16("graphics/main_menu/textbox.gbapal");
@@ -136,7 +170,11 @@ static const struct BgTemplate sBgTemplate[] = {
     }
 };
 
+#if defined(PORTABLE) && defined(__PSP__)
+static const u8 sMenuCursorYMax[] = { 1, 2, 2 };
+#else
 static const u8 sMenuCursorYMax[] = { 0, 1, 2 };
+#endif
 
 static void CB2_MainMenu(void)
 {
@@ -352,6 +390,13 @@ static void Task_PrintMainMenuText(u8 taskId)
         AddTextPrinterParameterized3(MAIN_MENU_WINDOW_NEWGAME_ONLY, FONT_NORMAL, 2, 2, sTextColor1, -1, gText_NewGame);
         MainMenu_DrawWindow(&sWindowTemplate[MAIN_MENU_WINDOW_NEWGAME_ONLY]);
         PutWindowTilemap(MAIN_MENU_WINDOW_NEWGAME_ONLY);
+#if defined(PORTABLE) && defined(__PSP__)
+        FillWindowPixelBuffer(MAIN_MENU_WINDOW_FILESELECT_TOP, PIXEL_FILL(10));
+        AddTextPrinterParameterized3(MAIN_MENU_WINDOW_FILESELECT_TOP, FONT_NORMAL, 2, 2, sTextColor1, -1, sText_FileSelect);
+        MainMenu_DrawWindow(&sWindowTemplate[MAIN_MENU_WINDOW_FILESELECT_TOP]);
+        PutWindowTilemap(MAIN_MENU_WINDOW_FILESELECT_TOP);
+        CopyWindowToVram(MAIN_MENU_WINDOW_FILESELECT_TOP, COPYWIN_GFX);
+#endif
         CopyWindowToVram(MAIN_MENU_WINDOW_NEWGAME_ONLY, COPYWIN_FULL);
         break;
     case MAIN_MENU_CONTINUE:
@@ -365,6 +410,13 @@ static void Task_PrintMainMenuText(u8 taskId)
         PutWindowTilemap(MAIN_MENU_WINDOW_CONTINUE);
         PutWindowTilemap(MAIN_MENU_WINDOW_NEWGAME);
         CopyWindowToVram(MAIN_MENU_WINDOW_CONTINUE, COPYWIN_GFX);
+#if defined(PORTABLE) && defined(__PSP__)
+        FillWindowPixelBuffer(MAIN_MENU_WINDOW_FILESELECT_BOTTOM, PIXEL_FILL(10));
+        AddTextPrinterParameterized3(MAIN_MENU_WINDOW_FILESELECT_BOTTOM, FONT_NORMAL, 2, 2, sTextColor1, -1, sText_FileSelect);
+        MainMenu_DrawWindow(&sWindowTemplate[MAIN_MENU_WINDOW_FILESELECT_BOTTOM]);
+        PutWindowTilemap(MAIN_MENU_WINDOW_FILESELECT_BOTTOM);
+        CopyWindowToVram(MAIN_MENU_WINDOW_FILESELECT_BOTTOM, COPYWIN_GFX);
+#endif
         CopyWindowToVram(MAIN_MENU_WINDOW_NEWGAME, COPYWIN_FULL);
         break;
     case MAIN_MENU_MYSTERYGIFT:
@@ -539,6 +591,14 @@ static void MoveWindowByMenuTypeAndCursorPos(u8 menuType, u8 cursorPos)
     {
     default:
     case MAIN_MENU_NEWGAME:
+#if defined(PORTABLE) && defined(__PSP__)
+        if (cursorPos == 1) // FILE SELECT
+        {
+            win0vTop = 0x20 << 8;
+            win0vBot = 0x40;
+            break;
+        }
+#endif
         win0vTop = 0x00 << 8;
         win0vBot = 0x20;
         break;
@@ -567,6 +627,15 @@ static void MoveWindowByMenuTypeAndCursorPos(u8 menuType, u8 cursorPos)
 
 static bool8 HandleMenuInput(u8 taskId)
 {
+#if defined(PORTABLE) && defined(__PSP__)
+    // The save file screen goes over the menu, which stays as it is
+    if (JOY_NEW(A_BUTTON) && gTasks[taskId].tCursorPos == FILE_SELECT_ITEM(gTasks[taskId].tMenuType))
+    {
+        PlaySE(SE_SELECT);
+        Platform_OpenFileSelect();
+        return FALSE;
+    }
+#endif
     if (JOY_NEW(A_BUTTON))
     {
         PlaySE(SE_SELECT);
