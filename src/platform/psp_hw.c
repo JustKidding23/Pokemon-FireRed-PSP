@@ -326,32 +326,46 @@ struct ColorVertex
     short x, y, z;
 };
 
-void PspHw_DrawGame(const uint16_t *image, int scale, bool filter, bool dim)
+// image is width pixels across (the GBA's 240, or the wider view's), its rows
+// stride pixels apart, a multiple of 8
+void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, bool filter, bool dim)
 {
     int x = 0, y = 0, w = SCREEN_WIDTH, h = SCREEN_HEIGHT;
-    int u0 = 0, v0 = 0, u1 = GBA_WIDTH, v1 = GBA_HEIGHT;
+    int u0 = 0, v0 = 0, u1 = width, v1 = GBA_HEIGHT;
     struct TexVertex *verts;
 
     switch (scale)
     {
     case PSP_SCALE_FIT:
         // 1.7 times, which keeps the shape and fills the height
-        w = GBA_WIDTH * SCREEN_HEIGHT / GBA_HEIGHT;
+        w = width * SCREEN_HEIGHT / GBA_HEIGHT;
+        if (w > SCREEN_WIDTH)
+            w = SCREEN_WIDTH;
         break;
     case PSP_SCALE_2X_CROP:
-        // 480x320 with 24 lines cut off at the top and bottom
+        // Twice the size, with 24 lines cut off at the top and bottom, and the
+        // sides cut to the screen's width
         v0 = (2 * GBA_HEIGHT - SCREEN_HEIGHT) / 4;
         v1 = GBA_HEIGHT - v0;
+        if (2 * width > SCREEN_WIDTH)
+        {
+            u0 = (2 * width - SCREEN_WIDTH) / 4;
+            u1 = width - u0;
+        }
+        else
+        {
+            w = 2 * width;
+        }
         break;
     case PSP_SCALE_1X:
-        w = GBA_WIDTH;
+        w = width;
         h = GBA_HEIGHT;
         break;
     }
     x = (SCREEN_WIDTH - w) / 2;
     y = (SCREEN_HEIGHT - h) / 2;
 
-    sceKernelDcacheWritebackRange(image, GBA_WIDTH * GBA_HEIGHT * 2);
+    sceKernelDcacheWritebackRange(image, stride * GBA_HEIGHT * 2);
 
     sceGuStart(GU_DIRECT, sDisplayList);
     sceGuClearColor(0xFF000000);
@@ -359,8 +373,8 @@ void PspHw_DrawGame(const uint16_t *image, int scale, bool filter, bool dim)
 
     sceGuEnable(GU_TEXTURE_2D);
     sceGuTexMode(GU_PSM_5551, 0, 0, 0);
-    // The rows are 240 pixels apart in the image, in a 256x256 texture
-    sceGuTexImage(0, 256, 256, GBA_WIDTH, image);
+    // A texture as wide as a power of 2 that holds the image's rows
+    sceGuTexImage(0, stride > 256 ? 512 : 256, 256, stride, image);
     sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGB);
     sceGuTexFilter(filter ? GU_LINEAR : GU_NEAREST, filter ? GU_LINEAR : GU_NEAREST);
     sceGuTexWrap(GU_CLAMP, GU_CLAMP);

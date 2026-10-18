@@ -1213,7 +1213,7 @@ static void FindBaseDir(const char *exePath)
 
 int main(int argc, char **argv)
 {
-    static u16 __attribute__((aligned(16))) image[DISPLAY_WIDTH * DISPLAY_HEIGHT];
+    static u16 __attribute__((aligned(16))) image[RENDER_STRIDE * DISPLAY_HEIGHT];
     char path[300];
     u32 held = 0;
     u64 clockStart, framesRun = 0;
@@ -1364,11 +1364,11 @@ int main(int argc, char **argv)
         if (sSaves.open)
         {
             DrawSavesScreen();
-            PspHw_DrawGame(sSavesImage, sSettings.scale, sSettings.filter, false);
+            PspHw_DrawGame(sSavesImage, DISPLAY_WIDTH, DISPLAY_WIDTH, sSettings.scale, sSettings.filter, false);
         }
         else
         {
-            PspHw_DrawGame(image, sSettings.scale, sSettings.filter, sSettingsMenu.open);
+            PspHw_DrawGame(image, RENDER_WIDTH, RENDER_STRIDE, sSettings.scale, sSettings.filter, sSettingsMenu.open);
             if (sSettingsMenu.open)
                 DrawSettings();
         }

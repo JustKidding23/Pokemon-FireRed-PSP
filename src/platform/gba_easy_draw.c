@@ -2,6 +2,7 @@
 #include "global.h"
 #include <stdbool.h>
 #include "platform/dma.h"
+#include "platform/framedraw.h"
 
 #define mosaicBGEffectX (REG_MOSAIC & 0xF)
 #define mosaicBGEffectY ((REG_MOSAIC >> 4) & 0xF)
@@ -32,13 +33,13 @@ uint16_t *memsetu16(uint16_t *dst, uint16_t fill, size_t count);
 
 struct scanlineData {
     // Only the enabled backgrounds' layers are drawn, and read, each line
-    uint16_t layers[4][DISPLAY_WIDTH];
+    uint16_t layers[4][RENDER_WIDTH];
     // Clear at the start of each line: DrawScanline clears the ones that
     // spritePriorities says were drawn on
-    uint16_t spriteLayers[4][DISPLAY_WIDTH];
+    uint16_t spriteLayers[4][RENDER_WIDTH];
     uint8_t spritePriorities;
     uint16_t bgcnts[4];
-    uint16_t winMask[DISPLAY_WIDTH];
+    uint16_t winMask[RENDER_WIDTH];
     //priority bookkeeping
     char bgtoprio[4]; //background to priority
     char prioritySortedBgs[4][4];
@@ -49,6 +50,19 @@ struct bgPriority {
     char priority;
     char subPriority;
 };
+
+// The columns of the line a text background draws on: all of them for a map
+// at least as wide as the line, like the overworld's, and only the GBA's 240
+// for a narrower one, which would just repeat itself in the margins
+static inline unsigned int BgFirstColumn(unsigned int mapWidthInPixels)
+{
+    return mapWidthInPixels >= RENDER_WIDTH ? 0 : RENDER_MARGIN;
+}
+
+static inline unsigned int BgEndColumn(unsigned int mapWidthInPixels)
+{
+    return mapWidthInPixels >= RENDER_WIDTH ? RENDER_WIDTH : RENDER_MARGIN + DISPLAY_WIDTH;
+}
 
 static const uint16_t bgMapSizes[][2] =
 {
@@ -99,9 +113,9 @@ static void RenderBGScanlineDirect(int bgNum, uint16_t control, uint16_t hoffs, 
     yy &= 0xFF;
     bgmapRow += (yy / 8) * 32;
 
-    for (unsigned int x = 0; x < DISPLAY_WIDTH;)
+    for (unsigned int x = BgFirstColumn(mapWidthInPixels), lineEnd = BgEndColumn(mapWidthInPixels); x < lineEnd;)
     {
-        unsigned int xx = (x + hoffs) & 0x1FF;
+        unsigned int xx = (x - RENDER_MARGIN + hoffs) & 0x1FF;
         uint16_t *bgmap = bgmapRow;
 
         if (xx > 255 && mapWidthInPixels > 256)
@@ -114,8 +128,8 @@ static void RenderBGScanlineDirect(int bgNum, uint16_t control, uint16_t hoffs, 
         unsigned int tileX = xx % 8;
         unsigned int run = 8 - tileX;
 
-        if (run > DISPLAY_WIDTH - x)
-            run = DISPLAY_WIDTH - x;
+        if (run > lineEnd - x)
+            run = lineEnd - x;
         if (pixels == 0)
         {
             x += run;
@@ -181,9 +195,17 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
         yy &= 0xFF;
         bgmapRow += (yy / 8) * 32;
 
-        for (unsigned int x = 0; x < DISPLAY_WIDTH;)
+        unsigned int lineEnd = BgEndColumn(mapWidthInPixels);
+
+        // A narrow map leaves the margins clear
+        if (BgFirstColumn(mapWidthInPixels) != 0)
         {
-            unsigned int xx = (x + hoffs) & 0x1FF;
+            memset(line, 0, RENDER_MARGIN * sizeof(line[0]));
+            memset(&line[lineEnd], 0, (RENDER_WIDTH - lineEnd) * sizeof(line[0]));
+        }
+        for (unsigned int x = BgFirstColumn(mapWidthInPixels); x < lineEnd;)
+        {
+            unsigned int xx = (x - RENDER_MARGIN + hoffs) & 0x1FF;
             uint16_t *bgmap = bgmapRow;
 
             if (xx > 255 && mapWidthInPixels > 256)
@@ -196,8 +218,8 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
             bool flipX = entry & (1 << 10);
             unsigned int run = 8 - (xx % 8);
 
-            if (run > DISPLAY_WIDTH - x)
-                run = DISPLAY_WIDTH - x;
+            if (run > lineEnd - x)
+                run = lineEnd - x;
             if (bitsPerPixel == 4)
             {
                 uint16_t *subPal = pal + 16 * ((entry >> 12) & 0xF);
@@ -235,16 +257,22 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
     }
 
     // This way only draws the pixels that aren't clear
-    memset(line, 0, DISPLAY_WIDTH * sizeof(line[0]));
-    for (unsigned int x = 0; x < DISPLAY_WIDTH; x++)
+    memset(line, 0, RENDER_WIDTH * sizeof(line[0]));
+    for (unsigned int x = BgFirstColumn(mapWidthInPixels); x < BgEndColumn(mapWidthInPixels); x++)
     {
         uint16_t *bgmap = (uint16_t *)BG_SCREEN_ADDR(screenBaseBlock);
-        // adjust for scroll
+        // adjust for scroll, in the game's columns (which start left of 0
+        // in the margin), with the mosaic grid anchored on the GBA's 0
+        int gx = (int)x - RENDER_MARGIN;
         unsigned int xx;
         if (control & BGCNT_MOSAIC)
-            xx = (applyBGHorizontalMosaicEffect(x) + hoffs) & 0x1FF;
+        {
+            int size = mosaicBGEffectX + 1;
+
+            xx = (gx - (((gx % size) + size) % size) + hoffs) & 0x1FF;
+        }
         else
-            xx = (x + hoffs) & 0x1FF;
+            xx = (gx + hoffs) & 0x1FF;
         
         unsigned int yy = (lineNum + voffs) & 0x1FF;
         
@@ -420,13 +448,18 @@ static void RenderRotScaleBGScanline(int bgNum, uint16_t control, uint16_t x, ui
     currentX += lineNum * pb;
     currentY += lineNum * pd;
 
-    int realX = currentX;
-    int realY = currentY;
+    // The walk starts at the line's first column, RENDER_MARGIN columns left
+    // of the GBA's. A background that wraps would repeat itself out there,
+    // so it only draws the GBA's columns.
+    int firstColumn = bgcnt->areaOverflowMode ? RENDER_MARGIN : 0;
+    int endColumn = bgcnt->areaOverflowMode ? RENDER_MARGIN + DISPLAY_WIDTH : RENDER_WIDTH;
+    int realX = currentX + (firstColumn - RENDER_MARGIN) * pa;
+    int realY = currentY + (firstColumn - RENDER_MARGIN) * pc;
 
-    memset(line, 0, DISPLAY_WIDTH * sizeof(line[0]));
+    memset(line, 0, RENDER_WIDTH * sizeof(line[0]));
     if (bgcnt->areaOverflowMode)
     {
-        for (int x = 0; x < DISPLAY_WIDTH; x++)
+        for (int x = firstColumn; x < endColumn; x++)
         {
             int xxx = (realX >> 8) & maskX;
             int yyy = (realY >> 8) & maskY;
@@ -448,7 +481,7 @@ static void RenderRotScaleBGScanline(int bgNum, uint16_t control, uint16_t x, ui
     }
     else
     {
-        for (int x = 0; x < DISPLAY_WIDTH; x++)
+        for (int x = firstColumn; x < endColumn; x++)
         {
             int xxx = (realX >> 8);
             int yyy = (realY >> 8);
@@ -478,11 +511,15 @@ static void RenderRotScaleBGScanline(int bgNum, uint16_t control, uint16_t x, ui
     //luckily i dont think pokemon emerald uses mosaic on affine bgs
     if (control & BGCNT_MOSAIC && mosaicBGEffectX > 0)
     {
-        for (int x = 0; x < DISPLAY_WIDTH; x++)
+        // The mosaic grid is anchored on the GBA's column 0
+        int size = mosaicBGEffectX + 1;
+
+        for (int x = 0; x < RENDER_WIDTH; x++)
         {
-            uint16_t color = line[applyBGHorizontalMosaicEffect(x)];
-            line[x] = color;
-            
+            int gx = x - RENDER_MARGIN;
+            int from = gx - (((gx % size) + size) % size) + RENDER_MARGIN;
+
+            line[x] = line[from < 0 ? 0 : from];
         }
     }
 }
@@ -589,22 +626,43 @@ static bool alphaBlendSelectTargetB(struct scanlineData* scanline, uint16_t* col
     }
 }
 
+// Window registers only reach the GBA's 240 columns, so a window meant to
+// cover the whole screen (the overworld's WIN0H of 0x00FF) can't say it covers
+// the margins too. On lines with a background wide enough to fill the margins,
+// an edge on the screen's left or right edge carries on to the line's edge.
+// Edges inside the screen (a cave's flash circle, battle transitions) stay
+// where they are. Borrowed from pokeemerald-dualscreen's widescreen renderer.
+// (idea from Goldoire/pokeemerald-dualscreen)
+static bool sWinExtendMargins;
+
+static void FillColumns(uint16_t *mask, int from, int to, uint16_t value)
+{
+    from += RENDER_MARGIN;
+    to += RENDER_MARGIN;
+    if (from < 0)
+        from = 0;
+    if (to > RENDER_WIDTH)
+        to = RENDER_WIDTH;
+    for (int x = from; x < to; x++)
+        mask[x] = value;
+}
+
 //fills the pixels a window covers horizontally, taking account of WIN wraparound
 static void FillWindowSpan(uint16_t *mask, u16 left, u16 right, uint16_t value)
 {
-    unsigned int x;
+    int lineStart = sWinExtendMargins ? -RENDER_MARGIN : 0;
+    int lineEnd = sWinExtendMargins ? DISPLAY_WIDTH + RENDER_MARGIN : DISPLAY_WIDTH;
 
+    if (right > DISPLAY_WIDTH)
+        right = DISPLAY_WIDTH;
     if (left > right)
     {
-        for (x = 0; x < right && x < DISPLAY_WIDTH; x++)
-            mask[x] = value;
-        for (x = left; x < DISPLAY_WIDTH; x++)
-            mask[x] = value;
+        FillColumns(mask, lineStart, right, value);
+        FillColumns(mask, left, lineEnd, value);
     }
     else
     {
-        for (x = left; x < right && x < DISPLAY_WIDTH; x++)
-            mask[x] = value;
+        FillColumns(mask, left == 0 ? lineStart : left, right == DISPLAY_WIDTH ? lineEnd : right, value);
     }
 }
 
@@ -680,7 +738,10 @@ static void DecodeSprites(void)
         int32_t x = oam->x;
         int32_t y = oam->y;
 
-        if (x >= DISPLAY_WIDTH)
+        // OAM's x is 9 bits. 384 and up are sprites coming in from the left;
+        // 240 to 383 are off the right, unless they're in the right margin.
+        // (from pokeemerald-dualscreen)
+        if (x >= 512 - 128)
             x -= 512;
         if (y >= DISPLAY_HEIGHT)
             y -= 256;
@@ -797,9 +858,16 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
                 int tex_x;
                 int tex_y;
 
-                unsigned int global_x = local_x + x;
+                // The game's column, and the line's (bx)
+                int global_x = local_x + x;
+                int bx = global_x + RENDER_MARGIN;
 
-                if (global_x < 0 || global_x >= DISPLAY_WIDTH)
+                // Sprites go out into the margins only on lines where a
+                // background fills them (the overworld). Elsewhere they stop
+                // at the GBA's edges, as on the GBA, so nothing coming on from
+                // off screen shows up early.
+                if (global_x < (sWinExtendMargins ? -RENDER_MARGIN : 0)
+                 || global_x >= (sWinExtendMargins ? DISPLAY_WIDTH + RENDER_MARGIN : DISPLAY_WIDTH))
                     continue;
 
                 if (oam->mosaic == 1)
@@ -851,22 +919,21 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
                     //if sprite mode is 2 then write to the window mask instead
                     if (isObjWin)
                     {
-                        if (scanline->winMask[global_x] & WINMASK_WINOUT)
-                        scanline->winMask[global_x] = (REG_WINOUT >> 8) & 0x3F;
+                        if (scanline->winMask[bx] & WINMASK_WINOUT)
+                        scanline->winMask[bx] = (REG_WINOUT >> 8) & 0x3F;
                         continue;
                     }
                     //this code runs if pixel is to be drawn
-                    if (global_x < DISPLAY_WIDTH && global_x >= 0)
                     {
                         //check if its enabled in the window (if window is enabled)
-                        winShouldBlendPixel = (windowsEnabled == false || scanline->winMask[global_x] & WINMASK_CLR);
+                        winShouldBlendPixel = (windowsEnabled == false || scanline->winMask[bx] & WINMASK_CLR);
                         
                         //has to be separated from the blend mode switch statement because of OBJ semi transparancy feature
                         if ((blendMode == 1 && REG_BLDCNT & BLDCNT_TGT1_OBJ && winShouldBlendPixel) || isSemiTransparent)
                         {
                             uint16_t targetA = color;
                             uint16_t targetB = 0;
-                            if (alphaBlendSelectTargetB(scanline, &targetB, oam->priority, 0, global_x, false))
+                            if (alphaBlendSelectTargetB(scanline, &targetB, oam->priority, 0, bx, false))
                             {
                                 color = alphaBlendColor(targetA, targetB);
                             }
@@ -885,7 +952,7 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
                         }
                         
                         //write pixel to pixel framebuffer
-                        pixels[global_x] = color | (1 << 15);
+                        pixels[bx] = color | (1 << 15);
                         scanline->spritePriorities |= 1 << oam->priority;
                     }
                 }
@@ -920,6 +987,16 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
         char priorityCount = scanline.prioritySortedBgsCount[priority];
         scanline.prioritySortedBgs[priority][priorityCount] = bgnum;
         scanline.prioritySortedBgsCount[priority]++;
+    }
+
+    // A line is wide when a text background on it is wide enough to fill the
+    // margins, like the overworld's 512-pixel maps. Then the windows and the
+    // sprites reach into the margins too (see FillWindowSpan).
+    sWinExtendMargins = false;
+    for (bgnum = 0; bgnum < (mode == 0 ? 4 : 2); bgnum++)
+    {
+        if (isbgEnabled(bgnum) && bgMapSizes[scanline.bgcnts[bgnum] >> 14][0] * 8 >= RENDER_WIDTH)
+            sWinExtendMargins = true;
     }
 
     // Most of the overworld's lines have nothing blended with what's below it.
@@ -1043,7 +1120,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     //where they overlap
     if (windowsEnabled)
     {
-        memsetu16(scanline.winMask, (REG_WINOUT & 0x3F) | WINMASK_WINOUT, DISPLAY_WIDTH);
+        memsetu16(scanline.winMask, (REG_WINOUT & 0x3F) | WINMASK_WINOUT, RENDER_WIDTH);
         if (WIN1enable)
             FillWindowSpan(scanline.winMask, WIN1left, WIN1right, (REG_WININ >> 8) & 0x3F);
         if (WIN0enable)
@@ -1078,7 +1155,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
                     }
                     else if (!windowsEnabled)
                     {
-                        for (xpos = 0; xpos < DISPLAY_WIDTH; xpos++)
+                        for (xpos = 0; xpos < RENDER_WIDTH; xpos++)
                         {
                             if (getAlphaBit(src[xpos]))
                                 pixels[xpos] = src[xpos];
@@ -1086,7 +1163,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
                     }
                     else
                     {
-                        for (xpos = 0; xpos < DISPLAY_WIDTH; xpos++)
+                        for (xpos = 0; xpos < RENDER_WIDTH; xpos++)
                         {
                             if (getAlphaBit(src[xpos]) && (scanline.winMask[xpos] & (1 << bgnum)))
                                 pixels[xpos] = src[xpos];
@@ -1095,7 +1172,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
                     continue;
                 }
                 //copy all pixels to framebuffer 
-                for (xpos = 0; xpos < DISPLAY_WIDTH; xpos++)
+                for (xpos = 0; xpos < RENDER_WIDTH; xpos++)
                 {
                     uint16_t color = src[xpos];
                     bool winEffectEnable = true;
@@ -1145,7 +1222,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
         if (!(scanline.spritePriorities & (1 << prnum)))
             continue;
         uint16_t *src = scanline.spriteLayers[prnum];
-        for (xpos = 0; xpos < DISPLAY_WIDTH; xpos++)
+        for (xpos = 0; xpos < RENDER_WIDTH; xpos++)
         {
             if (getAlphaBit(src[xpos]))
             {
@@ -1206,8 +1283,15 @@ static void DrawLine(uint16_t *line, int i)
         }
     }
 
-    memsetu16(line, backdropColor, DISPLAY_WIDTH);
+    memsetu16(line, backdropColor, RENDER_WIDTH);
     DrawScanline(line, i);
+    // Screens made for the GBA's width leave the margins black. The backdrop
+    // color is often one the game never meant to be seen.
+    if (!sWinExtendMargins)
+    {
+        memset(line, 0, RENDER_MARGIN * sizeof(line[0]));
+        memset(&line[RENDER_MARGIN + DISPLAY_WIDTH], 0, RENDER_MARGIN * sizeof(line[0]));
+    }
 }
 
 // What a line does after it's drawn: HBlank DMAs and interrupt
@@ -1231,7 +1315,7 @@ void DrawFrame(uint16_t *pixels)
     for (i = 0; i < DISPLAY_HEIGHT; i++)
     {
         BeginLine(i);
-        DrawLine(&pixels[i * DISPLAY_WIDTH], i);
+        DrawLine(&pixels[i * RENDER_STRIDE], i);
         EndLine();
     }
 }
@@ -1300,7 +1384,7 @@ static void LoadLineRegs(const struct GsLineState *s)
 void DrawFramePS2(void)
 {
     static struct GsLineState lines[DISPLAY_HEIGHT];
-    static uint16_t image[DISPLAY_WIDTH * DISPLAY_HEIGHT];
+    static uint16_t image[RENDER_STRIDE * DISPLAY_HEIGHT];
     struct GsLineState after;
 
     for (int i = 0; i < DISPLAY_HEIGHT; i++)
@@ -1318,7 +1402,7 @@ void DrawFramePS2(void)
     for (int i = 0; i < DISPLAY_HEIGHT; i++)
     {
         LoadLineRegs(&lines[i]);
-        DrawLine(&image[i * DISPLAY_WIDTH], i);
+        DrawLine(&image[i * RENDER_STRIDE], i);
     }
     LoadLineRegs(&after);
     PS2GS_DrawImage(image);
