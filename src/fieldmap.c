@@ -374,6 +374,136 @@ u32 MapGridGetMetatileIdAt(s32 x, s32 y)
     return block & MAPGRID_METATILE_ID_MASK;
 }
 
+// The wider view's overworld (see BG_MAP_TILES_X): every map with a layout
+// is drawn on the wide backgrounds. Where a map runs out, like a small room,
+// the extra columns show its border, as the GBA does when a room is smaller
+// than the screen.
+bool8 UseWideOverworldBg(void)
+{
+#ifdef WIDE_OVERWORLD
+    return gMapHeader.mapLayout != NULL;
+#else
+    return FALSE;
+#endif
+}
+
+u32 GetBgMapTilesX(void)
+{
+    return UseWideOverworldBg() ? BG_MAP_TILES_X : 32;
+}
+
+u32 GetMapFillExtraX(void)
+{
+    return UseWideOverworldBg() ? MAP_FILL_EXTRA_X : 0;
+}
+
+#ifdef WIDE_OVERWORLD
+// The wider view draws more metatiles past the view than the 7 the VMap holds
+// of each connected map, so near a map's edge the last ones would show the
+// border (trees across a town's road). For those, read the connected map's
+// own layout, where FillConnection copies from. Only for drawing: collision,
+// events and scripts keep the GBA's world. From pokeemerald-dualscreen.
+static bool32 TryGetConnectionBlock(s32 x, s32 y, u16 *block)
+{
+    const struct MapConnections *connections = gMapHeader.connections;
+    const struct MapLayout *layout = gMapHeader.mapLayout;
+    s32 ax = x - MAP_OFFSET, ay = y - MAP_OFFSET;
+    s32 i;
+
+    if (connections == NULL || connections->connections == NULL || layout == NULL)
+        return FALSE;
+    for (i = 0; i < connections->count; i++)
+    {
+        const struct MapConnection *connection = &connections->connections[i];
+        const struct MapLayout *neighbor;
+        s32 offset = (s32)connection->offset;
+        s32 nx, ny;
+
+        switch (connection->direction)
+        {
+        case CONNECTION_WEST:
+            if (ax >= 0)
+                continue;
+            neighbor = GetMapHeaderFromConnection(connection)->mapLayout;
+            if (neighbor == NULL)
+                continue;
+            nx = neighbor->width + ax;
+            ny = ay - offset;
+            break;
+        case CONNECTION_EAST:
+            if (ax < layout->width)
+                continue;
+            neighbor = GetMapHeaderFromConnection(connection)->mapLayout;
+            if (neighbor == NULL)
+                continue;
+            nx = ax - layout->width;
+            ny = ay - offset;
+            break;
+        case CONNECTION_NORTH:
+            if (ay >= 0)
+                continue;
+            neighbor = GetMapHeaderFromConnection(connection)->mapLayout;
+            if (neighbor == NULL)
+                continue;
+            nx = ax - offset;
+            ny = neighbor->height + ay;
+            break;
+        case CONNECTION_SOUTH:
+            if (ay < layout->height)
+                continue;
+            neighbor = GetMapHeaderFromConnection(connection)->mapLayout;
+            if (neighbor == NULL)
+                continue;
+            nx = ax - offset;
+            ny = ay - layout->height;
+            break;
+        default:
+            continue;
+        }
+        if (nx < 0 || nx >= neighbor->width || ny < 0 || ny >= neighbor->height)
+            continue;
+        *block = neighbor->map[nx + neighbor->width * ny];
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static u16 GetMapGridBlockForDraw(s32 x, s32 y)
+{
+    u16 block;
+
+    if (AreCoordsWithinMapGridBounds(x, y))
+    {
+        block = VMap.map[x + VMap.Xsize * y];
+        if (block != MAPGRID_UNDEFINED)
+            return block;
+    }
+    if (TryGetConnectionBlock(x, y, &block))
+        return block;
+    return GetBorderBlockAt(x, y);
+}
+
+u32 MapGridGetMetatileIdForDraw(s32 x, s32 y)
+{
+    return GetMapGridBlockForDraw(x, y) & MAPGRID_METATILE_ID_MASK;
+}
+
+u8 MapGridGetMetatileLayerTypeForDraw(s32 x, s32 y)
+{
+    return GetAttributeByMetatileIdAndMapLayout(gMapHeader.mapLayout, MapGridGetMetatileIdForDraw(x, y), METATILE_ATTRIBUTE_LAYER_TYPE);
+}
+#else
+u32 MapGridGetMetatileIdForDraw(s32 x, s32 y)
+{
+    return MapGridGetMetatileIdAt(x, y);
+}
+
+u8 MapGridGetMetatileLayerTypeForDraw(s32 x, s32 y)
+{
+    return MapGridGetMetatileLayerTypeAt(x, y);
+}
+#endif
+
 u32 ExtractMetatileAttribute(u32 attributes, u8 attributeType)
 {
     if (attributeType >= METATILE_ATTRIBUTE_COUNT) // Check for METATILE_ATTRIBUTES_ALL

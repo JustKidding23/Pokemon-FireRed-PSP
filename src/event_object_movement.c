@@ -1796,8 +1796,8 @@ void TrySpawnObjectEvents(s16 cameraX, s16 cameraY)
 
     if (gMapHeader.events != NULL)
     {
-        s16 left = gSaveBlock1Ptr->pos.x - 2;
-        s16 right = gSaveBlock1Ptr->pos.x + MAP_OFFSET_W + 2;
+        s16 left = gSaveBlock1Ptr->pos.x - 2 - WIDE_VIEW_EXTRA_METATILES;
+        s16 right = gSaveBlock1Ptr->pos.x + MAP_OFFSET_W + 2 + WIDE_VIEW_EXTRA_METATILES;
         s16 top = gSaveBlock1Ptr->pos.y;
         s16 bottom = gSaveBlock1Ptr->pos.y + MAP_OFFSET_H + 2;
 
@@ -1840,8 +1840,8 @@ void RemoveObjectEventsOutsideView(void)
 
 static void RemoveObjectEventIfOutsideView(struct ObjectEvent *objectEvent)
 {
-    s16 left =   gSaveBlock1Ptr->pos.x - 2;
-    s16 right =  gSaveBlock1Ptr->pos.x + MAP_OFFSET_W + 2;
+    s16 left =   gSaveBlock1Ptr->pos.x - 2 - WIDE_VIEW_EXTRA_METATILES;
+    s16 right =  gSaveBlock1Ptr->pos.x + MAP_OFFSET_W + 2 + WIDE_VIEW_EXTRA_METATILES;
     s16 top =    gSaveBlock1Ptr->pos.y;
     s16 bottom = gSaveBlock1Ptr->pos.y + MAP_OFFSET_H + 2;
 
@@ -7995,13 +7995,13 @@ static void CalcWhetherObjectIsOffscreen(struct ObjectEvent *objectEvent, struct
      && gSaveBlock1Ptr->location.mapNum == MAP_NUM(MAP_SSANNE_EXTERIOR)
      && objectEvent->localId == LOCALID_SS_ANNE)
     {
-        minX = -32;
+        minX = -32 - WIDE_VIEW_MARGIN;
     }
     else
     {
-        minX = -16;
+        minX = -16 - WIDE_VIEW_MARGIN;
     }
-    if ((s16)x >= (DISPLAY_WIDTH + 16) || (s16)x2 < minX)
+    if ((s16)x >= (DISPLAY_WIDTH + 16 + WIDE_VIEW_MARGIN) || (s16)x2 < minX)
     {
         objectEvent->offScreen = TRUE;
     }
@@ -9204,7 +9204,7 @@ void UpdateObjectEventSpriteInvisibility(struct Sprite *sprite, bool8 invisible)
     x2 = x - (sprite->centerToCornerVecX >> 1);
     y2 = y - (sprite->centerToCornerVecY >> 1);
 
-    if ((s16)x >= DISPLAY_WIDTH + 16 || x2 < -16)
+    if ((s16)x >= DISPLAY_WIDTH + 16 + WIDE_VIEW_MARGIN || x2 < -16 - WIDE_VIEW_MARGIN)
         sprite->invisible = TRUE;
     if ((s16)y >= DISPLAY_HEIGHT + 16 || y2 < -16)
         sprite->invisible = TRUE;

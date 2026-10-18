@@ -22,10 +22,38 @@
 #define MAP_OFFSET_W (MAP_OFFSET * 2 + 1)
 #define MAP_OFFSET_H (MAP_OFFSET * 2)
 
+#if defined(PORTABLE) && defined(__PSP__)
+// The PSP's wider view (see platform/framedraw.h) draws the overworld on
+// 64x32-tile backgrounds, with MAP_FILL_EXTRA_X metatiles drawn left of the
+// GBA's view. Everything else, the camera's position, collision, events and
+// the save, stays the GBA's. From pokeemerald-dualscreen's widescreen.
+#define WIDE_OVERWORLD 1
+#define BG_MAP_TILES_X 64
+#define MAP_FILL_EXTRA_X 8
+// The columns the wider view shows past each side of the GBA's (RENDER_MARGIN
+// in platform/framedraw.h), where sprites need to show too
+#define WIDE_VIEW_MARGIN 21
+// Objects are loaded and kept this many metatiles further out each side, so
+// they come and go out of sight even when they wander from their spot
+#define WIDE_VIEW_EXTRA_METATILES 5
+#else
+#define WIDE_VIEW_MARGIN 0
+#define WIDE_VIEW_EXTRA_METATILES 0
+#define BG_MAP_TILES_X 32
+#define MAP_FILL_EXTRA_X 0
+#endif
+#define BG_MAP_TILES_Y 32
+#define OVERWORLD_BG_TILEMAP_SCREENBLOCKS (BG_MAP_TILES_X / 32)
+
 extern struct BackupMapLayout VMap;
 extern const struct MapLayout Route1_Layout;
 
 u32 MapGridGetMetatileIdAt(s32, s32);
+bool8 UseWideOverworldBg(void);
+u32 GetBgMapTilesX(void);
+u32 GetMapFillExtraX(void);
+u32 MapGridGetMetatileIdForDraw(s32 x, s32 y);
+u8 MapGridGetMetatileLayerTypeForDraw(s32 x, s32 y);
 u32 MapGridGetMetatileBehaviorAt(s16, s16);
 u8 MapGridGetMetatileLayerTypeAt(s16 x, s16 y);
 void MapGridSetMetatileIdAt(s32, s32, u16);

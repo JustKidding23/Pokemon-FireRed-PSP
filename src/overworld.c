@@ -1311,7 +1311,13 @@ static const struct BgTemplate sOverworldBgTemplates[] = {
     }, {
         .bg = 1,
         .charBaseIndex = 0,
+#ifdef WIDE_OVERWORLD
+        // Two screenblocks each for the wide backgrounds: 25 to 30. BG0's
+        // tiles (char base 2) end at 0x21C, below screenblock 25.
+        .mapBaseIndex = 25,
+#else
         .mapBaseIndex = 29,
+#endif
         .screenSize = 0,
         .paletteMode = 0,
         .priority = 1,
@@ -1319,7 +1325,11 @@ static const struct BgTemplate sOverworldBgTemplates[] = {
     }, {
         .bg = 2,
         .charBaseIndex = 0,
+#ifdef WIDE_OVERWORLD
+        .mapBaseIndex = 27,
+#else
         .mapBaseIndex = 28,
+#endif
         .screenSize = 0,
         .paletteMode = 0,
         .priority = 2,
@@ -1327,7 +1337,11 @@ static const struct BgTemplate sOverworldBgTemplates[] = {
     }, {
         .bg = 3,
         .charBaseIndex = 0,
+#ifdef WIDE_OVERWORLD
+        .mapBaseIndex = 29,
+#else
         .mapBaseIndex = 30,
+#endif
         .screenSize = 0,
         .paletteMode = 0,
         .priority = 3,
@@ -1344,9 +1358,18 @@ static void InitOverworldBgs(void)
     SetBgAttribute(1, BG_ATTR_MOSAIC, TRUE);
     SetBgAttribute(2, BG_ATTR_MOSAIC, TRUE);
     SetBgAttribute(3, BG_ATTR_MOSAIC, TRUE);
-    gBGTilemapBuffers2 = AllocZeroed(BG_SCREEN_SIZE);
-    gBGTilemapBuffers1 = AllocZeroed(BG_SCREEN_SIZE);
-    gBGTilemapBuffers3 = AllocZeroed(BG_SCREEN_SIZE);
+#ifdef WIDE_OVERWORLD
+    // 64x32 for the wider view (see BG_MAP_TILES_X)
+    if (UseWideOverworldBg())
+    {
+        SetBgAttribute(1, BG_ATTR_SCREENSIZE, 1);
+        SetBgAttribute(2, BG_ATTR_SCREENSIZE, 1);
+        SetBgAttribute(3, BG_ATTR_SCREENSIZE, 1);
+    }
+#endif
+    gBGTilemapBuffers2 = AllocZeroed(BG_SCREEN_SIZE * OVERWORLD_BG_TILEMAP_SCREENBLOCKS);
+    gBGTilemapBuffers1 = AllocZeroed(BG_SCREEN_SIZE * OVERWORLD_BG_TILEMAP_SCREENBLOCKS);
+    gBGTilemapBuffers3 = AllocZeroed(BG_SCREEN_SIZE * OVERWORLD_BG_TILEMAP_SCREENBLOCKS);
     SetBgTilemapBuffer(1, gBGTilemapBuffers2);
     SetBgTilemapBuffer(2, gBGTilemapBuffers1);
     SetBgTilemapBuffer(3, gBGTilemapBuffers3);
@@ -1362,9 +1385,18 @@ static void InitOverworldBgs_NoResetHeap(void)
     SetBgAttribute(1, BG_ATTR_MOSAIC, TRUE);
     SetBgAttribute(2, BG_ATTR_MOSAIC, TRUE);
     SetBgAttribute(3, BG_ATTR_MOSAIC, TRUE);
-    gBGTilemapBuffers2 = AllocZeroed(BG_SCREEN_SIZE);
-    gBGTilemapBuffers1 = AllocZeroed(BG_SCREEN_SIZE);
-    gBGTilemapBuffers3 = AllocZeroed(BG_SCREEN_SIZE);
+#ifdef WIDE_OVERWORLD
+    // 64x32 for the wider view (see BG_MAP_TILES_X)
+    if (UseWideOverworldBg())
+    {
+        SetBgAttribute(1, BG_ATTR_SCREENSIZE, 1);
+        SetBgAttribute(2, BG_ATTR_SCREENSIZE, 1);
+        SetBgAttribute(3, BG_ATTR_SCREENSIZE, 1);
+    }
+#endif
+    gBGTilemapBuffers2 = AllocZeroed(BG_SCREEN_SIZE * OVERWORLD_BG_TILEMAP_SCREENBLOCKS);
+    gBGTilemapBuffers1 = AllocZeroed(BG_SCREEN_SIZE * OVERWORLD_BG_TILEMAP_SCREENBLOCKS);
+    gBGTilemapBuffers3 = AllocZeroed(BG_SCREEN_SIZE * OVERWORLD_BG_TILEMAP_SCREENBLOCKS);
     SetBgTilemapBuffer(1, gBGTilemapBuffers2);
     SetBgTilemapBuffer(2, gBGTilemapBuffers1);
     SetBgTilemapBuffer(3, gBGTilemapBuffers3);
