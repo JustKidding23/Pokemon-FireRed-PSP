@@ -7,6 +7,8 @@ void Platform_StoreSaveFile(void);
 void Platform_ReadFlash(u16 sectorNum, u32 offset, u8 *dest, u32 size);
 void Platform_QueueAudio(float *audioBuffer, s32 samplesPerFrame);
 u16 Platform_GetKeyInput(void);
+// A clock in microseconds, for the GBA timers the game reads (see StartTimer1)
+u64 Platform_GetMicroseconds(void);
 
 // The PSP's trace (see psp.c) notes each task and callback before it runs
 #ifdef __PSP__

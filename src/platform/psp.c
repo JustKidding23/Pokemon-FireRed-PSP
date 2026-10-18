@@ -357,6 +357,11 @@ static void AdoptOldSave(void)
     PspHw_WriteFile(path, buffer, size);
 }
 
+u64 Platform_GetMicroseconds(void)
+{
+    return PspHw_Microseconds();
+}
+
 u16 Platform_GetKeyInput(void)
 {
     return sKeys;

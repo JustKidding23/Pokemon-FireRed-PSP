@@ -286,14 +286,28 @@ void SetMainCallback2(MainCallback callback)
     gMain.state = 0;
 }
 
+#ifdef PORTABLE
+// The portable builds have no hardware timers, so timer 1 is counted from the
+// platform's clock: started here, and read for the trainer ID and the random
+// seed when the player's name is set, as the GBA does at 16.78 MHz.
+static u64 sTimer1StartMicroseconds;
+#endif
+
 void StartTimer1(void)
 {
     REG_TM1CNT_H = 0x80;
+#ifdef PORTABLE
+    sTimer1StartMicroseconds = Platform_GetMicroseconds();
+#endif
 }
 
 void SeedRngAndSetTrainerId(void)
 {
+#ifdef PORTABLE
+    u16 val = (u16)((Platform_GetMicroseconds() - sTimer1StartMicroseconds) * 16777216 / 1000000);
+#else
     u16 val = REG_TM1CNT_L;
+#endif
     SeedRng(val);
     REG_TM1CNT_H = 0;
     gTrainerId = val;

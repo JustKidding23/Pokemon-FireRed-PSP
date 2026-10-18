@@ -462,6 +462,11 @@ static void ToggleFullscreen(void)
     SDL_SetWindowFullscreen(sdlWindow, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 }
 
+u64 Platform_GetMicroseconds(void)
+{
+    return SDL_GetPerformanceCounter() * 1000000 / SDL_GetPerformanceFrequency();
+}
+
 u16 Platform_GetKeyInput(void)
 {
     if (sTestMode)
