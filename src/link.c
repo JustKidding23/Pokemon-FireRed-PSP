@@ -242,6 +242,10 @@ static const u8 sLinkErrorTextColor[] = { 0x00, 0x01, 0x02 };
 
 bool8 IsWirelessAdapterConnected(void)
 {
+#ifdef PORTABLE
+    // No wireless adapter on the portable builds
+    return FALSE;
+#endif
     if (QL_IS_PLAYBACK_STATE)
         return FALSE;
 

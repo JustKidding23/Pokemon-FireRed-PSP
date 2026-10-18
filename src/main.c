@@ -249,6 +249,12 @@ static void InitMainCallbacks(void)
     SetMainCallback2(CB2_InitCopyrightScreenAfterBootup);
     gSaveBlock2Ptr = &gSaveBlock2;
     gSaveBlock1Ptr = &gSaveBlock1;
+#ifdef UBFIX
+    // Reading the save at boot copies the boxes through gPokemonStoragePtr,
+    // still NULL here. The GBA drops those writes on its BIOS at address 0,
+    // anything else crashes. Emerald sets it here.
+    gPokemonStoragePtr = &gPokemonStorage;
+#endif
     gSaveBlock2.encryptionKey = 0;
     gQuestLogPlaybackState = QL_PLAYBACK_STATE_STOPPED;
 #if REVISION >= 0xA
