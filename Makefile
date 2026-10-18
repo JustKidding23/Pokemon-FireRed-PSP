@@ -354,6 +354,11 @@ else ifeq ($(PORTABLE),1)
   # The same floating point results everywhere, which the tests' frame hashes
   # need: on ARM, compilers would otherwise fuse multiplies and adds
   override CFLAGS += -ffp-contract=off
+  # Keep variables in the order the source has them, like the GBA build's
+  # linker. FireRed counts on it: ClearSav2 clears gSaveBlock2 and the
+  # gSaveBlock2_DMA after it together, and SetSaveBlocksPointers moves the
+  # save blocks up into those bytes.
+  override CFLAGS += -fno-toplevel-reorder
   ifeq ($(COMPILER),clang)
     # clang reports GNU C that gcc takes as it is, and that pret's code is full
     # of: __alignof__ of expressions, unused tables, u8 and char strings mixed,
