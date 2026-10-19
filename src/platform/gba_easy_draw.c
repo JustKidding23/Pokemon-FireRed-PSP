@@ -645,6 +645,9 @@ static bool alphaBlendSelectTargetB(struct scanlineData* scanline, uint16_t* col
 // where they are. Borrowed from pokeemerald-dualscreen's widescreen renderer.
 // (idea from Goldoire/pokeemerald-dualscreen)
 static bool sWinExtendMargins;
+// Whether a sprite covers the GBA screen's left or right column on this line,
+// so ExtendEdges carries on the background under it rather than the sprite
+static bool sSpriteAtEdge[2];
 // Whether the line's left and right margins were filled by carrying on the
 // GBA's edge columns (see ExtendEdges), so DrawLine leaves them
 static bool sExtendedLeft, sExtendedRight;
@@ -1069,9 +1072,10 @@ static void ExtendEdges(uint16_t *pixels, int lineNum, const uint16_t *bgcnts, b
         {
             uint16_t color = pixels[gx + RENDER_MARGIN];
 
-            // Under a background that stops at the edge, like the title's
-            // Charizard, take the color from the carried background itself
-            if (endsAtEdgeOnTop)
+            // Under a sprite, or a background that stops at the edge like the
+            // title's Charizard, take the color from the carried background
+            // itself
+            if (endsAtEdgeOnTop || sSpriteAtEdge[side])
             {
                 uint16_t control = bgcnts[bestNarrowBg];
 
@@ -1109,6 +1113,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     unsigned int blendMode = (REG_BLDCNT >> 6) & 3;
     unsigned int xpos;
 
+    sSpriteAtEdge[0] = sSpriteAtEdge[1] = false;
 
     //initialize all priority bookkeeping data
     memset(scanline.prioritySortedBgsCount, 0, sizeof(scanline.prioritySortedBgsCount));
@@ -1370,6 +1375,10 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
                         continue;
                 //draw the pixel
                 pixels[xpos] = src[xpos];
+                if (xpos == RENDER_MARGIN)
+                    sSpriteAtEdge[0] = true;
+                else if (xpos == RENDER_MARGIN + DISPLAY_WIDTH - 1)
+                    sSpriteAtEdge[1] = true;
             }
         }
     }

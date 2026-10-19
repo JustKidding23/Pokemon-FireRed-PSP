@@ -2,6 +2,9 @@
 #include "gflib.h"
 #include "m4a.h"
 #include "task.h"
+#ifdef PORTABLE
+#include "platform/framedraw.h"
+#endif
 #include "scanline_effect.h"
 #include "libgcnmultiboot.h"
 #include "new_menu_helpers.h"
@@ -1041,6 +1044,11 @@ static void CB2_SetUpIntro(void)
         FillPalette(RGB_BLACK, 0, PLTT_SIZE);
         ResetBgsAndClearDma3BusyFlags(FALSE);
         InitBgsFromTemplates(0, sBgTemplates_GameFreakScene, ARRAY_COUNT(sBgTemplates_GameFreakScene));
+#ifdef PORTABLE
+        // The background's rows are one tile across, so it repeats into the
+        // margins, and the shooting star crosses them too
+        gWideViewRepeatingBgs = 1 << BG_GF_BACKGROUND;
+#endif
         break;
     case 1:
         LoadPalette(sGameFreakBg_Pal, BG_PLTT_ID(0), sizeof(sGameFreakBg_Pal));
@@ -1989,10 +1997,17 @@ static void GFScene_LoadGfxCreateStar(void)
     sStarSparklesYprecision = 5;
     if (sStarSparklesRngSeed == 0)
         sStarSparklesRngSeed = 354128453;
-    spriteId = CreateSprite(&sSpriteTemplate_Star, 248, 55, 0);
+#ifdef PORTABLE
+    // From past the wider view's right edge, so it flies in rather than
+    // appearing in the margin
+#define STAR_START_X (248 + RENDER_MARGIN)
+#else
+#define STAR_START_X 248
+#endif
+    spriteId = CreateSprite(&sSpriteTemplate_Star, STAR_START_X, 55, 0);
     if (spriteId != MAX_SPRITES)
     {
-        gSprites[spriteId].sStar_BaseX = 248 << 4;
+        gSprites[spriteId].sStar_BaseX = STAR_START_X << 4;
         gSprites[spriteId].sStar_BaseY = 55 << 4;
         gSprites[spriteId].sStar_SpeedX = sStarSpeedX;
         gSprites[spriteId].sStar_SpeedY = sStarSpeedY;
@@ -2314,7 +2329,11 @@ static void SpriteCB_Star(struct Sprite *sprite)
         random >>= 16;
         GFScene_CreateStarSparkle(sprite->x, sprite->y + sprite->y2, random);
     }
+#ifdef PORTABLE
+    if (sprite->x < -8 - RENDER_MARGIN)
+#else
     if (sprite->x < -8)
+#endif
         DestroySprite(sprite);
 }
 
