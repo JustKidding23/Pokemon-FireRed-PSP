@@ -1005,6 +1005,8 @@ static bool TextBgOpaqueAt(uint16_t control, uint16_t hoffs, uint16_t voffs, int
 // margins: where a background narrower than the line is the top one showing at
 // the screen's edge column, the line's margin on that side takes that column's
 // color. Boxes that stop short of the edges, like dialogue, stay as they are.
+// Where no background covers the edge column, the GBA shows the backdrop
+// there, like the controls guide's blue page, so the margin keeps it too.
 static void ExtendEdges(uint16_t *pixels, int lineNum, const uint16_t *bgcnts, bool windowsEnabled, const uint16_t *winMask)
 {
     static const int sEdgeColumns[2] = {0, DISPLAY_WIDTH - 1};
@@ -1046,10 +1048,12 @@ static void ExtendEdges(uint16_t *pixels, int lineNum, const uint16_t *bgcnts, b
             else
                 memsetu16(&pixels[RENDER_MARGIN + DISPLAY_WIDTH], color, RENDER_MARGIN);
         }
+        bool extended = (bestNarrow < 4 && bestNarrow <= bestWide) || (bestNarrow == 4 && bestWide == 4);
+
         if (side == 0)
-            sExtendedLeft = bestNarrow < 4 && bestNarrow <= bestWide;
+            sExtendedLeft = extended;
         else
-            sExtendedRight = bestNarrow < 4 && bestNarrow <= bestWide;
+            sExtendedRight = extended;
     }
 }
 
@@ -1382,8 +1386,9 @@ static void DrawLine(uint16_t *line, int i)
 
     memsetu16(line, backdropColor, RENDER_WIDTH);
     DrawScanline(line, i);
-    // Screens made for the GBA's width leave the margins black. The backdrop
-    // color is often one the game never meant to be seen.
+    // Screens made for the GBA's width leave the margins black, except where
+    // ExtendEdges carried the edges on. A backdrop color seen only behind
+    // boxes that stop short of the edges was never meant to fill the screen.
     if (!sWinExtendMargins)
     {
         if (!sExtendedLeft)
