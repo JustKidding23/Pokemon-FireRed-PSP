@@ -5,6 +5,7 @@
 #include "graphics.h"
 #include "dynamic_placeholder_text_util.h"
 #include "constants/songs.h"
+#include "platform.h"
 
 #define TAG_CURSOR 0x8000
 
@@ -93,7 +94,23 @@ struct
     [CHAR_DPAD_UPDOWN]    = { 0x20,  8, 12 },
     [CHAR_DPAD_LEFTRIGHT] = { 0x21,  8, 12 },
     [CHAR_DPAD_NONE]      = { 0x22,  8, 12 },
+    [CHAR_CROSS_BUTTON]    = { 0x23,  8, 12 },
+    [CHAR_CIRCLE_BUTTON]   = { 0x24,  8, 12 },
+    [CHAR_TRIANGLE_BUTTON] = { 0x25,  8, 12 },
+    [CHAR_SQUARE_BUTTON]   = { 0x26,  8, 12 },
 };
+
+// On the PSP, the A and B Buttons show as the buttons that do their job
+static u8 PlatformKeypadIcon(u8 keypadIconId)
+{
+#ifdef __PSP__
+    if (keypadIconId == CHAR_A_BUTTON)
+        return Platform_ConfirmIsCircle() ? CHAR_CIRCLE_BUTTON : CHAR_CROSS_BUTTON;
+    if (keypadIconId == CHAR_B_BUTTON)
+        return Platform_ConfirmIsCircle() ? CHAR_CROSS_BUTTON : CHAR_CIRCLE_BUTTON;
+#endif
+    return keypadIconId;
+}
 
 const u8 gKeypadIconTiles[] = INCBIN_U8("graphics/fonts/keypad_icons.4bpp");
 
@@ -813,6 +830,16 @@ u16 RenderText(struct TextPrinter *textPrinter)
             break;
         case CHAR_KEYPAD_ICON:
             currChar = *textPrinter->printerTemplate.currentChar++;
+#ifdef __PSP__
+            // The badges are made for white text on the help bars. With dark
+            // text on a light box, where the badge's white wouldn't show, the
+            // badge takes the text's shadow color and its symbol the text's
+            if (textPrinter->printerTemplate.fgColor != 1)
+                gGlyphInfo.width = DrawKeypadIconInTextColors(textPrinter->printerTemplate.windowId, currChar,
+                                                              textPrinter->printerTemplate.currentX, textPrinter->printerTemplate.currentY,
+                                                              textPrinter->printerTemplate.shadowColor, textPrinter->printerTemplate.fgColor);
+            else
+#endif
             gGlyphInfo.width = DrawKeypadIcon(textPrinter->printerTemplate.windowId, currChar, textPrinter->printerTemplate.currentX, textPrinter->printerTemplate.currentY);
             textPrinter->printerTemplate.currentX += gGlyphInfo.width + textPrinter->printerTemplate.letterSpacing;
             return RENDER_PRINT;
@@ -1340,6 +1367,7 @@ void DestroyTextCursorSprite(u8 spriteId)
 
 u8 DrawKeypadIcon(u8 windowId, u8 keypadIconId, u16 x, u16 y)
 {
+    keypadIconId = PlatformKeypadIcon(keypadIconId);
     BlitBitmapRectToWindow(
         windowId,
         gKeypadIconTiles + (sKeypadIcons[keypadIconId].tileOffset * 0x20),
@@ -1354,18 +1382,50 @@ u8 DrawKeypadIcon(u8 windowId, u8 keypadIconId, u16 x, u16 y)
     return sKeypadIcons[keypadIconId].width;
 }
 
+#ifdef __PSP__
+// DrawKeypadIcon with the icon's white (1) and dark gray (2) changed to fill and stroke
+u8 DrawKeypadIconInTextColors(u8 windowId, u8 keypadIconId, u16 x, u16 y, u8 fill, u8 stroke)
+{
+    // The two tile rows of the 128-pixel-wide icon sheet the icon is read from
+    static u8 sRecolored[2 * 16 * TILE_SIZE_4BPP];
+    const u8 *src;
+    int row, i;
+
+    keypadIconId = PlatformKeypadIcon(keypadIconId);
+    // Only the icon's own tiles: its top row and the row under it
+    for (row = 0; row < 2; row++)
+    {
+        src = gKeypadIconTiles + (sKeypadIcons[keypadIconId].tileOffset + row * 16) * TILE_SIZE_4BPP;
+        for (i = 0; i < sKeypadIcons[keypadIconId].width / 8 * TILE_SIZE_4BPP; i++)
+        {
+            u8 lo = src[i] & 0xF, hi = src[i] >> 4;
+
+            lo = lo == 1 ? fill : lo == 2 ? stroke : lo;
+            hi = hi == 1 ? fill : hi == 2 ? stroke : hi;
+            sRecolored[row * 16 * TILE_SIZE_4BPP + i] = lo | (hi << 4);
+        }
+    }
+    BlitBitmapRectToWindow(windowId, sRecolored, 0, 0, 0x80, 0x80, x, y,
+                           sKeypadIcons[keypadIconId].width, sKeypadIcons[keypadIconId].height);
+    return sKeypadIcons[keypadIconId].width;
+}
+#endif
+
 u8 GetKeypadIconTileOffset(u8 keypadIconId)
 {
+    keypadIconId = PlatformKeypadIcon(keypadIconId);
     return sKeypadIcons[keypadIconId].tileOffset;
 }
 
 u8 GetKeypadIconWidth(u8 keypadIconId)
 {
+    keypadIconId = PlatformKeypadIcon(keypadIconId);
     return sKeypadIcons[keypadIconId].width;
 }
 
 u8 GetKeypadIconHeight(u8 keypadIconId)
 {
+    keypadIconId = PlatformKeypadIcon(keypadIconId);
     return sKeypadIcons[keypadIconId].height;
 }
 

@@ -8,6 +8,7 @@
 #include "global.h"
 #include "main.h"
 #include "bg.h"
+#include "text.h"
 #include "platform.h"
 
 #include "save.h"
@@ -751,7 +752,36 @@ static int StringWidth(const u8 *text)
     int width = 0;
 
     for (; *text != EOS; text++)
-        width += GlyphWidth(*text);
+    {
+        if (*text == CHAR_KEYPAD_ICON && text[1] != EOS)
+            width += GetKeypadIconWidth(*++text);
+        else
+            width += GlyphWidth(*text);
+    }
+    return width;
+}
+
+// A button badge from the game's keypad icons (see DrawKeypadIcon), white with
+// a dark gray symbol like on the game's help bars
+static int DrawKeypadBadge(u8 icon, int x, int y)
+{
+    int width = GetKeypadIconWidth(icon);
+    const u8 *tiles = gKeypadIconTiles + GetKeypadIconTileOffset(icon) * TILE_SIZE_4BPP;
+
+    for (int row = 0; row < GetKeypadIconHeight(icon); row++)
+    {
+        for (int col = 0; col < width; col++)
+        {
+            const u8 *tile = tiles + ((row / 8) * 16 + col / 8) * TILE_SIZE_4BPP;
+            u8 pair = tile[(row % 8) * 4 + (col % 8) / 2];
+            u8 index = (col & 1) ? pair >> 4 : pair & 0xF;
+
+            if (index == 1)
+                Plot(x + col, y + row, TEXT_WHITE);
+            else if (index == 2)
+                Plot(x + col, y + row, TEXT_DARK);
+        }
+    }
     return width;
 }
 
@@ -759,6 +789,11 @@ static void DrawString(const u8 *text, int x, int y, u16 fg, u16 shadow)
 {
     for (; *text != EOS; text++)
     {
+        if (*text == CHAR_KEYPAD_ICON && text[1] != EOS)
+        {
+            x += DrawKeypadBadge(*++text, x, y);
+            continue;
+        }
         const u16 *glyph = gFontNormalLatinGlyphs + 0x20 * *text;
         int width = GlyphWidth(*text);
 
@@ -783,7 +818,10 @@ static void DrawStringRightAligned(const u8 *text, int right, int y, u16 fg, u16
     DrawString(text, right - StringWidth(text), y, fg, shadow);
 }
 
-// Plain text in the game's characters
+// Plain text in the game's characters. CONFIRM and CANCEL put in the badge
+// of the button that does that (see PlatformKeypadIcon in text.c).
+#define CONFIRM "\x01"
+#define CANCEL  "\x02"
 static void AsciiToGame(const char *text, u8 *out, size_t size)
 {
     size_t n = 0;
@@ -792,7 +830,12 @@ static void AsciiToGame(const char *text, u8 *out, size_t size)
     {
         char c = *text;
 
-        if (c >= 'A' && c <= 'Z')
+        if ((c == '\x01' || c == '\x02') && n + 2 < size)
+        {
+            out[n++] = CHAR_KEYPAD_ICON;
+            out[n] = c == '\x01' ? CHAR_A_BUTTON : CHAR_B_BUTTON;
+        }
+        else if (c >= 'A' && c <= 'Z')
             out[n] = CHAR_A + (c - 'A');
         else if (c >= 'a' && c <= 'z')
             out[n] = CHAR_a + (c - 'a');
@@ -868,9 +911,6 @@ static void DrawFileWindow(int file)
 static void DrawSavesScreen(void)
 {
     static const char *const sActions[ACTION_COUNT] = {"PLAY", "COPY", "DELETE", "CANCEL"};
-    const char *a = sSettings.circleIsA ? "O" : "X";
-    const char *b = sSettings.circleIsA ? "X" : "O";
-    char help[64];
 
     if (sSaves.inGame)
     {
@@ -889,8 +929,7 @@ static void DrawSavesScreen(void)
     switch (sSaves.mode)
     {
     case SAVES_LIST:
-        snprintf(help, sizeof(help), "%s CHOOSE   %s BACK", a, b);
-        DrawAscii(help, 16, 145, TEXT_WHITE, HELP_SHADOW);
+        DrawAscii(CONFIRM "CHOOSE  " CANCEL "BACK", 16, 145, TEXT_WHITE, HELP_SHADOW);
         break;
     case SAVES_ACTIONS:
         DrawWindow(20, 11, 8, 8);
@@ -911,8 +950,7 @@ static void DrawSavesScreen(void)
         break;
     case SAVES_COPY_TO:
         // On the help line, so the files stay in sight
-        snprintf(help, sizeof(help), "Copy to which file?   %s OK   %s BACK", a, b);
-        DrawAscii(help, 16, 145, TEXT_WHITE, HELP_SHADOW);
+        DrawAscii("Copy to which file?   " CONFIRM "OK  " CANCEL "BACK", 16, 145, TEXT_WHITE, HELP_SHADOW);
         break;
     case SAVES_CONFIRM:
     case SAVES_MESSAGE:
@@ -958,6 +996,11 @@ static void OpenSaves(void)
         if (!sSlotInfo[slot].known)
             RefreshSlotInfo(slot);
     }
+}
+
+bool8 Platform_ConfirmIsCircle(void)
+{
+    return sSettings.circleIsA;
 }
 
 void Platform_OpenFileSelect(bool8 inGame)

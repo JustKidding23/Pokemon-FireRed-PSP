@@ -183,7 +183,7 @@ gPikachuIntro_Text_Page3::
     .string "of people and achieve personal growth.\n"
     .string "That is our biggest objective.\n"
     .string "\n"
-    .string "Press the A Button, and let your\n"
+    .string "Press the {A_BUTTON} Button, and let your\n"
     .string "adventure begin!$"
 
 gOakSpeech_Text_WelcomeToTheWorld::

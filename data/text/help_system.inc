@@ -194,7 +194,7 @@ Help_Text_AnswerPlayingForFirstTime::
 
 Help_Text_AnswerWhatShouldIBeDoing::
 	.string "When you come across another person,\n"
-	.string "go up to them and press the A Button.\l"
+	.string "go up to them and press the {A_BUTTON} Button.\l"
 	.string "That will get them to talk and interact\l"
 	.string "with your character. You may also\l"
 	.string "examine various items and objects in\l"
@@ -232,9 +232,9 @@ Help_Text_AnswerSomeoneBlockingMyWay::
 
 Help_Text_AnswerICantGoOn::
 	.string "Try talking to people by going up to\n"
-	.string "them and pressing the A Button.\l"
+	.string "them and pressing the {A_BUTTON} Button.\l"
 	.string "Also, try checking things like odd trees\l"
-	.string "and strange rocks with the A Button.\l"
+	.string "and strange rocks with the {A_BUTTON} Button.\l"
 	.string "Press the {PLUS} Control Pad and try going\l"
 	.string "to places that look impassable, too.$"
 
@@ -242,7 +242,7 @@ Help_Text_AnswerOutOfThingsToDo::
 	.string "Try going to places where you \n"
 	.string "haven't visited yet.\l"
 	.string "Also, check everything that looks\l"
-	.string "suspicious by pressing the A Button.$"
+	.string "suspicious by pressing the {A_BUTTON} Button.$"
 
 Help_Text_AnswerWhatHappenedToItemIGot::
 	.string "Any item that you are given by another\n"
@@ -750,7 +750,7 @@ Help_Text_HowToUsePlayer::
 	.string "{CIRCLE_1} Select “{PLAYER}” on the MENU.\n"
 	.string "{CIRCLE_2} Your TRAINER CARD is displayed face\n"
 	.string "   up with basic information. Press the\n"
-	.string "   A Button to turn the CARD over.\n"
+	.string "   {A_BUTTON} Button to turn the CARD over.\n"
 	.string "{CIRCLE_3} A variety of data can be found on\n"
 	.string "   the reverse side of the CARD.$"
 
@@ -769,7 +769,7 @@ Help_Text_HowToUseOption::
 	.string "   press left or right to alter the\n"
 	.string "   settings.\n"
 	.string "{CIRCLE_3} Select “CANCEL” or press the\n"
-	.string "   B Button after making changes.$"
+	.string "   {B_BUTTON} Button after making changes.$"
 
 Help_Text_HowToUsePotion::
 	.string "{CIRCLE_1} Open the MENU.\n"
@@ -828,15 +828,15 @@ Help_Text_HowToRideBicycle::
 Help_Text_HowToEnterName::
 	.string "{CIRCLE_1} Move the cursor to the letter you\n"
 	.string "   want with the {PLUS} Control Pad, then\n"
-	.string "   press the A Button to enter it.\n"
-	.string "{CIRCLE_2} Press the B Button to back up.\n"
+	.string "   press the {A_BUTTON} Button to enter it.\n"
+	.string "{CIRCLE_2} Press the {B_BUTTON} Button to back up.\n"
 	.string "{CIRCLE_3} Press SELECT to switch between\n"
 	.string "   uppercase and lowercase letters.\n"
-	.string "{CIRCLE_4} Press the A Button on “OK.”$"
+	.string "{CIRCLE_4} Press the {A_BUTTON} Button on “OK.”$"
 
 Help_Text_HowToUsePC::
 	.string "{CIRCLE_1} Go to any POKéMON CENTER, go up\n"
-	.string "   to the PC, then press the A Button.$"
+	.string "   to the PC, then press the {A_BUTTON} Button.$"
 
 Help_Text_HowToUseBillsPC::
 	.string "{CIRCLE_1} Select “{STR_VAR_1}'S PC” on the PC.\n"
@@ -861,7 +861,7 @@ Help_Text_HowToUseDeposit::
 	.string "   the {PLUS} Control Pad.\n"
 	.string "{CIRCLE_2} Select “DEPOSIT.”\n"
 	.string "{CIRCLE_3} Select the BOX, then press the\n"
-	.string "   A Button to store the POKéMON.\n"
+	.string "   {A_BUTTON} Button to store the POKéMON.\n"
 	.string "If you have only one POKéMON with you,\n"
 	.string "it may not be stored!$"
 
@@ -877,11 +877,11 @@ Help_Text_HowToUseMove::
 Help_Text_HowToMoveItems::
 	.string "{CIRCLE_1} Faintly shown POKéMON can be made\n"
 	.string "   to hold an item by selecting it and\n"
-	.string "   pressing the A Button.\n"
+	.string "   pressing the {A_BUTTON} Button.\n"
 	.string "{CIRCLE_2} Clearly shown POKéMON can be made\n"
 	.string "   to give the item they are holding to\n"
 	.string "   another POKéMON, or return the item\n"
-	.string "   to the BAG with the A Button.$"
+	.string "   to the BAG with the {A_BUTTON} Button.$"
 
 Help_Text_HowToUsePlayersPC::
 	.string "{CIRCLE_1} Select “{PLAYER}'s PC” on the PC.\n"
@@ -906,7 +906,7 @@ Help_Text_HowToUseDepositItem::
 	.string "{CIRCLE_3} If there is more than one \n"
 	.string "   item to be deposited, enter the\n"
 	.string "   quantity with the {PLUS} Control Pad,\n"
-	.string "   then press the A Button.$"
+	.string "   then press the {A_BUTTON} Button.$"
 
 Help_Text_HowToUseMailbox::
 	.string "When MAIL is taken from a POKéMON,\n"
@@ -987,7 +987,7 @@ Help_Text_HowToReadPokedex::
 
 Help_Text_HowToUseHomePC::
 	.string "{CIRCLE_1} Go up to the PC at home, then press\n"
-	.string "   the A Button.\n"
+	.string "   the {A_BUTTON} Button.\n"
 	.string "{CIRCLE_2} The PC will turn on.\n"
 	.string "{CIRCLE_3} Select either “ITEM STORAGE” or\n"
 	.string "   “MAILBOX.”$"
@@ -1421,7 +1421,7 @@ Help_Text_DefineButtonMode::
 	.string "of the POKéDEX pages and BAG POCKETS\l"
 	.string "using the L and R Buttons.\l"
 	.string "Set to “L=A” to make the L Button\l"
-	.string "work the same as the A Button.$"
+	.string "work the same as the {A_BUTTON} Button.$"
 
 Help_Text_DefineFrame::
 	.string "You may choose the design of the frame\n"

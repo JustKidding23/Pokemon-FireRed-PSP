@@ -4526,6 +4526,7 @@ extern const u16 gNamingScreenRival_Pal[];
 extern const u16 gNamingScreenKeyboard_Pal[];
 extern const u16 gNamingScreenMenu_Pal[6][16];
 extern const u16 gNamingScreenBackButton_Gfx[];
+extern const u32 gNamingScreenBackButtonCross_Gfx[];
 extern const u16 gNamingScreenOKButton_Gfx[];
 extern const u16 gNamingScreenPageSwapFrame_Gfx[];
 extern const u16 gNamingScreenPageSwapButton_Gfx[];

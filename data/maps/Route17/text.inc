@@ -113,7 +113,7 @@ Route17_Text_SameSpeciesGrowDifferentRates::
 
 Route17_Text_PressBToStayInPlace::
     .string "TRAINER TIPS\p"
-    .string "Press the B Button to stay in place\n"
+    .string "Press the {B_BUTTON} Button to stay in place\n"
     .string "while on a slope.$"
 
 Route17_Text_RouteSign::

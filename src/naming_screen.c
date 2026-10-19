@@ -1,4 +1,5 @@
 #include "global.h"
+#include "platform.h"
 #include "gflib.h"
 #include "data.h"
 #include "keyboard_text.h"
@@ -1876,6 +1877,11 @@ static void LoadGfx(void)
     LoadBgTiles(2, sNamingScreen->tileBuffer, sizeof(sNamingScreen->tileBuffer), 0);
     LoadBgTiles(3, sNamingScreen->tileBuffer, sizeof(sNamingScreen->tileBuffer), 0);
     LoadSpriteSheets(sSpriteSheets);
+#ifdef __PSP__
+    // BACK's label names the button that cancels
+    if (Platform_ConfirmIsCircle())
+        CpuCopy32(gNamingScreenBackButtonCross_Gfx, (void *)(OBJ_VRAM0 + GetSpriteTileStartByTag(GFXTAG_BACK_BUTTON) * TILE_SIZE_4BPP), 0x1E0);
+#endif
     LoadSpritePalettes(sSpritePalettes);
 }
 

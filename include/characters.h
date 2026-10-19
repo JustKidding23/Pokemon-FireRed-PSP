@@ -195,6 +195,11 @@
 #define CHAR_DPAD_UPDOWN    0x0A
 #define CHAR_DPAD_LEFTRIGHT 0x0B
 #define CHAR_DPAD_NONE      0x0C
+// The PSP's buttons (A_BUTTON and B_BUTTON draw as whichever confirms and cancels)
+#define CHAR_CROSS_BUTTON    0x0D
+#define CHAR_CIRCLE_BUTTON   0x0E
+#define CHAR_TRIANGLE_BUTTON 0x0F
+#define CHAR_SQUARE_BUTTON   0x10
 
 // CHAR_EXTRA_SYMBOL chars
 #define CHAR_UP_ARROW_2        0x00

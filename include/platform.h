@@ -17,6 +17,8 @@ void Platform_TraceCall(const void *func);
 // start menu (inGame) or the main menu. The game keeps running without the
 // buttons.
 void Platform_OpenFileSelect(bool8 inGame);
+// Whether Circle confirms and Cross cancels (the button prompts follow it)
+bool8 Platform_ConfirmIsCircle(void);
 #else
 #define Platform_TraceCall(func) ((void)0)
 #endif

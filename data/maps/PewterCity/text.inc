@@ -135,7 +135,7 @@ PewterCity_Text_SwitchedShoesWithRunningShoes::
     .string "RUNNING SHOES.$"
 
 PewterCity_Text_ExplainRunningShoes::
-    .string "Press the B Button to run.\n"
+    .string "Press the {B_BUTTON} Button to run.\n"
     .string "But only where there's room to run!$"
 
 PewterCity_Text_MustBeGoingBackToLab::

@@ -1,4 +1,5 @@
 #include "global.h"
+#include "platform.h"
 #include "gflib.h"
 #include "decompress.h"
 #include "task.h"
@@ -121,6 +122,33 @@ static const u32 sControlsGuide_PikachuIntro_Background_Tiles[] = INCBIN_U32("gr
 static const u32 sPikachuIntro_Background_Tilemap[] = INCBIN_U32("graphics/oak_speech/pikachu_intro/tilemap.bin.lz");
 static const u32 sOakSpeech_Background_Tiles[] = INCBIN_U32("graphics/oak_speech/oak_speech_bg.4bpp.lz");
 static const u32 sOakSpeech_Background_Tilemap[] = INCBIN_U32("graphics/oak_speech/oak_speech_bg.bin.lz");
+#ifdef __PSP__
+// The guide's PSP buttons are drawn as Cross (confirm) left and Circle (cancel)
+// right in graphics/oak_speech/bg_tiles.png, 3x4 tiles each from tile row 2.
+// When Circle confirms instead, they trade places, like the text beside them.
+static void ControlsGuide_SwapButtonsIfCircleConfirms(void)
+{
+    int row, col, i;
+
+    if (!Platform_ConfirmIsCircle())
+        return;
+    for (row = 2; row < 6; row++)
+    {
+        for (col = 0; col < 3; col++)
+        {
+            u32 *a = (u32 *)(VRAM + (row * 16 + col) * TILE_SIZE_4BPP);
+            u32 *b = (u32 *)(VRAM + (row * 16 + col + 3) * TILE_SIZE_4BPP);
+
+            for (i = 0; i < TILE_SIZE_4BPP / 4; i++)
+            {
+                u32 t = a[i];
+                a[i] = b[i];
+                b[i] = t;
+            }
+        }
+    }
+}
+#endif
 static const u16 sControlsGuide_Tilemap_Page2[] = INCBIN_U16("graphics/oak_speech/controls_guide_page_2.bin");
 static const u16 sControlsGuide_Tilemap_Page3[] = INCBIN_U16("graphics/oak_speech/controls_guide_page_3.bin");
 static const u16 sOakSpeech_Leaf_Pal[] = INCBIN_U16("graphics/oak_speech/leaf/pal.gbapal");
@@ -770,6 +798,9 @@ static void Task_NewGameScene(u8 taskId)
         CopyBgTilemapBufferToVram(1);
         break;
     case 7:
+#ifdef __PSP__
+        ControlsGuide_SwapButtonsIfCircleConfirms();
+#endif
         CreateTopBarWindowLoadPalette(0, 30, 0, 13, 0x1C4);
         FillBgTilemapBufferRect_Palette0(1, 0xD00F, 0,  0, 30, 2);
         FillBgTilemapBufferRect_Palette0(1, 0xD002, 0,  2, 30, 1);

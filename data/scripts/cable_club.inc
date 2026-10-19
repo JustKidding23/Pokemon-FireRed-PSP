@@ -1324,21 +1324,21 @@ CableClub_Text_CantTradeEnigmaBerry::
 
 CableClub_Text_PleaseWaitBCancel::
 	.string "Please wait.\n"
-	.string "… … B Button: Cancel$"
+	.string "… … {B_BUTTON} Button: Cancel$"
 
 CableClub_Text_WhenAllPlayersReadyAConfirmBCancel::
 	.string "When all players are ready…\n"
-	.string "A Button: Confirm\l"
-	.string "B Button: Cancel$"
+	.string "{A_BUTTON} Button: Confirm\l"
+	.string "{B_BUTTON} Button: Cancel$"
 
 CableClub_Text_StartLinkWithXPlayersAConfirmBCancel::
 	.string "Start link with {STR_VAR_1} players.\n"
-	.string "A Button: Confirm\l"
-	.string "B Button: Cancel$"
+	.string "{A_BUTTON} Button: Confirm\l"
+	.string "{B_BUTTON} Button: Cancel$"
 
 CableClub_Text_AwaitingLinkupBCancel::
 	.string "Awaiting linkup…\n"
-	.string "… … B Button: Cancel$"
+	.string "… … {B_BUTTON} Button: Cancel$"
 
 /* Unused, translated in Emerald*/
 CableClub_Text_OkayToSaveProgress::
@@ -1522,7 +1522,7 @@ Text_DescribeWhichGame::
 Text_PokemonJumpInfo::
 	.string "“POKéMON JUMP”\p"
 	.string "Make your POKéMON skip the\n"
-	.string "VINE WHIP rope with the A Button.\p"
+	.string "VINE WHIP rope with the {A_BUTTON} Button.\p"
 	.string "Only mini POKéMON around 28 inches\n"
 	.string "or less may participate.\p"
 	.string "POKéMON that only swim, burrow, or\n"
