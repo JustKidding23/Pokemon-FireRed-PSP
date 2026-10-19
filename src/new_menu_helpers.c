@@ -667,15 +667,7 @@ u8 CreateStartMenuWindow(u8 height)
 {
     if (sStartMenuWindowId == 0xFF)
     {
-        #if defined(PORTABLE) && defined(__PSP__)
-        // Two tiles wider on the PSP, for FILE SELECT. That runs 26 tiles into
-        // the dialogue box's (0x198), which is never on screen with the start
-        // menu: saving removes the menu before it asks. The tiles after the
-        // window frames hold the wider view's overworld maps.
-        struct WindowTemplate template = SetWindowTemplateFields(0, 0x14, 1, 9, height * 2 - 1, DLG_WINDOW_PALETTE_NUM, 0x13D);
-#else
         struct WindowTemplate template = SetWindowTemplateFields(0, 0x16, 1, 7, height * 2 - 1, DLG_WINDOW_PALETTE_NUM, 0x13D);
-#endif
         sStartMenuWindowId = AddWindow(&template);
         PutWindowTilemap(sStartMenuWindowId);
     }

@@ -97,9 +97,9 @@ static bool8 StartMenuLinkPlayerCallback(void);
 #if defined(PORTABLE) && defined(__PSP__)
 // The PSP's save files, under SAVE (see Platform_OpenFileSelect)
 static bool8 StartMenuFileSelectCallback(void);
-static const u8 sText_MenuFileSelect[] = _("FILE SELECT");
+static const u8 sText_MenuFileSelect[] = _("FILE");
 static const u8 sStartMenuDesc_FileSelect[] = _("Play, copy or delete the other\nadventures saved on this PSP.");
-// With FILE SELECT the normal start menu has eight items. Spaced 13 pixels
+// With FILE the normal start menu has eight items. Spaced 13 pixels
 // apart instead of 15, they fill the window seven items take, which ends
 // where the help message window begins.
 #define START_MENU_LINE_HEIGHT (sNumStartMenuItems > 7 ? 13 : 15)
