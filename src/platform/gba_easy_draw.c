@@ -1068,14 +1068,17 @@ static void ExtendEdges(uint16_t *pixels, int lineNum, const uint16_t *bgcnts, b
                 bestNarrowBg = bgnum;
             }
         }
+        // A background that stops at the edge, like the title's Charizard,
+        // has nothing past it but what's behind the screen: the margin shows
+        // that rather than carrying on what's under him at the edge column
+        if (endsAtEdgeOnTop)
+            bestNarrow = 4;
         if (bestNarrow < 4 && bestNarrow <= bestWide)
         {
             uint16_t color = pixels[gx + RENDER_MARGIN];
 
-            // Under a sprite, or a background that stops at the edge like the
-            // title's Charizard, take the color from the carried background
-            // itself
-            if (endsAtEdgeOnTop || sSpriteAtEdge[side])
+            // Under a sprite, take the color from the carried background itself
+            if (sSpriteAtEdge[side])
             {
                 uint16_t control = bgcnts[bestNarrowBg];
 

@@ -625,6 +625,30 @@ static struct
 } sSaves;
 
 static u16 __attribute__((aligned(16))) sSavesImage[RENDER_STRIDE * DISPLAY_HEIGHT];
+// Opening and closing the screen fade through black like the game's menus
+// do (BeginNormalPaletteFade: 2 of 16 steps a frame). sSavesShown is the
+// screen on show, which changes to match sSaves.open while it's black.
+static bool sSavesShown;
+static int sSavesFade;      // 0 to 16, how dark
+static int sSavesFadeStep;  // 2 while fading out, -2 while fading in
+
+static void UpdateSavesFade(void)
+{
+    if (sSavesShown != sSaves.open && sSavesFadeStep <= 0)
+        sSavesFadeStep = 2;
+    sSavesFade += sSavesFadeStep;
+    if (sSavesFade >= 16)
+    {
+        sSavesFade = 16;
+        sSavesShown = sSaves.open;
+        sSavesFadeStep = -2;
+    }
+    else if (sSavesFade <= 0)
+    {
+        sSavesFade = 0;
+        sSavesFadeStep = 0;
+    }
+}
 // Like the main menu's darkening of the windows that aren't selected
 static bool sDarken;
 
@@ -1300,7 +1324,11 @@ int main(int argc, char **argv)
         // PPSSPP, Select and Triangle do.
         menuWasOpen = sSaves.open || sSettingsMenu.open;
         if (sSaves.open)
-            UpdateSaves(pressed);
+        {
+            // Not while it's fading
+            if (sSavesShown && sSavesFadeStep == 0)
+                UpdateSaves(pressed);
+        }
         else if (sSettingsMenu.open)
             UpdateSettings(pressed);
         else if ((pressed & PSP_BTN_NOTE) || ((pressed & PSP_BTN_TRIANGLE) && (buttons & PSP_BTN_SELECT)))
@@ -1308,7 +1336,8 @@ int main(int argc, char **argv)
         if (menuWasOpen && !sSaves.open && !sSettingsMenu.open)
             sMaskedButtons = buttons;
         sMaskedButtons &= buttons;
-        menuWasOpen |= sSaves.open || sSettingsMenu.open;
+        // Including while the save file screen fades out
+        menuWasOpen |= sSaves.open || sSavesShown || sSettingsMenu.open;
 
         // How many frames the game should have run by now. It runs one a
         // display frame, or with Square held two or three (the turbo speed),
@@ -1382,14 +1411,16 @@ int main(int argc, char **argv)
         }
 
         PspHw_SetDiag(PSP_DIAG_STEP, PSP_STEP_PRESENT);
-        if (sSaves.open)
+        UpdateSavesFade();
+        if (sSavesShown)
         {
             DrawSavesScreen();
-            PspHw_DrawGame(sSavesImage, RENDER_WIDTH, RENDER_STRIDE, sSettings.scale, sSettings.filter, false, false);
+            PspHw_DrawGame(sSavesImage, RENDER_WIDTH, RENDER_STRIDE, sSettings.scale, sSettings.filter, sSavesFade * 255 / 16, false);
         }
         else
         {
-            PspHw_DrawGame(image, RENDER_WIDTH, RENDER_STRIDE, sSettings.scale, sSettings.filter, sSettingsMenu.open, gWideViewZoom);
+            PspHw_DrawGame(image, RENDER_WIDTH, RENDER_STRIDE, sSettings.scale, sSettings.filter,
+                           sSettingsMenu.open ? 0xE0 : sSavesFade * 255 / 16, gWideViewZoom);
             if (sSettingsMenu.open)
                 DrawSettings();
         }

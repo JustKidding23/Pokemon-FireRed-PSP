@@ -328,8 +328,9 @@ struct ColorVertex
 
 // image is width pixels across (the GBA's 240, or the wider view's), its rows
 // stride pixels apart, a multiple of 8. zoom shows its middle at twice the size
-// instead, for letterboxed scenes that can't be widened (the "fit" size only)
-void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, bool filter, bool dim, bool zoom)
+// instead, for letterboxed scenes that can't be widened (the "fit" size only).
+// dim darkens it, from 0 (not at all) to 255 (black).
+void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, bool filter, int dim, bool zoom)
 {
     int x = 0, y = 0, w = SCREEN_WIDTH, h = SCREEN_HEIGHT;
     int u0 = 0, v0 = 0, u1 = width, v1 = GBA_HEIGHT;
@@ -415,11 +416,11 @@ void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, boo
     }
     sceGuDisable(GU_TEXTURE_2D);
 
-    if (dim)
+    if (dim > 0)
     {
         struct ColorVertex *rect = sceGuGetMemory(2 * sizeof(struct ColorVertex));
 
-        rect[0].color = rect[1].color = 0xE0000000;
+        rect[0].color = rect[1].color = (unsigned int)(dim > 255 ? 255 : dim) << 24;
         rect[0].x = rect[0].y = rect[0].z = 0;
         rect[1].x = SCREEN_WIDTH;
         rect[1].y = SCREEN_HEIGHT;
