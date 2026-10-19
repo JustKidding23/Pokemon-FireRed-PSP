@@ -807,6 +807,11 @@ static void Task_TitleScreen_SlideWin0(u8 taskId)
         SetGpuReg(REG_OFFSET_WINOUT, WINOUT_WIN01_BG0 | WINOUT_WIN01_BG1 | WINOUT_WIN01_BG3 | WINOUT_WIN01_OBJ | WINOUT_WIN01_CLR);
         SetGpuReg(REG_OFFSET_WIN0H, WIN_RANGE(DISPLAY_WIDTH, DISPLAY_WIDTH));
         ChangeBgX(2, -0xF000, 0);
+#ifdef PORTABLE
+        // While "PRESS START" and the copyright slide in, the streaks at
+        // their front aren't carried on across the margins
+        gWideViewEndsAtEdgeBgs |= 1 << 2;
+#endif
         BlendPalettes(1 << 0xF, 0, RGB_BLACK);
         data[1] = 10 * 24 << 4;
         data[0]++;
@@ -818,6 +823,9 @@ static void Task_TitleScreen_SlideWin0(u8 taskId)
         {
             data[2] = 0;
             data[0]++;
+#ifdef PORTABLE
+            gWideViewEndsAtEdgeBgs &= ~(1 << 2);
+#endif
         }
         ChangeBgX(2, -data[2] << 8, 0);
         SetGpuReg(REG_OFFSET_WIN0H, WIN_RANGE(data[2], DISPLAY_WIDTH));
