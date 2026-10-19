@@ -131,6 +131,37 @@ static const struct BgTemplate sOptionMenuBgTemplates[] =
 };
 
 static const u16 sOptionMenuPalette[] = INCBIN_U16("graphics/misc/option_menu.gbapal");
+
+#ifdef PORTABLE
+// The striped background of the game's other menus (the trainer card's), so
+// OPTION matches them: one light line, then three dark
+static const struct BgTemplate sOptionMenuStripesBgTemplate =
+{
+    .bg = 3,
+    .charBaseIndex = 0,
+    .mapBaseIndex = 28,
+    .screenSize = 0,
+    .paletteMode = 0,
+    .priority = 3,
+    .baseTile = 0
+};
+static const u32 sOptionMenuStripesTile[8] =
+{
+    0x11111111, 0x22222222, 0x22222222, 0x22222222,
+    0x11111111, 0x22222222, 0x22222222, 0x22222222,
+};
+static const u16 sOptionMenuStripesPalette[3] = {RGB_BLACK, RGB(10, 25, 22), RGB(6, 19, 18)};
+#define OPTION_MENU_STRIPES_PAL 14
+
+static void InitOptionMenuStripes(void)
+{
+    InitBgFromTemplate(&sOptionMenuStripesBgTemplate);
+    LoadBgTiles(3, sOptionMenuStripesTile, sizeof(sOptionMenuStripesTile), 0);
+    CpuFill16(OPTION_MENU_STRIPES_PAL << 12, (void *)BG_SCREEN_ADDR(28), BG_SCREEN_SIZE);
+    LoadPalette(sOptionMenuStripesPalette, BG_PLTT_ID(OPTION_MENU_STRIPES_PAL), sizeof(sOptionMenuStripesPalette));
+    ShowBg(3);
+}
+#endif
 static const u16 sOptionMenuItemCounts[MENUITEM_COUNT] = {3, 2, 2, 2, 3, 10, 0};
 
 static const u8 *const sOptionMenuItemsNames[MENUITEM_COUNT] =
@@ -306,11 +337,18 @@ static void InitOptionMenuBg(void)
     SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT1_BG0 | BLDCNT_EFFECT_BLEND | BLDCNT_EFFECT_LIGHTEN);
     SetGpuReg(REG_OFFSET_BLDY, BLDCNT_TGT1_BG1);
     SetGpuReg(REG_OFFSET_WININ, WININ_WIN0_BG0);
+#ifdef PORTABLE
+    SetGpuReg(REG_OFFSET_WINOUT, WINOUT_WIN01_BG0 | WINOUT_WIN01_BG1 | WINOUT_WIN01_BG2 | WINOUT_WIN01_BG3 | WINOUT_WIN01_CLR);
+#else
     SetGpuReg(REG_OFFSET_WINOUT, WINOUT_WIN01_BG0 | WINOUT_WIN01_BG1 | WINOUT_WIN01_BG2 | WINOUT_WIN01_CLR);
+#endif
     SetGpuReg(REG_OFFSET_DISPCNT, DISPCNT_OBJ_1D_MAP | DISPCNT_OBJ_ON | DISPCNT_WIN0_ON);
     ShowBg(0);
     ShowBg(1);
     ShowBg(2);
+#ifdef PORTABLE
+    InitOptionMenuStripes();
+#endif
 };
 
 static void OptionMenu_PickSwitchCancel(void)

@@ -1310,6 +1310,10 @@ static void IntroCB_Scene1(struct IntroSequenceData * this)
         LoadPalette(sScene1_Bg_Pal, BG_PLTT_ID(PALSLOT_SCENE1_BG), sizeof(sScene1_Bg_Pal));
         BlendPalettes((1 << PALSLOT_SCENE1_GRASS) | (1 << PALSLOT_SCENE1_BG), 16, RGB_WHITE);
         InitBgsFromTemplates(0, sBgTemplates_Scene1, ARRAY_COUNT(sBgTemplates_Scene1));
+#ifdef PORTABLE
+        // The grass's art ends at the GBA's edges: zoom into the letterboxed scene
+        gWideViewZoom = TRUE;
+#endif
         DecompressAndCopyTileDataToVram(BG_SCENE1_BACKGROUND, sScene1_Bg_Gfx, 0, 0, 0);
         DecompressAndCopyTileDataToVram(BG_SCENE1_BACKGROUND, sScene1_Bg_Map, 0, 0, 1);
         ShowBg(BG_SCENE1_BACKGROUND);
@@ -1443,6 +1447,10 @@ static void IntroCB_Scene2(struct IntroSequenceData * this)
     case 0:
         BlendPalettes(PALETTES_ALL & ~1, 16, RGB_WHITE);
         InitBgsFromTemplates(0, sBgTemplates_Scene2, ARRAY_COUNT(sBgTemplates_Scene2));
+#ifdef PORTABLE
+        // The forest's art ends at the GBA's edges: zoom into the letterboxed scene
+        gWideViewZoom = TRUE;
+#endif
         DecompressAndCopyTileDataToVram(BG_SCENE2_BACKGROUND, sScene2_Bg_Gfx, 0, 0, 0);
         DecompressAndCopyTileDataToVram(BG_SCENE2_BACKGROUND, sScene2_Bg_Map, 0, 0, 1);
         ShowBg(BG_SCENE2_BACKGROUND);
@@ -1570,6 +1578,11 @@ static void IntroCB_Scene3_Entrance(struct IntroSequenceData * this)
         LoadPalette(sGengar_Pal, BG_PLTT_ID(5), sizeof(sGengar_Pal));
         BlendPalettes(PALETTES_ALL & ~1, 16, RGB_WHITE);
         InitBgsFromTemplates(0, sBgTemplates_Scene3, ARRAY_COUNT(sBgTemplates_Scene3));
+#ifdef PORTABLE
+        // The fight's forest scrolls round and round, so its map repeats, and
+        // Gengar's map holds the rest of him past the screen's edge
+        gWideViewRepeatingBgs = (1 << BG_SCENE3_BACKGROUND) | (1 << BG_SCENE3_GENGAR);
+#endif
         DecompressAndCopyTileDataToVram(BG_SCENE3_BACKGROUND, sScene3_Bg_Gfx, 0, 0, 0);
         DecompressAndCopyTileDataToVram(BG_SCENE3_BACKGROUND, sScene3_Bg_Map, 0, 0, 1);
         ShowBg(BG_SCENE3_BACKGROUND);

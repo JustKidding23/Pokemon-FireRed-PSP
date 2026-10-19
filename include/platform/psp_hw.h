@@ -80,7 +80,7 @@ uint64_t PspHw_Microseconds(void);
 
 // A frame: the game's picture (240x160, ABGR1555), maybe dimmed under the
 // menu, then text on top, then shown at the next vertical blank
-void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, bool filter, bool dim);
+void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, bool filter, bool dim, bool zoom);
 void PspHw_Print(int column, int row, uint32_t color, const char *text);
 void PspHw_Present(void);
 // Text is 8x8 pixels, so the screen holds 60x34 characters

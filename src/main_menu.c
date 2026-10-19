@@ -632,7 +632,7 @@ static bool8 HandleMenuInput(u8 taskId)
     if (JOY_NEW(A_BUTTON) && gTasks[taskId].tCursorPos == FILE_SELECT_ITEM(gTasks[taskId].tMenuType))
     {
         PlaySE(SE_SELECT);
-        Platform_OpenFileSelect();
+        Platform_OpenFileSelect(FALSE);
         return FALSE;
     }
 #endif

@@ -7,6 +7,7 @@
 
 #include "global.h"
 #include "main.h"
+#include "bg.h"
 #include "platform.h"
 
 #include "save.h"
@@ -566,8 +567,11 @@ static void DrawSettings(void)
 // The save file screen, from FILE SELECT in the start menu and the main menu
 // (see Platform_OpenFileSelect). It's drawn like the game's CONTINUE
 // screen (see main_menu.c), with its font, window frame and colors, into an
-// image of the GBA's size.
+// image of the wider view's size. Its background is the main menu's from
+// there, and the striped one of the game's other menus from the start menu.
 #define SAVES_BG_COLOR    RGB(17, 18, 31) // graphics/main_menu/bg.gbapal
+#define STRIPES_LIGHT     RGB(10, 25, 22) // the trainer card's background
+#define STRIPES_DARK      RGB(6, 19, 18)
 #define TEXT_WHITE        RGB_WHITE
 #define TEXT_DARK         RGB(12, 12, 12)
 #define TEXT_SHADOW       RGB(26, 26, 25)
@@ -610,6 +614,7 @@ enum
 static struct
 {
     bool open;
+    bool inGame;    // opened from the start menu
     int mode;
     int file;       // 0 to NUM_SLOTS - 1, the file the cursor is on
     int action;
@@ -619,7 +624,7 @@ static struct
     char message[2][40];
 } sSaves;
 
-static u16 __attribute__((aligned(16))) sSavesImage[DISPLAY_WIDTH * DISPLAY_HEIGHT];
+static u16 __attribute__((aligned(16))) sSavesImage[RENDER_STRIDE * DISPLAY_HEIGHT];
 // Like the main menu's darkening of the windows that aren't selected
 static bool sDarken;
 
@@ -634,10 +639,12 @@ static u16 DarkenColor(u16 color)
     return r | (g << 5) | (b << 10);
 }
 
+// x is the game's, so the margins are at -RENDER_MARGIN to -1 and from
+// DISPLAY_WIDTH on
 static inline void Plot(int x, int y, u16 color)
 {
-    if (x >= 0 && x < DISPLAY_WIDTH && y >= 0 && y < DISPLAY_HEIGHT)
-        sSavesImage[y * DISPLAY_WIDTH + x] = sDarken ? DarkenColor(color) : color;
+    if (x >= -RENDER_MARGIN && x < DISPLAY_WIDTH + RENDER_MARGIN && y >= 0 && y < DISPLAY_HEIGHT)
+        sSavesImage[y * RENDER_STRIDE + x + RENDER_MARGIN] = sDarken ? DarkenColor(color) : color;
 }
 
 static void FillRect(int x, int y, int width, int height, u16 color)
@@ -841,9 +848,17 @@ static void DrawSavesScreen(void)
     const char *b = sSettings.circleIsA ? "X" : "O";
     char help[64];
 
-    // FireRed's main menu darkens the background too, not only the windows
-    // that aren't selected
-    FillRect(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, DarkenColor(SAVES_BG_COLOR));
+    if (sSaves.inGame)
+    {
+        for (int y = 0; y < DISPLAY_HEIGHT; y++)
+            FillRect(-RENDER_MARGIN, y, RENDER_WIDTH, 1, y % 4 == 0 ? STRIPES_LIGHT : STRIPES_DARK);
+    }
+    else
+    {
+        // FireRed's main menu darkens the background too, not only the
+        // windows that aren't selected
+        FillRect(-RENDER_MARGIN, 0, RENDER_WIDTH, DISPLAY_HEIGHT, DarkenColor(SAVES_BG_COLOR));
+    }
     for (int file = 0; file < NUM_SLOTS; file++)
         DrawFileWindow(file);
 
@@ -921,8 +936,9 @@ static void OpenSaves(void)
     }
 }
 
-void Platform_OpenFileSelect(void)
+void Platform_OpenFileSelect(bool8 inGame)
 {
+    sSaves.inGame = inGame;
     OpenSaves();
 }
 
@@ -1369,11 +1385,11 @@ int main(int argc, char **argv)
         if (sSaves.open)
         {
             DrawSavesScreen();
-            PspHw_DrawGame(sSavesImage, DISPLAY_WIDTH, DISPLAY_WIDTH, sSettings.scale, sSettings.filter, false);
+            PspHw_DrawGame(sSavesImage, RENDER_WIDTH, RENDER_STRIDE, sSettings.scale, sSettings.filter, false, false);
         }
         else
         {
-            PspHw_DrawGame(image, RENDER_WIDTH, RENDER_STRIDE, sSettings.scale, sSettings.filter, sSettingsMenu.open);
+            PspHw_DrawGame(image, RENDER_WIDTH, RENDER_STRIDE, sSettings.scale, sSettings.filter, sSettingsMenu.open, gWideViewZoom);
             if (sSettingsMenu.open)
                 DrawSettings();
         }

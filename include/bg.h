@@ -127,6 +127,16 @@ extern bool32 gWindowTileAutoAllocEnabled;
 
 #ifdef PORTABLE
 extern bool8 gWideViewMargins;
+// Backgrounds (bits 0-3) whose narrower maps are made to repeat, so they fill
+// the margins from their own next columns
+extern u8 gWideViewRepeatingBgs;
+// Show the GBA screen's middle twice the size instead, for letterboxed scenes
+// that can't be widened
+extern bool8 gWideViewZoom;
+// Backgrounds (bits 0-3) whose art stops at the GBA screen's edges, like the
+// title's Charizard: the margins show what's behind them instead of carrying
+// their edge on
+extern u8 gWideViewEndsAtEdgeBgs;
 #endif
 
 #endif // GUARD_BG_H

@@ -327,8 +327,9 @@ struct ColorVertex
 };
 
 // image is width pixels across (the GBA's 240, or the wider view's), its rows
-// stride pixels apart, a multiple of 8
-void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, bool filter, bool dim)
+// stride pixels apart, a multiple of 8. zoom shows its middle at twice the size
+// instead, for letterboxed scenes that can't be widened (the "fit" size only)
+void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, bool filter, bool dim, bool zoom)
 {
     int x = 0, y = 0, w = SCREEN_WIDTH, h = SCREEN_HEIGHT;
     int u0 = 0, v0 = 0, u1 = width, v1 = GBA_HEIGHT;
@@ -341,6 +342,15 @@ void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, boo
         w = width * SCREEN_HEIGHT / GBA_HEIGHT;
         if (w > SCREEN_WIDTH)
             w = SCREEN_WIDTH;
+        if (zoom)
+        {
+            // The middle 240x136, which cuts only the scene's black bars
+            w = SCREEN_WIDTH;
+            u0 = (width - SCREEN_WIDTH / 2) / 2;
+            u1 = u0 + SCREEN_WIDTH / 2;
+            v0 = (GBA_HEIGHT - SCREEN_HEIGHT / 2) / 2;
+            v1 = v0 + SCREEN_HEIGHT / 2;
+        }
         break;
     case PSP_SCALE_2X_CROP:
         // Twice the size, with 24 lines cut off at the top and bottom, and the

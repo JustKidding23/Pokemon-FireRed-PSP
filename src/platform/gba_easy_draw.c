@@ -53,17 +53,26 @@ struct bgPriority {
 
 // The columns of the line a text background draws on: all of them for a map
 // at least as wide as the line, like the overworld's, and only the GBA's 240
-// for a narrower one, which would just repeat itself in the margins
+// for a narrower one, which would just repeat itself in the margins. A screen
+// can also name narrower maps that are made to repeat, like the intro's
+// scrolling forest (gWideViewRepeatingBgs).
 extern bool8 gWideViewMargins;
+extern u8 gWideViewRepeatingBgs;
+extern u8 gWideViewEndsAtEdgeBgs;
 
-static inline unsigned int BgFirstColumn(unsigned int mapWidthInPixels)
+static inline bool BgFillsMargins(int bgNum, unsigned int mapWidthInPixels)
 {
-    return gWideViewMargins && mapWidthInPixels >= RENDER_WIDTH ? 0 : RENDER_MARGIN;
+    return (gWideViewMargins && mapWidthInPixels >= RENDER_WIDTH) || (gWideViewRepeatingBgs & (1 << bgNum));
 }
 
-static inline unsigned int BgEndColumn(unsigned int mapWidthInPixels)
+static inline unsigned int BgFirstColumn(int bgNum, unsigned int mapWidthInPixels)
 {
-    return gWideViewMargins && mapWidthInPixels >= RENDER_WIDTH ? RENDER_WIDTH : RENDER_MARGIN + DISPLAY_WIDTH;
+    return BgFillsMargins(bgNum, mapWidthInPixels) ? 0 : RENDER_MARGIN;
+}
+
+static inline unsigned int BgEndColumn(int bgNum, unsigned int mapWidthInPixels)
+{
+    return BgFillsMargins(bgNum, mapWidthInPixels) ? RENDER_WIDTH : RENDER_MARGIN + DISPLAY_WIDTH;
 }
 
 static const uint16_t bgMapSizes[][2] =
@@ -115,7 +124,7 @@ static void RenderBGScanlineDirect(int bgNum, uint16_t control, uint16_t hoffs, 
     yy &= 0xFF;
     bgmapRow += (yy / 8) * 32;
 
-    for (unsigned int x = BgFirstColumn(mapWidthInPixels), lineEnd = BgEndColumn(mapWidthInPixels); x < lineEnd;)
+    for (unsigned int x = BgFirstColumn(bgNum, mapWidthInPixels), lineEnd = BgEndColumn(bgNum, mapWidthInPixels); x < lineEnd;)
     {
         unsigned int xx = (x - RENDER_MARGIN + hoffs) & 0x1FF;
         uint16_t *bgmap = bgmapRow;
@@ -197,15 +206,15 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
         yy &= 0xFF;
         bgmapRow += (yy / 8) * 32;
 
-        unsigned int lineEnd = BgEndColumn(mapWidthInPixels);
+        unsigned int lineEnd = BgEndColumn(bgNum, mapWidthInPixels);
 
         // A narrow map leaves the margins clear
-        if (BgFirstColumn(mapWidthInPixels) != 0)
+        if (BgFirstColumn(bgNum, mapWidthInPixels) != 0)
         {
             memset(line, 0, RENDER_MARGIN * sizeof(line[0]));
             memset(&line[lineEnd], 0, (RENDER_WIDTH - lineEnd) * sizeof(line[0]));
         }
-        for (unsigned int x = BgFirstColumn(mapWidthInPixels); x < lineEnd;)
+        for (unsigned int x = BgFirstColumn(bgNum, mapWidthInPixels); x < lineEnd;)
         {
             unsigned int xx = (x - RENDER_MARGIN + hoffs) & 0x1FF;
             uint16_t *bgmap = bgmapRow;
@@ -260,7 +269,7 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
 
     // This way only draws the pixels that aren't clear
     memset(line, 0, RENDER_WIDTH * sizeof(line[0]));
-    for (unsigned int x = BgFirstColumn(mapWidthInPixels); x < BgEndColumn(mapWidthInPixels); x++)
+    for (unsigned int x = BgFirstColumn(bgNum, mapWidthInPixels); x < BgEndColumn(bgNum, mapWidthInPixels); x++)
     {
         uint16_t *bgmap = (uint16_t *)BG_SCREEN_ADDR(screenBaseBlock);
         // adjust for scroll, in the game's columns (which start left of 0
@@ -970,9 +979,9 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
     }
 }
 
-// Whether a text background's pixel at the game's column gx, on line lineNum,
-// isn't clear
-static bool TextBgOpaqueAt(uint16_t control, uint16_t hoffs, uint16_t voffs, int lineNum, int gx)
+// The palette entry of a text background's pixel at the game's column gx, on
+// line lineNum, or 0 where it's clear
+static unsigned int TextBgColorIndexAt(uint16_t control, uint16_t hoffs, uint16_t voffs, int lineNum, int gx)
 {
     unsigned int charBaseBlock = (control >> 2) & 3;
     unsigned int screenBaseBlock = (control >> 8) & 0x1F;
@@ -996,8 +1005,14 @@ static bool TextBgOpaqueAt(uint16_t control, uint16_t hoffs, uint16_t voffs, int
     unsigned int tileY = (entry & (1 << 11)) ? 7 - yy % 8 : yy % 8;
 
     if (is8bpp)
-        return tiles[(uint16_t)((entry & 0x3FF) * 64) + tileY * 8 + tileX] != 0;
-    return (tiles[(uint16_t)((entry & 0x3FF) * 32) + tileY * 4 + tileX / 2] >> ((tileX & 1) * 4)) & 0xF;
+        return tiles[(uint16_t)((entry & 0x3FF) * 64) + tileY * 8 + tileX];
+    unsigned int pixel = (tiles[(uint16_t)((entry & 0x3FF) * 32) + tileY * 4 + tileX / 2] >> ((tileX & 1) * 4)) & 0xF;
+    return pixel != 0 ? (entry >> 12) * 16 + pixel : 0;
+}
+
+static bool TextBgOpaqueAt(uint16_t control, uint16_t hoffs, uint16_t voffs, int lineNum, int gx)
+{
+    return TextBgColorIndexAt(control, hoffs, voffs, lineNum, gx) != 0;
 }
 
 // Boxes and backgrounds drawn to the GBA screen's edges, like the quest log's
@@ -1015,18 +1030,28 @@ static void ExtendEdges(uint16_t *pixels, int lineNum, const uint16_t *bgcnts, b
     for (int side = 0; side < 2; side++)
     {
         int gx = sEdgeColumns[side];
-        int bestNarrow = 4, bestWide = 4;
+        int bestNarrow = 4, bestWide = 4, bestNarrowBg = 0;
+        bool endsAtEdgeOnTop = false;
 
         for (int bgnum = 0; bgnum < (mode == 0 ? 4 : 2); bgnum++)
         {
             uint16_t control = bgcnts[bgnum];
             int priority = control & 3;
-            bool wide = gWideViewMargins && bgMapSizes[control >> 14][0] * 8 >= RENDER_WIDTH;
+            bool wide = BgFillsMargins(bgnum, bgMapSizes[control >> 14][0] * 8);
 
             if (!isbgEnabled(bgnum))
                 continue;
             if (windowsEnabled && !(winMask[gx + RENDER_MARGIN] & (1 << bgnum)))
                 continue;
+            if (gWideViewEndsAtEdgeBgs & (1 << bgnum))
+            {
+                // Not carried on, but what's showing at the edge column may
+                // be it rather than the background that is
+                if (TextBgOpaqueAt(control, *(uint16_t *)(REG_ADDR_BG0HOFS + bgnum * 4),
+                                   *(uint16_t *)(REG_ADDR_BG0VOFS + bgnum * 4), lineNum, gx))
+                    endsAtEdgeOnTop = true;
+                continue;
+            }
             if (wide)
             {
                 if (priority < bestWide)
@@ -1037,11 +1062,26 @@ static void ExtendEdges(uint16_t *pixels, int lineNum, const uint16_t *bgcnts, b
                                     *(uint16_t *)(REG_ADDR_BG0VOFS + bgnum * 4), lineNum, gx))
             {
                 bestNarrow = priority;
+                bestNarrowBg = bgnum;
             }
         }
         if (bestNarrow < 4 && bestNarrow <= bestWide)
         {
             uint16_t color = pixels[gx + RENDER_MARGIN];
+
+            // Under a background that stops at the edge, like the title's
+            // Charizard, take the color from the carried background itself
+            if (endsAtEdgeOnTop)
+            {
+                uint16_t control = bgcnts[bestNarrowBg];
+
+                color = ((uint16_t *)PLTT)[TextBgColorIndexAt(control, *(uint16_t *)(REG_ADDR_BG0HOFS + bestNarrowBg * 4),
+                                                             *(uint16_t *)(REG_ADDR_BG0VOFS + bestNarrowBg * 4), lineNum, gx)];
+                if ((REG_BLDCNT & (1 << bestNarrowBg)) && ((REG_BLDCNT >> 6) & 3) == 2)
+                    color = alphaBrightnessIncrease(color);
+                else if ((REG_BLDCNT & (1 << bestNarrowBg)) && ((REG_BLDCNT >> 6) & 3) == 3)
+                    color = alphaBrightnessDecrease(color);
+            }
 
             if (side == 0)
                 memsetu16(pixels, color, RENDER_MARGIN);
@@ -1092,9 +1132,9 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     // others, like the summary screen, have wide maps for scrolling whose
     // other parts aren't meant to be seen.
     sWinExtendMargins = false;
-    for (bgnum = 0; gWideViewMargins && bgnum < (mode == 0 ? 4 : 2); bgnum++)
+    for (bgnum = 0; bgnum < (mode == 0 ? 4 : 2); bgnum++)
     {
-        if (isbgEnabled(bgnum) && bgMapSizes[scanline.bgcnts[bgnum] >> 14][0] * 8 >= RENDER_WIDTH)
+        if (isbgEnabled(bgnum) && BgFillsMargins(bgnum, bgMapSizes[scanline.bgcnts[bgnum] >> 14][0] * 8))
             sWinExtendMargins = true;
     }
 

@@ -14,8 +14,9 @@ u64 Platform_GetMicroseconds(void);
 #ifdef __PSP__
 void Platform_TraceCall(const void *func);
 // Opens the PSP's save file screen over the game, from FILE SELECT in the
-// start menu or the main menu. The game keeps running without the buttons.
-void Platform_OpenFileSelect(void);
+// start menu (inGame) or the main menu. The game keeps running without the
+// buttons.
+void Platform_OpenFileSelect(bool8 inGame);
 #else
 #define Platform_TraceCall(func) ((void)0)
 #endif

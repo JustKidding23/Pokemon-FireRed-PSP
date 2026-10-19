@@ -3,6 +3,9 @@
 #include "task.h"
 #include "new_menu_helpers.h"
 #include "m4a.h"
+#ifdef PORTABLE
+#include "platform/framedraw.h"
+#endif
 #include "scanline_effect.h"
 #include "graphics.h"
 #include "help_system.h"
@@ -304,6 +307,13 @@ static const u8 sFlameXPositions[] = {
     4, 16, 26, 32, 48, 200, 216, 224, 232, 60, 76, 92, 108, 128, 144, 0
 };
 
+#ifdef PORTABLE
+// More flames in the wider view's margins, spaced like the ones at the edges
+static const s16 sMarginFlameXPositions[] = {
+    -20, -12, 240, 248, 256
+};
+#endif
+
 #elif defined(LEAFGREEN)
 static const struct CompressedSpriteSheet sSpriteSheets[] = {
     {sLeaves_Gfx,                    0x580, TILE_TAG_FLAME_OR_LEAF},
@@ -360,6 +370,13 @@ void CB2_InitTitleScreen(void)
         DmaFill16(3, 0, (void *)PLTT, PLTT_SIZE);
         ResetBgsAndClearDma3BusyFlags(FALSE);
         InitBgsFromTemplates(0, sBgTemplates, NELEMS(sBgTemplates));
+#ifdef PORTABLE
+        // The border's rows are one tile across, so it repeats into the
+        // margins, and the flames rise there too. The box art's Charizard
+        // ends at the GBA's edge: the border shows past him.
+        gWideViewRepeatingBgs = 1 << 3;
+        gWideViewEndsAtEdgeBgs = 1 << 1;
+#endif
         SetGpuRegBits(REG_OFFSET_DISPCNT, DISPCNT_OBJ_1D_MAP | DISPCNT_OBJ_ON);
         sTitleScreenTimerTaskId = TASK_NONE;
         break;
@@ -958,7 +975,11 @@ static void SpriteCallback_TitleScreenFlame(struct Sprite *sprite)
     s16 *data = sprite->data;
     sPosX -= sSpeedX;
     sprite->x = sPosX >> 4;
+#ifdef PORTABLE
+    if (sprite->x < -8 - RENDER_MARGIN)
+#else
     if (sprite->x < -8)
+#endif
     {
         DestroySprite(sprite);
         return;
@@ -1058,6 +1079,14 @@ static void Task_FlameSpawner(u8 taskId)
                 xspeed = (TitleScreen_rand(taskId, 3) % 4) - 2;
                 yspeed = (TitleScreen_rand(taskId, 3) % 8) - 16;
             }
+#ifdef PORTABLE
+            for (i = 0; i < NELEMS(sMarginFlameXPositions); i++)
+            {
+                CreateFlameSprite(tOffsetX + sMarginFlameXPositions[i], y, xspeed, yspeed, TRUE);
+                xspeed = (TitleScreen_rand(taskId, 3) % 4) - 2;
+                yspeed = (TitleScreen_rand(taskId, 3) % 8) - 16;
+            }
+#endif
             tOffsetX++;
             if (tOffsetX > 3)
                 tOffsetX = 0;

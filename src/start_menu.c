@@ -580,7 +580,7 @@ static bool8 StartMenuOptionCallback(void)
 // behind it
 static bool8 StartMenuFileSelectCallback(void)
 {
-    Platform_OpenFileSelect();
+    Platform_OpenFileSelect(TRUE);
     sStartMenuCallback = StartCB_HandleInput;
     return FALSE;
 }
