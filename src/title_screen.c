@@ -806,29 +806,43 @@ static void Task_TitleScreen_SlideWin0(u8 taskId)
     case 3:
         SetGpuReg(REG_OFFSET_WINOUT, WINOUT_WIN01_BG0 | WINOUT_WIN01_BG1 | WINOUT_WIN01_BG3 | WINOUT_WIN01_OBJ | WINOUT_WIN01_CLR);
         SetGpuReg(REG_OFFSET_WIN0H, WIN_RANGE(DISPLAY_WIDTH, DISPLAY_WIDTH));
-        ChangeBgX(2, -0xF000, 0);
 #ifdef PORTABLE
-        // While "PRESS START" and the copyright slide in, the streaks at
-        // their front aren't carried on across the margins
-        gWideViewEndsAtEdgeBgs |= 1 << 2;
+        // "PRESS START" and the copyright slide in from the wider view's
+        // right edge, in the GBA's 10 frames, carrying their bar's end on
+        // across the margin behind them
+        ChangeBgX(2, -(DISPLAY_WIDTH + RENDER_MARGIN) << 8, 0);
+        gWideViewClampBgs |= 1 << 2;
+        data[1] = (DISPLAY_WIDTH + RENDER_MARGIN) << 4;
+#else
+        ChangeBgX(2, -0xF000, 0);
+        data[1] = 10 * 24 << 4;
 #endif
         BlendPalettes(1 << 0xF, 0, RGB_BLACK);
-        data[1] = 10 * 24 << 4;
         data[0]++;
         break;
     case 4:
+#ifdef PORTABLE
+        data[1] -= ((DISPLAY_WIDTH + RENDER_MARGIN) << 4) / 10 + 1;
+#else
         data[1] -= 24 << 4;
+#endif
         data[2] = data[1] >> 4;
         if (data[2] <= 0)
         {
             data[2] = 0;
             data[0]++;
 #ifdef PORTABLE
-            gWideViewEndsAtEdgeBgs &= ~(1 << 2);
+            gWideViewClampBgs &= ~(1 << 2);
 #endif
         }
         ChangeBgX(2, -data[2] << 8, 0);
+#ifdef PORTABLE
+        // The window can't start past the GBA's edge: while the layer is
+        // still beyond it, nothing of it shows
+        SetGpuReg(REG_OFFSET_WIN0H, WIN_RANGE(min(data[2], DISPLAY_WIDTH), DISPLAY_WIDTH));
+#else
         SetGpuReg(REG_OFFSET_WIN0H, WIN_RANGE(data[2], DISPLAY_WIDTH));
+#endif
         break;
     case 5:
         ClearGpuRegBits(REG_OFFSET_DISPCNT, DISPCNT_WIN0_ON);

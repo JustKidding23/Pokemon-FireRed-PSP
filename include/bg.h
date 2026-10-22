@@ -137,6 +137,9 @@ extern bool8 gWideViewZoom;
 // title's Charizard: the margins show what's behind them instead of carrying
 // their edge on
 extern u8 gWideViewEndsAtEdgeBgs;
+// Backgrounds (bits 0-3) that fill the margins with their art's first and last
+// columns, moving with their scroll, like the title's copyright bar sliding in
+extern u8 gWideViewClampBgs;
 #endif
 
 #endif // GUARD_BG_H
