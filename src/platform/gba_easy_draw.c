@@ -320,11 +320,16 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
         }
         else
             xx = (gx + hoffs) & 0x1FF;
-        // In the margins, only where the map carries on without wrapping
-        // round (see gWideViewNoWrapBgs)
-        if ((gWideViewNoWrapBgs & (1 << bgNum)) && (gx < 0 || gx >= DISPLAY_WIDTH)
-         && ((unsigned int)(gx + (int)(hoffs % mapWidthInPixels)) >= mapWidthInPixels))
-            continue;
+        // In the margins, only where the map seen at the screen's edge
+        // carries on without wrapping round (see gWideViewNoWrapBgs)
+        if (gWideViewNoWrapBgs & (1 << bgNum))
+        {
+            if (gx < 0 && (int)(hoffs % mapWidthInPixels) + gx < 0)
+                continue;
+            if (gx >= DISPLAY_WIDTH
+             && (hoffs + DISPLAY_WIDTH - 1) % mapWidthInPixels + (unsigned int)(gx - (DISPLAY_WIDTH - 1)) >= mapWidthInPixels)
+                continue;
+        }
         
         unsigned int yy = (lineNum + voffs) & 0x1FF;
         
