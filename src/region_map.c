@@ -2911,17 +2911,30 @@ static void SnapToIconOrButton(void)
 
 static u16 GetMapCursorX(void)
 {
+#ifdef UBFIX
+    if (sMapCursor == NULL)
+        return 0;
+#endif
     return sMapCursor->x;
 }
 
 static u16 GetMapCursorY(void)
 {
+#ifdef UBFIX
+    if (sMapCursor == NULL)
+        return 0;
+#endif
     return sMapCursor->y;
 }
 
 static u16 GetMapsecUnderCursor(void)
 {
     u8 mapsec;
+#ifdef UBFIX
+    // BUG: DisplayCurrentMapName asks before the cursor is made
+    if (sMapCursor == NULL)
+        return MAPSEC_NONE;
+#endif
     if (sMapCursor->y < 0
      || sMapCursor->y >= MAP_HEIGHT
      || sMapCursor->x < 0
@@ -2937,6 +2950,12 @@ static u16 GetMapsecUnderCursor(void)
 static u16 GetDungeonMapsecUnderCursor(void)
 {
     u8 mapsec;
+#ifdef UBFIX
+    // BUG: UpdateMapsecNameBox asks before the cursor is made, reading address 2
+    // (harmless on the GBA, a crash on the PSP)
+    if (sMapCursor == NULL)
+        return MAPSEC_NONE;
+#endif
     if (sMapCursor->y < 0
      || sMapCursor->y >= MAP_HEIGHT
      || sMapCursor->x < 0
@@ -3614,12 +3633,24 @@ static void SetFlyIconInvisibility(u8 whichMap, u8 iconNum, bool8 invisible)
         for (i = 0; i < NELEMS(sMapIcons->flyIcons); i++)
         {
             if (sMapIcons->flyIcons[i].region == whichMap || whichMap == 0xFF)
+            {
+#ifdef UBFIX
+                // BUG: unused slots are zero, which is REGIONMAP_KANTO, and
+                // have no sprite (a write near address 0)
+                if (sMapIcons->flyIcons[i].sprite == NULL)
+                    continue;
+#endif
                 sMapIcons->flyIcons[i].sprite->invisible = invisible;
+            }
         }
     }
     else
     {
-        if (sMapIcons->flyIcons[iconNum].region == whichMap)
+        if (sMapIcons->flyIcons[iconNum].region == whichMap
+#ifdef UBFIX
+         && sMapIcons->flyIcons[iconNum].sprite != NULL
+#endif
+        )
             sMapIcons->flyIcons[iconNum].sprite->invisible = invisible;
     }
 }
@@ -3633,12 +3664,22 @@ static void SetDungeonIconInvisibility(u8 whichMap, u8 iconNum, bool8 invisible)
         for (i = 0; i < NELEMS(sMapIcons->dungeonIcons); i++)
         {
             if (sMapIcons->dungeonIcons[i].region == whichMap || whichMap == 0xFF)
+            {
+#ifdef UBFIX
+                if (sMapIcons->dungeonIcons[i].sprite == NULL)
+                    continue;
+#endif
                 sMapIcons->dungeonIcons[i].sprite->invisible = invisible;
+            }
         }
     }
     else
     {
-        if (sMapIcons->dungeonIcons[iconNum].region != whichMap)
+        if (sMapIcons->dungeonIcons[iconNum].region != whichMap
+#ifdef UBFIX
+         && sMapIcons->dungeonIcons[iconNum].sprite != NULL
+#endif
+        )
             sMapIcons->dungeonIcons[iconNum].sprite->invisible = invisible;
     }
 }
