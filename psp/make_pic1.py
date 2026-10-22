@@ -13,6 +13,8 @@ import sys
 import cv2
 import numpy as np
 
+cv2.setRNGSeed(0)       # GrabCut starts from random guesses: the same ones every run
+cv2.setNumThreads(1)
 img = cv2.imread(sys.argv[1])
 H, W = img.shape[:2]
 b, g, r = [img[:, :, i].astype(int) for i in range(3)]

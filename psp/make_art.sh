@@ -6,7 +6,8 @@
 #   psp/PIC1.PNG (480x272): the box art's Charizard, whole, on its swirl, from
 #                           Game Rant's 1920x1080 key art (make_pic1.py;
 #                           without it or OpenCV, a crop of the box below the logo)
-#   psp/SND0.AT3:           the title screen's music (Charizard), from the ROM
+#   psp/SND0.AT3:           30 s of the title screen's music (Charizard), from
+#                           the ROM, fading out over the last 5 s
 # They're made from the box art and the game, so don't share them; .gitignore
 # leaves them out. `make psp` puts them in the EBOOT if they're here.
 #
@@ -117,15 +118,16 @@ if [ -n "${KEYART:-}" ]; then
         || echo "No OpenCV: PIC1.PNG is the plain crop of the box"
 fi
 
-# 20 seconds of the title music, from where it starts (24.4 s into the intro
-# with no save, after a second of silence), about 330 KB as ATRAC3, inside
-# the PSP menu's limit of about 500 KB
+# 30 seconds of the title music, from where it starts (24.4 s into the intro
+# with no save, after a second of silence), the last 5 fading out (the
+# owner's choice). That's about 496 KB as ATRAC3, just inside the PSP menu's
+# limit of about 500 KB.
 if [ -n "$atracdenc" ]; then
-    printf '2700 -\n' > "$work/input.txt"
+    printf '3400 -\n' > "$work/input.txt"
     GBAREF_AUDIO="$work/rec.wav" "$gbaref" "$rom" "$work/input.txt" "$work" > /dev/null
     # -ss before -i, so the fades' times count from the clip's start
-    ffmpeg -hide_banner -loglevel error -y -ss 24.4 -t 20 -i "$work/rec.wav" \
-        -af "afade=t=in:d=0.05,afade=t=out:st=17.5:d=2.5" -ac 2 -ar 44100 -c:a pcm_s16le "$work/title44.wav"
+    ffmpeg -hide_banner -loglevel error -y -ss 24.4 -t 30 -i "$work/rec.wav" \
+        -af "afade=t=in:d=0.05,afade=t=out:st=25:d=5" -ac 2 -ar 44100 -c:a pcm_s16le "$work/title44.wav"
     # atracdenc picks the RIFF container from the lowercase .at3. It writes the
     # RIFF size wrong; the files that played had it set to the file's size
     # less 8, as RIFF has it.
