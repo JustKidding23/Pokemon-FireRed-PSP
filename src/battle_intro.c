@@ -11,6 +11,9 @@ static EWRAM_DATA u16 sBgCnt = 0;
 
 extern const u8 gBattleAnimRegOffsBgCnt[];
 extern const u8 gBattleIntroRegOffsBgCnt[];
+#ifdef PORTABLE
+extern u8 gWideViewRepeatingBgs;
+#endif
 
 static void BattleIntroSlide1(u8 taskId);
 static void BattleIntroSlide2(u8 taskId);
@@ -116,11 +119,20 @@ void HandleIntroSlide(u8 terrain)
     gTasks[taskId].data[4] = 0;
     gTasks[taskId].data[5] = 0;
     gTasks[taskId].data[6] = 0;
+#ifdef PORTABLE
+    // The grass (or sand, water...) that scrolls past at the start is a
+    // 256-pixel map the GBA wraps round, so it carries on into the margins
+    // the same way instead of stretching its edge column
+    gWideViewRepeatingBgs |= 1 << 1;
+#endif
 }
 
 void BattleIntroSlideEnd(u8 taskId)
 {
     DestroyTask(taskId);
+#ifdef PORTABLE
+    gWideViewRepeatingBgs &= ~(1 << 1);   // BG1 is the moves' animations' from here
+#endif
     gBattle_BG1_X = 0;
     gBattle_BG1_Y = 0;
     gBattle_BG2_X = 0;
