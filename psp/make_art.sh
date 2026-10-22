@@ -3,14 +3,16 @@
 # (2026-10-21, research/mockups/X1-xmb-art.png in the port's folder):
 #   psp/ICON0.PNG (144x80): the US box's "POKéMON FIRERED VERSION" logo, cut
 #                           out of the cover onto transparency
-#   psp/PIC1.PNG (480x272): the US box's Charizard, cut out whole, on a swirl
-#                           like the box's (make_pic1.py; without OpenCV, a
-#                           crop of the box below the logo)
+#   psp/PIC1.PNG (480x272): the box art's Charizard, whole, on its swirl, from
+#                           Game Rant's 1920x1080 key art (make_pic1.py;
+#                           without it or OpenCV, a crop of the box below the logo)
 #   psp/SND0.AT3:           the title screen's music (Charizard), from the ROM
 # They're made from the box art and the game, so don't share them; .gitignore
 # leaves them out. `make psp` puts them in the EBOOT if they're here.
 #
 # usage: psp/make_art.sh BOXART ROM [GBAREF] [ATRACDENC]
+#   KEYART (environment, optional): Game Rant's key art for the background,
+#     https://static0.gamerantimages.com/wordpress/wp-content/uploads/2026/03/pokemon-firered-version.jpg
 #   BOXART: the US cover, 512x512, from libretro-thumbnails:
 #     https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Game_Boy_Advance/master/Named_Boxarts/Pokemon%20-%20FireRed%20Version%20(USA).png
 #   ROM: Pokémon FireRed (USA), for the music
@@ -110,8 +112,10 @@ icon = Image.new('RGBA', (144, 80))
 icon.paste(small, ((144 - small.width) // 2, (80 - small.height) // 2))
 icon.save(icon_path)
 EOF
-"${PYTHON:-python3}" psp/make_pic1.py "$boxart" "$work/logo_mask.png" psp/PIC1.PNG \
-    || echo "No OpenCV: PIC1.PNG is the plain crop of the box"
+if [ -n "${KEYART:-}" ]; then
+    "${PYTHON:-python3}" psp/make_pic1.py "$KEYART" psp/PIC1.PNG \
+        || echo "No OpenCV: PIC1.PNG is the plain crop of the box"
+fi
 
 # 20 seconds of the title music, from where it starts (24.4 s into the intro
 # with no save, after a second of silence), about 330 KB as ATRAC3, inside
