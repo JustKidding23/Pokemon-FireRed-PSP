@@ -1,51 +1,122 @@
 #!/bin/bash
-# Makes the PSP menu's art and music for the EBOOT from the game itself:
-# psp/ICON0.PNG (144x80), the logo from the end of the intro, and
-# psp/PIC1.PNG (480x272) and psp/SND0.AT3, the title screen's Rayquaza
-# without the logo, and its music. They're made from the game, so don't share them;
-# .gitignore leaves them out. `make psp` puts them in the EBOOT if they're here.
+# Makes the PSP menu's art and music for the EBOOT, as the owner chose them
+# (2026-10-21, research/mockups/X1-xmb-art.png in the port's folder):
+#   psp/ICON0.PNG (144x80): the US box's "POKéMON FIRERED VERSION" logo, cut
+#                           out of the cover onto transparency
+#   psp/PIC1.PNG (480x272): the US box's Charizard, below the logo
+#   psp/SND0.AT3:           the title screen's music (Charizard), from the ROM
+# They're made from the box art and the game, so don't share them; .gitignore
+# leaves them out. `make psp` puts them in the EBOOT if they're here.
 #
-# usage: psp/make_art.sh [PC_BINARY] [ATRACDENC]
-#   PC_BINARY: a PC build of this repository (make linux), default ./pokeemerald64
-#   ATRACDENC: https://github.com/dcherednik/atracdenc release 0.2.3, for the
-#              ATRAC3 music the PSP plays. A PSP 3001 played its files in the
-#              menu but not those of later versions. Without it there's no
-#              SND0.AT3.
-# Needs ImageMagick and ffmpeg.
+# usage: psp/make_art.sh BOXART ROM [GBAREF] [ATRACDENC]
+#   BOXART: the US cover, 512x512, from libretro-thumbnails:
+#     https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Game_Boy_Advance/master/Named_Boxarts/Pokemon%20-%20FireRed%20Version%20(USA).png
+#   ROM: Pokémon FireRed (USA), for the music
+#   GBAREF: ~/Projects/PSP-Ports/Tools/gbaref/gbaref (records the ROM's sound)
+#   ATRACDENC: https://github.com/dcherednik/atracdenc release 0.2.3. A PSP
+#              3001 played its files in the menu but not those of later versions.
+# Needs Python 3 with Pillow, and ffmpeg.
 set -euo pipefail
+boxart=$(realpath "$1")
+rom=$(realpath "$2")
+gbaref=${3:-$HOME/Projects/PSP-Ports/Tools/gbaref/gbaref}
+atracdenc=${4:-$(command -v atracdenc || true)}
 cd "$(dirname "$0")/.."
-game=$(realpath "${1:-./pokeemerald64}")
-atracdenc=${2:-$(command -v atracdenc || true)}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-# Skip the intro to the title screen, and record its music and pictures
-# without the logo (BG2) and the sprites
-printf '300 -\n2 START\n2700 -\n' > "$work/input.txt"
-"$game" --save "$work/none.sav" --test-input "$work/input.txt" --test-audio "$work/title.wav" \
-    --test-shots "$work" --test-shot-every 60 --test-hide-layers 0x1400 > /dev/null 2>&1
+python3 -I - "$boxart" psp/ICON0.PNG psp/PIC1.PNG <<'EOF'
+import sys
+from collections import deque
+from PIL import Image
 
-# The intro, without skipping it
-mkdir "$work/intro"
-printf '3600 -\n' > "$work/intro.txt"
-"$game" --save "$work/none.sav" --test-input "$work/intro.txt" \
-    --test-shots "$work/intro" --test-shot-every 20 > /dev/null 2>&1
+cover = Image.open(sys.argv[1]).convert('RGB')
+icon_path, pic_path = sys.argv[2], sys.argv[3]
 
-# The background: the title screen's Rayquaza when its markings glow brightest
-magick "$work/frame_001920.ppm" -filter point -resize 200% -crop 480x272+0+24 +repage psp/PIC1.PNG
-# The icon: the logo at the end of the intro, which is on black, made clear
-magick "$work/intro/frame_003600.ppm" -fuzz 2% -transparent black -trim +repage \
-    -filter Lanczos -resize 144x80 -background none -gravity center -extent 144x80 psp/ICON0.PNG
+# The background: Charizard below the logo, between the GBA strip on the left
+# and the rating badges at the bottom
+cover.crop((112, 165, 512, 392)).resize((480, 272), Image.LANCZOS).save(pic_path)
 
-# 18 seconds of the title music at 44100 Hz, about 300 KB, well inside the
-# PSP menu's limit of about 500 KB.
+# The icon: the logo, cut out by filling the background in from the edges up
+# to the logo's dark outlines (navy around POKéMON, black around the badge)
+logo = cover.crop((130, 5, 495, 210))
+W, H = logo.size
+px = logo.load()
+
+def lum(p):
+    return 0.3 * p[0] + 0.59 * p[1] + 0.11 * p[2]
+
+def outline(p):
+    r, g, b = p
+    return lum(p) < 75 or (b > r + 40 and b > g + 10 and lum(p) < 125)
+
+background = [[False] * W for _ in range(H)]
+queue = deque([(x, 0) for x in range(W)] + [(x, H - 1) for x in range(W)]
+              + [(0, y) for y in range(H)] + [(W - 1, y) for y in range(H)])
+while queue:
+    x, y = queue.popleft()
+    if x < 0 or y < 0 or x >= W or y >= H or background[y][x] or outline(px[x, y]):
+        continue
+    background[y][x] = True
+    queue.extend(((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)))
+
+seen = [[False] * W for _ in range(H)]
+parts = []
+for y in range(H):
+    for x in range(W):
+        if background[y][x] or seen[y][x]:
+            continue
+        part, queue = [], deque([(x, y)])
+        seen[y][x] = True
+        while queue:
+            a, b = queue.popleft()
+            part.append((a, b))
+            for u, v in ((a + 1, b), (a - 1, b), (a, b + 1), (a, b - 1)):
+                if 0 <= u < W and 0 <= v < H and not seen[v][u] and not background[v][u]:
+                    seen[v][u] = True
+                    queue.append((u, v))
+        parts.append(part)
+parts = [p for p in parts if len(p) > 1500]
+
+# The lower part is the black and white FIRERED VERSION badge. Charizard's
+# wing touches it, so only its grey pixels near its white letters are kept.
+badge = max(parts, key=lambda p: sum(y for _, y in p) / len(p))
+whites = [(x, y) for x, y in badge if lum(px[x, y]) > 200]
+top = min(y for _, y in whites) - 7
+bottom = max(y for _, y in whites) + 7
+
+out = Image.new('RGBA', (W, H))
+o = out.load()
+for part in parts:
+    for x, y in part:
+        r, g, b = px[x, y]
+        if part is badge:
+            near = [wx for wx, wy in whites if abs(wy - y) <= 6]
+            if not near or not (min(near) - 6 <= x <= max(near) + 6 and top <= y <= bottom) \
+                    or max(r, g, b) - min(r, g, b) >= 40:
+                continue
+        o[x, y] = (r, g, b, 255)
+out = out.crop(out.getbbox())
+scale = min(144 / out.width, 80 / out.height)
+small = out.convert('RGBa').resize((round(out.width * scale), round(out.height * scale)), Image.LANCZOS).convert('RGBA')
+icon = Image.new('RGBA', (144, 80))
+icon.paste(small, ((144 - small.width) // 2, (80 - small.height) // 2))
+icon.save(icon_path)
+EOF
+
+# 20 seconds of the title music, from where it starts (24.4 s into the intro
+# with no save, after a second of silence), about 330 KB as ATRAC3, inside
+# the PSP menu's limit of about 500 KB
 if [ -n "$atracdenc" ]; then
-    ffmpeg -hide_banner -loglevel error -y -i "$work/title.wav" -ss 6.5 -t 18 \
-        -af "afade=t=in:d=0.3,afade=t=out:st=15.5:d=2.5,aresample=44100" -ac 2 -c:a pcm_s16le "$work/title44.wav"
+    printf '2700 -\n' > "$work/input.txt"
+    GBAREF_AUDIO="$work/rec.wav" "$gbaref" "$rom" "$work/input.txt" "$work" > /dev/null
+    # -ss before -i, so the fades' times count from the clip's start
+    ffmpeg -hide_banner -loglevel error -y -ss 24.4 -t 20 -i "$work/rec.wav" \
+        -af "afade=t=in:d=0.05,afade=t=out:st=17.5:d=2.5" -ac 2 -ar 44100 -c:a pcm_s16le "$work/title44.wav"
     # atracdenc picks the RIFF container from the lowercase .at3. It writes the
-    # RIFF size wrong, and the file that played had it set to the file's size
+    # RIFF size wrong; the files that played had it set to the file's size
     # less 8, as RIFF has it.
-    "$atracdenc" -e atrac3 -i "$work/title44.wav" -o "$work/snd0.at3" > /dev/null
+    "$atracdenc" -e atrac3 -i "$work/title44.wav" -o "$work/snd0.at3" > /dev/null 2>&1
     python3 -c 'import os, struct, sys
 f = open(sys.argv[1], "r+b"); f.seek(4); f.write(struct.pack("<I", os.path.getsize(sys.argv[1]) - 8))' "$work/snd0.at3"
     cp "$work/snd0.at3" psp/SND0.AT3

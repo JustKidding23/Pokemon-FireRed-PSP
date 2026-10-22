@@ -71,3 +71,6 @@ compile_commands.json
 
 # Other build folders (PSP_TEST builds, profiling)
 build-*/
+psp/ICON0.PNG
+psp/PIC1.PNG
+psp/SND0.AT3
