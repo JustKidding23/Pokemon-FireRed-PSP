@@ -1174,8 +1174,6 @@ static void UpdateSaves(u32 pressed)
 // starts the game over so it reads the new one
 static void SwitchSlotIfPending(void)
 {
-    char text[80];
-
     if (sPendingSlot == 0 || gSoftResetDisabled)
         return;
     sSettings.slot = sPendingSlot;
@@ -1184,8 +1182,6 @@ static void SwitchSlotIfPending(void)
     StoreSettings();
     sSlotInfo[sSettings.slot].known = false;
     RequestSoftReset();
-    snprintf(text, sizeof(text), "Playing file %d.", sSettings.slot);
-    ShowStatus(text);
 }
 
 #ifdef PSP_TEST
