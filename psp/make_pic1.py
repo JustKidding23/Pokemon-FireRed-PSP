@@ -22,7 +22,7 @@ b, g, r = [img[:, :, i].astype(int) for i in range(3)]
 # the swirl showing between his wing and tail
 im = cv2.resize(img, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA)
 mask = np.full(im.shape[:2], cv2.GC_BGD, np.uint8)
-mask[85:480, 0:495] = cv2.GC_PR_BGD
+mask[60:480, 0:495] = cv2.GC_PR_BGD   # from above the top of his wing
 cv2.ellipse(mask, (250, 280), (240, 190), 0, 0, 360, cv2.GC_PR_FGD, -1)
 for centre, axes in (((300, 365), (55, 40)), ((290, 300), (30, 40)), ((410, 195), (40, 25)),
                      ((150, 200), (60, 40)), ((330, 180), (15, 30)), ((92, 270), (14, 22)),
@@ -46,17 +46,18 @@ lum = 0.3 * r + 0.59 * g + 0.11 * b
 swirlish = (r > 185) & (r - g > 85)
 glowish = (r > 215) & (g > 140) & (b > g - 25)
 outline = (lum < 125) & ~swirlish
-# the swirl seen through his glow (under his arm); not round his flame, which
-# has no outline and the same colours
-pale_swirl = (lum > 160) & (r > 220) & (r - g > 60) & (b < 160)
-pale_swirl[380:700, 100:340] = False
+# the swirl seen through his glow under his arm. Only there: elsewhere the
+# same pale orange is his flame or the highlights on his wing's arm.
+pale_swirl = np.zeros((H, W), bool)
+pale_swirl[540:780, 640:900] = ((lum > 160) & (r > 220) & (r - g > 60) & (b < 160))[540:780, 640:900]
 passable = fg & (swirlish | glowish | pale_swirl) & ~cv2.dilate(outline.astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
 count, labels = cv2.connectedComponents((passable | ~fg).astype(np.uint8), connectivity=4)
 outside = np.unique(np.concatenate([labels[0], labels[-1], labels[:, 0], labels[:, -1]]))
 fg &= ~(passable & np.isin(labels, outside))
 # and pockets of pure glow he closes in (between his horn and his face): big,
 # very light, and not his teeth, claws or eye, which are whiter or bluer
-pockets = fg & glowish & (lum > 200) & (b <= g + 4) & ~outline
+pockets = np.zeros((H, W), bool)   # only between his horn and his face, not his eye
+pockets[345:400, 590:700] = (fg & glowish & (lum > 200) & (b <= g + 4) & ~outline)[345:400, 590:700]
 count, labels, stats, _ = cv2.connectedComponentsWithStats(pockets.astype(np.uint8), connectivity=4)
 for i in range(1, count):
     if stats[i, cv2.CC_STAT_AREA] > 120:
