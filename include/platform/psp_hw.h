@@ -83,6 +83,8 @@ uint64_t PspHw_Microseconds(void);
 void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, bool filter, int dim, bool zoom);
 void PspHw_Print(int column, int row, uint32_t color, const char *text);
 void PspHw_Present(void);
+// Waits for the screen's next refresh (the game is ahead of time)
+void PspHw_WaitRefresh(void);
 // Text is 8x8 pixels, so the screen holds 60x34 characters
 #define PSP_TEXT_COLUMNS 60
 #define PSP_TEXT_ROWS 34

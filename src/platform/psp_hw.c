@@ -32,6 +32,11 @@ PSP_MAIN_THREAD_STACK_SIZE_KB(512);
 
 static volatile bool sRunning = true;
 static unsigned int __attribute__((aligned(64))) sDisplayList[64 * 1024];
+// Three frame buffers at the start of VRAM: the one on the screen, the one
+// waiting for the next refresh, and the one being drawn, so the game never
+// waits for the refresh to draw the next frame (see PspHw_Present)
+#define NUM_FRAME_BUFFERS 3
+static int sDrawIndex;
 // Where the GU is drawing, as an offset into VRAM
 static void *sDrawBuffer;
 
@@ -104,7 +109,7 @@ void PspHw_Init(void)
     sceCtrlSetSamplingCycle(0);
     sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
 
-    // Two 32-bit frame buffers at the start of VRAM, and no depth buffer
+    // 32-bit frame buffers at the start of VRAM, and no depth buffer
     sDrawBuffer = (void *)0;
     sceGuInit();
     sceGuStart(GU_DIRECT, sDisplayList);
@@ -122,6 +127,8 @@ void PspHw_Init(void)
     sceGuSync(GU_SYNC_FINISH, GU_SYNC_WHAT_DONE);
     sceDisplayWaitVblankStart();
     sceGuDisplay(GU_TRUE);
+    sDrawIndex = 2;   // buffer 1 is on the screen after sceGuDisplay
+    sDrawBuffer = (void *)(uintptr_t)(sDrawIndex * FRAME_SIZE);
 
     pspDebugScreenInitEx((void *)(0x44000000 + (uintptr_t)sDrawBuffer), PSP_DISPLAY_PIXEL_FORMAT_8888, 0);
     pspDebugScreenEnableBackColor(0);
@@ -379,6 +386,7 @@ void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, boo
     sceKernelDcacheWritebackRange(image, stride * GBA_HEIGHT * 2);
 
     sceGuStart(GU_DIRECT, sDisplayList);
+    sceGuDrawBufferList(GU_PSM_8888, sDrawBuffer, BUFFER_WIDTH);
     sceGuClearColor(0xFF000000);
     sceGuClear(GU_COLOR_BUFFER_BIT);
 
@@ -482,8 +490,18 @@ void PspHw_Present(void)
         sTextUsed = 0;
     }
 
+    // Shown at the next refresh without waiting for it; the next frame is
+    // drawn in the buffer shown two frames ago, which the screen has left
+    // (the game waits for a refresh only when it's ahead, see PspHw_WaitRefresh)
+    sceDisplaySetFrameBuf((void *)(0x44000000 + (uintptr_t)sDrawBuffer), BUFFER_WIDTH,
+                          PSP_DISPLAY_PIXEL_FORMAT_8888, PSP_DISPLAY_SETBUF_NEXTFRAME);
+    sDrawIndex = (sDrawIndex + 1) % NUM_FRAME_BUFFERS;
+    sDrawBuffer = (void *)(uintptr_t)(sDrawIndex * FRAME_SIZE);
+}
+
+void PspHw_WaitRefresh(void)
+{
     sceDisplayWaitVblankStartCB();
-    sDrawBuffer = sceGuSwapBuffers();
 }
 
 // Sound. The game's frames go into a ring that the sound thread reads at

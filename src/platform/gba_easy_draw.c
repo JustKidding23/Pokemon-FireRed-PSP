@@ -43,6 +43,9 @@ struct scanlineData {
     // spritePriorities says were drawn on
     uint16_t spriteLayers[4][RENDER_WIDTH];
     uint8_t spritePriorities;
+    // The columns each priority's sprites were drawn in on this line, so
+    // putting the line together and clearing only go over those
+    uint16_t spriteFirstX[4], spriteEndX[4];
     uint16_t bgcnts[4];
     uint16_t winMask[RENDER_WIDTH];
     //priority bookkeeping
@@ -867,6 +870,11 @@ static void UpdateSprites(void)
         DecodeSprites();
 }
 
+#ifdef PSP_PROFILE
+// Sprite pixels looked at: plain, turned or scaled, semi-transparent, window
+unsigned int gSpriteStats[4];
+#endif
+
 // Parts of this code heavily borrowed from NanoboyAdvance.
 static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool windowsEnabled)
 {
@@ -906,8 +914,99 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
             bool flipX  = !isAffine && ((oam->matrixNum >> 3) & 1);
             bool flipY  = !isAffine && ((oam->matrixNum >> 4) & 1);
             bool is8BPP  = oam->bpp & 1;
+            // Most sprites aren't turned or scaled (a battler is often an affine
+            // sprite with no change): then the texture is the screen less an
+            // offset, with no matrix sums for each pixel
+            bool identity = matrix[0][0] == 0x100 && matrix[0][1] == 0 && matrix[1][0] == 0
+                         && matrix[1][1] == 0x100 && oam->mosaic != 1;
+            int firstX = -half_width, lastX = half_width;
+            // only the columns on the line
+            int minGlobalX = sWinExtendMargins ? -RENDER_MARGIN : 0;
+            int endGlobalX = sWinExtendMargins ? DISPLAY_WIDTH + RENDER_MARGIN : DISPLAY_WIDTH;
 
-            for (int local_x = -half_width; local_x <= half_width; local_x++)
+            if (firstX < minGlobalX - x)
+                firstX = minGlobalX - x;
+            if (lastX > endGlobalX - 1 - x)
+                lastX = endGlobalX - 1 - x;
+            if (identity)
+            {
+                int texRow = local_y + (int)(height / 2);
+
+                // only the texture's own columns, and nothing if the line misses it
+                if (texRow < 0 || texRow >= (int)height)
+                    continue;
+                if (firstX < -(int)(width / 2))
+                    firstX = -(int)(width / 2);
+                if (lastX > (int)(width / 2) - 1)
+                    lastX = (int)(width / 2) - 1;
+            }
+
+#ifdef PSP_PROFILE
+            if (lastX >= firstX)
+                gSpriteStats[isObjWin ? 3 : isSemiTransparent ? 2 : identity ? 0 : 1] += lastX - firstX + 1;
+#endif
+            // A plain sprite that nothing blends (most of them): its row of
+            // texels is copied straight, without the checks below for each pixel
+            if (identity && !isObjWin && !isSemiTransparent && !windowsEnabled
+             && !((REG_BLDCNT & BLDCNT_TGT1_OBJ) && blendMode != 0 && sLineEffects))
+            {
+                int texY = local_y + (int)(height / 2);
+                const uint8_t *tiles = (const uint8_t *)objtiles;
+                const uint16_t *pal = (const uint16_t *)(PLTT + 0x200);
+                unsigned int rowTiles = (REG_DISPCNT & 0x40) ? width / 8 : 16;
+                bool drew = false;
+
+                if (lastX < firstX)
+                    continue;
+                if (flipY)
+                    texY = height - 1 - texY;
+                for (int local_x = firstX; local_x <= lastX; local_x++)
+                {
+                    unsigned int texX = local_x + width / 2;
+                    unsigned int pixel;
+
+                    if (flipX)
+                        texX = width - 1 - texX;
+                    if (!is8BPP)
+                    {
+                        const uint8_t *row = tiles + ((texY / 8) * rowTiles + texX / 8 + oam->tileNum) * 32 + (texY % 8) * 4;
+
+                        pixel = row[(texX % 8) / 2];
+                        pixel = (texX & 1) ? pixel >> 4 : pixel & 0xF;
+                        if (pixel != 0)
+                            pixel += oam->paletteNum * 16;
+                    }
+                    else
+                    {
+                        pixel = tiles[(((texY / 8) * rowTiles + texX / 8) * 2 + oam->tileNum) * 32 + (texY % 8) * 8 + texX % 8];
+                    }
+                    if (pixel != 0)
+                    {
+                        pixels[x + local_x + RENDER_MARGIN] = pal[pixel] | (1 << 15);
+                        drew = true;
+                    }
+                }
+                if (drew)
+                {
+                    unsigned int first = x + firstX + RENDER_MARGIN, end = x + lastX + RENDER_MARGIN + 1;
+
+                    if (!(scanline->spritePriorities & (1 << oam->priority)))
+                    {
+                        scanline->spritePriorities |= 1 << oam->priority;
+                        scanline->spriteFirstX[oam->priority] = first;
+                        scanline->spriteEndX[oam->priority] = end;
+                    }
+                    else
+                    {
+                        if (first < scanline->spriteFirstX[oam->priority])
+                            scanline->spriteFirstX[oam->priority] = first;
+                        if (end > scanline->spriteEndX[oam->priority])
+                            scanline->spriteEndX[oam->priority] = end;
+                    }
+                }
+                continue;
+            }
+            for (int local_x = firstX; local_x <= lastX; local_x++)
             {
                 uint8_t *tiledata = (uint8_t *)objtiles;
                 uint16_t *palette = (uint16_t *)(PLTT + 0x200);
@@ -927,7 +1026,12 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
                  || global_x >= (sWinExtendMargins ? DISPLAY_WIDTH + RENDER_MARGIN : DISPLAY_WIDTH))
                     continue;
 
-                if (oam->mosaic == 1)
+                if (identity)
+                {
+                    tex_x = local_x + (int)(width / 2);
+                    tex_y = local_y + (int)(height / 2);
+                }
+                else if (oam->mosaic == 1)
                 {
                     //mosaic effect has to be applied to global coordinates otherwise the mosaic will scroll
                     local_mosaicX = applySpriteHorizontalMosaicEffect(global_x) - x;
@@ -1010,7 +1114,16 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
                         
                         //write pixel to pixel framebuffer
                         pixels[bx] = color | (1 << 15);
-                        scanline->spritePriorities |= 1 << oam->priority;
+                        if (!(scanline->spritePriorities & (1 << oam->priority)))
+                        {
+                            scanline->spritePriorities |= 1 << oam->priority;
+                            scanline->spriteFirstX[oam->priority] = bx;
+                            scanline->spriteEndX[oam->priority] = bx + 1;
+                        }
+                        else if (bx < scanline->spriteFirstX[oam->priority])
+                            scanline->spriteFirstX[oam->priority] = bx;
+                        else if (bx >= scanline->spriteEndX[oam->priority])
+                            scanline->spriteEndX[oam->priority] = bx + 1;
                     }
                 }
             }
@@ -1435,7 +1548,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
         if (!(scanline.spritePriorities & (1 << prnum)))
             continue;
         uint16_t *src = scanline.spriteLayers[prnum];
-        for (xpos = 0; xpos < RENDER_WIDTH; xpos++)
+        for (xpos = scanline.spriteFirstX[prnum]; xpos < scanline.spriteEndX[prnum]; xpos++)
         {
             if (getAlphaBit(src[xpos]))
             {
@@ -1456,7 +1569,8 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     for (prnum = 0; prnum < 4; prnum++)
     {
         if (scanline.spritePriorities & (1 << prnum))
-            memset(scanline.spriteLayers[prnum], 0, sizeof(scanline.spriteLayers[prnum]));
+            memset(&scanline.spriteLayers[prnum][scanline.spriteFirstX[prnum]], 0,
+                   (scanline.spriteEndX[prnum] - scanline.spriteFirstX[prnum]) * sizeof(scanline.spriteLayers[prnum][0]));
     }
     scanline.spritePriorities = 0;
 

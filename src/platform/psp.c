@@ -1193,6 +1193,7 @@ static unsigned sBehind;    // display frames that ran more game frames than the
 #ifdef PSP_PROFILE
 extern unsigned int gDrawProfile[8];
 extern unsigned int gSoundProfile[4];
+extern unsigned int gSpriteStats[4];
 #endif
 
 // The emulator tests: PSP buttons from host0:/test_input.txt, a line of
@@ -1316,10 +1317,7 @@ int main(int argc, char **argv)
     // Where the time goes, in microseconds a second
     u64 timeGame = 0, timeDraw = 0, timeSound = 0, timeStart;
     int speed, lastSpeed = 1;
-    // How long the last display frame's work took, before waiting to show it,
-    // and how many game frames it ran (see the catching up below)
-    u64 loopStart = 0, lastWork = 0, lastDraw = 0, drawTime = 0;
-    int lastFrames = 1;
+
     bool menuWasOpen;
     u32 soundFrame = 0;
     char speedText[80] = "";
@@ -1350,7 +1348,6 @@ int main(int argc, char **argv)
     clockStart = speedStart = PspHw_Microseconds();
     while (PspHw_Running())
     {
-        loopStart = PspHw_Microseconds();
 #ifdef PSP_TEST
         static int sShots;
         bool testDone, testShot;
@@ -1409,19 +1406,14 @@ int main(int argc, char **argv)
             lastSpeed = speed;
         }
         framesDue = (int)((now - clockStart) * speed / FRAME_MICROSECONDS - framesRun) + 1;
-        if (framesDue < 1 || sSettings.frameskip == FRAMESKIP_OFF)
-            framesDue = speed;
-        // Showing a frame waits for the screen's refresh, so work that just
-        // misses one looks like being a refresh behind, and catching up (twice
-        // the frames) then misses every refresh: stuck at 30 drawn. When the
-        // last refresh's work for the usual number of frames fitted well
-        // within a refresh, that lag is let go instead. Really slow scenes
-        // still catch up by skipping drawing, so the game keeps its speed.
-        if (framesDue > speed && framesDue <= 2 * speed
-            && lastDraw + (lastWork - lastDraw) * speed / lastFrames < FRAME_MICROSECONDS * 9 / 10)
+        if (framesDue < 1)
+            framesDue = 1;
+        if (sSettings.frameskip == FRAMESKIP_OFF && framesDue != speed)
         {
-            framesRun += framesDue - speed;
+            // Slowing down instead of skipping: never more than the usual frames
             framesDue = speed;
+            clockStart = now;
+            framesRun = 0;
         }
         if (framesDue > 4 * speed)
         {
@@ -1459,9 +1451,7 @@ int main(int argc, char **argv)
             PspHw_SetDiag(PSP_DIAG_STEP, PSP_STEP_DRAW);
             if (i == framesDue - 1)
             {
-                drawTime = PspHw_Microseconds();
                 DrawFrame(image);
-                drawTime = PspHw_Microseconds() - drawTime;
                 speedDrawn++;
             }
             else
@@ -1525,6 +1515,12 @@ int main(int argc, char **argv)
                                          gSoundProfile[2] / 1000.0f / speedFrames, gSoundProfile[3] / 1000.0f / speedFrames);
             }
             memset(gDrawProfile, 0, sizeof(gDrawProfile));
+            if (speedDrawn && sSpeedLogLen < sizeof(sSpeedLog) - 200)
+                sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,
+                                         "  sprite pixels per drawn frame: plain %u  affine %u  semi %u  objwin %u\n",
+                                         gSpriteStats[0] / speedDrawn, gSpriteStats[1] / speedDrawn,
+                                         gSpriteStats[2] / speedDrawn, gSpriteStats[3] / speedDrawn);
+            memset(gSpriteStats, 0, sizeof(gSpriteStats));
             memset(gSoundProfile, 0, sizeof(gSoundProfile));
 #endif
             if (!sSettings.showSpeed)
@@ -1557,10 +1553,11 @@ int main(int argc, char **argv)
             PspHw_Print(1, 33, COLOR_YELLOW, sStatus);
             sStatusFrames--;
         }
-        lastWork = PspHw_Microseconds() - loopStart;
-        lastDraw = drawTime < lastWork ? drawTime : lastWork;   // drawn once, however many frames ran
-        lastFrames = framesDue > 0 ? framesDue : 1;
         PspHw_Present();
+        // Frames are shown without waiting for the refresh (see PspHw_Present),
+        // so the game waits here while it's ahead of time
+        while ((PspHw_Microseconds() - clockStart) * speed / FRAME_MICROSECONDS < framesRun)
+            PspHw_WaitRefresh();
     }
 
     PspHw_Exit();
