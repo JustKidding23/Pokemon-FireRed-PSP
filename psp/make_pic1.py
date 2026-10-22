@@ -37,7 +37,57 @@ cv2.grabCut(im, mask, None, bgd, fgd, 8, cv2.GC_INIT_WITH_MASK)
 fg = np.where((mask == cv2.GC_FGD) | (mask == cv2.GC_PR_FGD), 1, 0).astype(np.uint8)
 count, labels, stats, _ = cv2.connectedComponentsWithStats(fg, connectivity=8)
 fg = (labels == 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])).astype(np.uint8)
-alpha = cv2.resize(fg * 255, (W, H), interpolation=cv2.INTER_LINEAR).astype(np.float32) / 255
+fg = cv2.resize(fg * 255, (W, H), interpolation=cv2.INTER_LINEAR) > 127
+
+# Clean up his edge. His body is closed off by his outline, so swirl and white
+# glow that GrabCut kept (round his flame, under his arm) are what can be
+# reached from outside him without crossing the outline.
+lum = 0.3 * r + 0.59 * g + 0.11 * b
+swirlish = (r > 185) & (r - g > 85)
+glowish = (r > 215) & (g > 140) & (b > g - 25)
+outline = (lum < 125) & ~swirlish
+# the swirl seen through his glow (under his arm); not round his flame, which
+# has no outline and the same colours
+pale_swirl = (lum > 160) & (r > 220) & (r - g > 60) & (b < 160)
+pale_swirl[380:700, 100:340] = False
+passable = fg & (swirlish | glowish | pale_swirl) & ~cv2.dilate(outline.astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool)
+count, labels = cv2.connectedComponents((passable | ~fg).astype(np.uint8), connectivity=4)
+outside = np.unique(np.concatenate([labels[0], labels[-1], labels[:, 0], labels[:, -1]]))
+fg &= ~(passable & np.isin(labels, outside))
+# and pockets of pure glow he closes in (between his horn and his face): big,
+# very light, and not his teeth, claws or eye, which are whiter or bluer
+pockets = fg & glowish & (lum > 200) & (b <= g + 4) & ~outline
+count, labels, stats, _ = cv2.connectedComponentsWithStats(pockets.astype(np.uint8), connectivity=4)
+for i in range(1, count):
+    if stats[i, cv2.CC_STAT_AREA] > 120:
+        fg[labels == i] = False
+# take back the outline where the cut ran through it, then smooth the edge
+near = cv2.dilate(fg.astype(np.uint8), np.ones((9, 9), np.uint8)).astype(bool)
+fg |= near & outline
+# small dents and bumps left by the cleanup go. Closing fills dents, but it
+# could also shut a whole gap (between his arm and his body), so only small
+# fills are kept.
+closed = cv2.morphologyEx(fg.astype(np.uint8), cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))).astype(bool)
+count, labels, stats, _ = cv2.connectedComponentsWithStats((closed & ~fg).astype(np.uint8), connectivity=8)
+small = np.isin(labels, [i for i in range(1, count) if stats[i, cv2.CC_STAT_AREA] <= 250])
+fg = fg | small
+fg = cv2.morphologyEx(fg.astype(np.uint8), cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))).astype(bool)
+fg = cv2.GaussianBlur(fg.astype(np.float32), (0, 0), 1.8) > 0.5
+count, labels, stats, _ = cv2.connectedComponentsWithStats(fg.astype(np.uint8), connectivity=8)
+fg = labels == 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])
+
+# One even outline round him, in his line art's colour, except round his flame,
+# which has none in the art
+inside = cv2.distanceTransform(fg.astype(np.uint8), cv2.DIST_L2, 5)
+stroke = np.where(fg, np.clip(3.4 - inside, 0, 1), 0)
+flame = (r > 225) & (g > 150) & (g - b > 35)
+flame_area = np.zeros((H, W), bool)
+flame_area[380:700, 100:330] = True
+flame = cv2.dilate((flame & flame_area & fg).astype(np.uint8), np.ones((15, 15), np.uint8)).astype(bool)
+stroke[flame] = 0
+line = np.array([62, 66, 92], np.float32)  # BGR: a dark brown-grey like his lines
+art_src = (img.astype(np.float32) * (1 - stroke[..., None]) + line * stroke[..., None]).astype(np.uint8)
+alpha = cv2.GaussianBlur(fg.astype(np.float32), (0, 0), 0.8)
 
 # The swirl without him or the logo. It turns round (947, 659), with its
 # streaks running round that point, so each ring is filled from the swirl
@@ -78,7 +128,7 @@ background = cv2.GaussianBlur(cv2.warpPolar(rings, (W, H), (cx, cy), R, polar + 
 # Him, a little bigger, on the right (the menu shows its icon and the name on
 # the left), with his white glow
 x0, y0, x1, y1 = max(0, x - 60), max(0, y - 60), min(W, x + w + 60), min(H, y + h + 60)
-art = cv2.resize(img[y0:y1, x0:x1].astype(np.float32), None, fx=1.15, fy=1.15, interpolation=cv2.INTER_CUBIC)
+art = cv2.resize(art_src[y0:y1, x0:x1].astype(np.float32), None, fx=1.15, fy=1.15, interpolation=cv2.INTER_CUBIC)
 cut = cv2.GaussianBlur(cv2.resize(alpha[y0:y1, x0:x1], None, fx=1.15, fy=1.15, interpolation=cv2.INTER_LINEAR), (0, 0), 1.0)
 glow = cv2.GaussianBlur(cv2.dilate((cut > 0.5).astype(np.float32), np.ones((25, 25), np.uint8)), (0, 0), 14)
 glow = np.clip(glow * 1.3, 0, 1) * 0.85
