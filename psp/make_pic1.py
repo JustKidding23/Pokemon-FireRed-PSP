@@ -18,17 +18,19 @@ H, W = img.shape[:2]
 b, g, r = [img[:, :, i].astype(int) for i in range(3)]
 
 # Charizard, cut out with GrabCut at half size from hints: where he surely is
-# (belly, chest, head, wings, flame, tail, feet), where he may be, and the
-# swirl showing between his wing and tail
+# (belly, chest, head, wings, flame, tail, feet, jaw), where he may be, and
+# the swirl showing between his wing and tail
 im = cv2.resize(img, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_AREA)
 mask = np.full(im.shape[:2], cv2.GC_BGD, np.uint8)
 mask[85:480, 0:495] = cv2.GC_PR_BGD
 cv2.ellipse(mask, (250, 280), (240, 190), 0, 0, 360, cv2.GC_PR_FGD, -1)
 for centre, axes in (((300, 365), (55, 40)), ((290, 300), (30, 40)), ((410, 195), (40, 25)),
                      ((150, 200), (60, 40)), ((330, 180), (15, 30)), ((92, 270), (14, 22)),
-                     ((160, 380), (30, 12)), ((240, 450), (25, 12)), ((405, 375), (15, 15))):
+                     ((160, 380), (30, 12)), ((240, 450), (25, 12)), ((405, 375), (15, 15)),
+                     ((412, 287), (8, 10)), ((405, 268), (6, 6)), ((94, 318), (6, 8)), ((120, 352), (8, 6)),
+                     ((185, 255), (14, 8))):
     cv2.ellipse(mask, centre, axes, 0, 0, 360, cv2.GC_FGD, -1)
-for centre, axes in (((175, 270), (25, 30)), ((440, 300), (30, 35)), ((100, 205), (12, 14)), ((343, 200), (5, 7))):
+for centre, axes in (((125, 290), (14, 16)), ((458, 322), (16, 20)), ((100, 205), (12, 14)), ((343, 200), (5, 7))):
     cv2.ellipse(mask, centre, axes, 0, 0, 360, cv2.GC_BGD, -1)
 bgd, fgd = np.zeros((1, 65)), np.zeros((1, 65))
 cv2.grabCut(im, mask, None, bgd, fgd, 8, cv2.GC_INIT_WITH_MASK)

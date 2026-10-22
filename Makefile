@@ -796,7 +796,11 @@ $(ROM): $(OBJS)
 	mksfoex -d MEMSIZE=1 '$(PSP_TITLE)' $(OBJ_DIR)/PARAM.SFO
 	$(MAKE) -C psp/kbuttons PATH="$(PATH)"
 	cp psp/kbuttons/kbuttons.prx $(PSP_GAME_DIR)/
-	pack-pbp $(PSP_GAME_DIR)/EBOOT.PBP $(OBJ_DIR)/PARAM.SFO $(or $(wildcard psp/ICON0.PNG),NULL) NULL NULL $(or $(wildcard psp/PIC1.PNG),NULL) $(or $(wildcard psp/SND0.AT3),NULL) $(OBJ_DIR)/pokefirered.prx NULL
+# Packed again when the menu art or music changes too, not only the game
+PSP_ART := $(wildcard psp/ICON0.PNG psp/PIC1.PNG psp/SND0.AT3)
+$(PSP_GAME_DIR)/EBOOT.PBP: $(ROM) $(PSP_ART)
+	pack-pbp $@ $(OBJ_DIR)/PARAM.SFO $(or $(wildcard psp/ICON0.PNG),NULL) NULL NULL $(or $(wildcard psp/PIC1.PNG),NULL) $(or $(wildcard psp/SND0.AT3),NULL) $(OBJ_DIR)/pokefirered.prx NULL
+rom: $(PSP_GAME_DIR)/EBOOT.PBP
 else
 $(ROM): $(OBJS)
 	$(MODERNCC) $(CFLAGS) -Wl,--demangle $^ -static-libgcc -L$(SDL_DIR)/lib $(PLATFORM_LFLAGS) $(OS_LFLAGS) -o $@
