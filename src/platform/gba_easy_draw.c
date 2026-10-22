@@ -1018,6 +1018,72 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
                 }
                 continue;
             }
+            // A turned or scaled sprite that nothing blends, like a Pokémon
+            // coming out of its ball: the texture's coordinates step along by
+            // the matrix's first column instead of being worked out for each
+            // pixel, with the same results
+            if (!identity && oam->mosaic != 1 && !isObjWin && !isSemiTransparent && !windowsEnabled
+             && !((REG_BLDCNT & BLDCNT_TGT1_OBJ) && blendMode != 0 && sLineEffects))
+            {
+                const uint8_t *tiles = (const uint8_t *)objtiles;
+                const uint16_t *pal = (const uint16_t *)(PLTT + 0x200);
+                unsigned int rowTiles = (REG_DISPCNT & 0x40) ? width / 8 : 16;
+                unsigned int tileNum = oam->tileNum;
+                unsigned int palBase = oam->paletteNum * 16;
+                int32_t pa = matrix[0][0], pc = matrix[1][0];
+                int32_t accX = pa * firstX + matrix[0][1] * local_y;
+                int32_t accY = pc * firstX + matrix[1][1] * local_y;
+                int first = -1, last = -1;
+
+                for (int local_x = firstX; local_x <= lastX; local_x++, accX += pa, accY += pc)
+                {
+                    unsigned int texX = (unsigned int)((accX >> 8) + (int)(width / 2));
+                    unsigned int texY = (unsigned int)((accY >> 8) + (int)(height / 2));
+                    unsigned int pixel;
+
+                    if (texX >= width || texY >= height)
+                        continue;
+                    if (!is8BPP)
+                    {
+                        pixel = tiles[((texY / 8) * rowTiles + texX / 8 + tileNum) * 32 + (texY % 8) * 4 + (texX % 8) / 2];
+                        pixel = (texX & 1) ? pixel >> 4 : pixel & 0xF;
+                        if (pixel != 0)
+                            pixel += palBase;
+                    }
+                    else
+                    {
+                        pixel = tiles[(((texY / 8) * rowTiles + texX / 8) * 2 + tileNum) * 32 + (texY % 8) * 8 + texX % 8];
+                    }
+                    if (pixel != 0)
+                    {
+                        int bx = x + local_x + RENDER_MARGIN;
+
+                        pixels[bx] = pal[pixel] | (1 << 15);
+                        if (first < 0)
+                            first = bx;
+                        last = bx;
+                    }
+                }
+                if (first >= 0)
+                {
+                    unsigned int end = last + 1;
+
+                    if (!(scanline->spritePriorities & (1 << oam->priority)))
+                    {
+                        scanline->spritePriorities |= 1 << oam->priority;
+                        scanline->spriteFirstX[oam->priority] = first;
+                        scanline->spriteEndX[oam->priority] = end;
+                    }
+                    else
+                    {
+                        if ((unsigned int)first < scanline->spriteFirstX[oam->priority])
+                            scanline->spriteFirstX[oam->priority] = first;
+                        if (end > scanline->spriteEndX[oam->priority])
+                            scanline->spriteEndX[oam->priority] = end;
+                    }
+                }
+                continue;
+            }
             for (int local_x = firstX; local_x <= lastX; local_x++)
             {
                 uint8_t *tiledata = (uint8_t *)objtiles;
