@@ -15,6 +15,7 @@ u8 gWideViewRepeatingBgs;
 bool8 gWideViewZoom;
 u8 gWideViewEndsAtEdgeBgs;
 u8 gWideViewClampBgs;
+u8 gWideViewNoWrapBgs;
 #endif
 
 #define DISPCNT_ALL_BG_AND_MODE_BITS    (DISPCNT_BG_ALL_ON | 0x7)
@@ -380,6 +381,7 @@ void InitBgsFromTemplates(u8 bgMode, const struct BgTemplate *templates, u8 numT
     gWideViewZoom = FALSE;
     gWideViewEndsAtEdgeBgs = 0;
     gWideViewClampBgs = 0;
+    gWideViewNoWrapBgs = 0;
 #endif
     int i;
     u8 bg;

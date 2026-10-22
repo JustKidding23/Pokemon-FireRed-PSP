@@ -68,10 +68,12 @@ extern bool8 gWideViewMargins;
 extern u8 gWideViewRepeatingBgs;
 extern u8 gWideViewEndsAtEdgeBgs;
 extern u8 gWideViewClampBgs;
+extern u8 gWideViewNoWrapBgs;
 
 static inline bool BgFillsMargins(int bgNum, unsigned int mapWidthInPixels)
 {
-    return (gWideViewMargins && mapWidthInPixels >= RENDER_WIDTH) || ((gWideViewRepeatingBgs | gWideViewClampBgs) & (1 << bgNum));
+    return (gWideViewMargins && mapWidthInPixels >= RENDER_WIDTH)
+        || ((gWideViewRepeatingBgs | gWideViewClampBgs | gWideViewNoWrapBgs) & (1 << bgNum));
 }
 
 static inline unsigned int BgFirstColumn(int bgNum, unsigned int mapWidthInPixels)
@@ -222,7 +224,7 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
     // entry, so it only needs looking up once per tile instead of for every
     // pixel. The overworld keeps mosaic on for BG1-3 with a size of 0, which
     // changes nothing.
-    if ((!(control & BGCNT_MOSAIC) || mosaicBGEffectX == 0) && !(gWideViewClampBgs & (1 << bgNum)))
+    if ((!(control & BGCNT_MOSAIC) || mosaicBGEffectX == 0) && !((gWideViewClampBgs | gWideViewNoWrapBgs) & (1 << bgNum)))
     {
         unsigned int yy = (lineNum + voffs) & 0x1FF;
         uint16_t *bgmapRow = (uint16_t *)BG_SCREEN_ADDR(screenBaseBlock);
@@ -318,6 +320,11 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
         }
         else
             xx = (gx + hoffs) & 0x1FF;
+        // In the margins, only where the map carries on without wrapping
+        // round (see gWideViewNoWrapBgs)
+        if ((gWideViewNoWrapBgs & (1 << bgNum)) && (gx < 0 || gx >= DISPLAY_WIDTH)
+         && ((unsigned int)(gx + (int)(hoffs % mapWidthInPixels)) >= mapWidthInPixels))
+            continue;
         
         unsigned int yy = (lineNum + voffs) & 0x1FF;
         
@@ -1391,7 +1398,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
             for (bgnum = 0; bgnum < (mode == 0 ? 4 : mode == 1 ? 2 : 0); bgnum++)
             {
                 if (CanDrawBGDirectly(scanline.bgcnts[bgnum]) && !(blendMode != 0 && (REG_BLDCNT & (1 << bgnum)))
-                 && !(gWideViewClampBgs & (1 << bgnum)))
+                 && !((gWideViewClampBgs | gWideViewNoWrapBgs) & (1 << bgnum)))
                     directBgs |= 1 << bgnum;
             }
         }

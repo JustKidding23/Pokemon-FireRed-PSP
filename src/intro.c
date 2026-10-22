@@ -1588,8 +1588,10 @@ static void IntroCB_Scene3_Entrance(struct IntroSequenceData * this)
         InitBgsFromTemplates(0, sBgTemplates_Scene3, ARRAY_COUNT(sBgTemplates_Scene3));
 #ifdef PORTABLE
         // The fight's forest scrolls round and round, so its map repeats, and
-        // Gengar's map holds the rest of him past the screen's edge
-        gWideViewRepeatingBgs = (1 << BG_SCENE3_BACKGROUND) | (1 << BG_SCENE3_GENGAR);
+        // Gengar's map holds the rest of him past the screen's left edge, but
+        // past the right one it would wrap round to his arm
+        gWideViewRepeatingBgs = 1 << BG_SCENE3_BACKGROUND;
+        gWideViewNoWrapBgs = 1 << BG_SCENE3_GENGAR;
 #endif
         DecompressAndCopyTileDataToVram(BG_SCENE3_BACKGROUND, sScene3_Bg_Gfx, 0, 0, 0);
         DecompressAndCopyTileDataToVram(BG_SCENE3_BACKGROUND, sScene3_Bg_Map, 0, 0, 1);

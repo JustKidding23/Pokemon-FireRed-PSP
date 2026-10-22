@@ -140,6 +140,11 @@ extern u8 gWideViewEndsAtEdgeBgs;
 // Backgrounds (bits 0-3) that fill the margins with their art's first and last
 // columns, moving with their scroll, like the title's copyright bar sliding in
 extern u8 gWideViewClampBgs;
+// Backgrounds (bits 0-3) whose 256-pixel map shows in the margins only where
+// it carries on without wrapping round, like the intro's Gengar: the rest of
+// him past the screen's left edge shows, but not his own left side again
+// past the right edge
+extern u8 gWideViewNoWrapBgs;
 #endif
 
 #endif // GUARD_BG_H
