@@ -31,8 +31,20 @@ static inline float SamplesPerOutputSample(const struct MixerSource *chan, float
     return chan->freq * sampleRateReciprocal;
 }
 
+#ifdef PSP_PROFILE
+// Time in each part of the sound, in microseconds, for the speed log
+unsigned int gSoundProfile[4];
+unsigned int sceKernelGetSystemTimeLow(void);
+#define SPROF_DECL unsigned int t0_ = sceKernelGetSystemTimeLow(), t1_
+#define SPROF(n) (t1_ = sceKernelGetSystemTimeLow(), gSoundProfile[n] += t1_ - t0_, t0_ = t1_)
+#else
+#define SPROF_DECL
+#define SPROF(n) ((void)0)
+#endif
+
 void RunMixerFrame(void) {
     struct SoundMixerState *mixer = (struct SoundMixerState *)SOUND_INFO_PTR;
+    SPROF_DECL;
     
     if (mixer->lockStatus != MIXER_UNLOCKED) {
         return;
@@ -51,8 +63,10 @@ void RunMixerFrame(void) {
     if (mixer->firstPlayerFunc != NULL) {
         mixer->firstPlayerFunc(mixer->firstPlayer);
     }
+    SPROF(0);   // music player (reading the song)
     
     mixer->cgbMixerFunc();
+    SPROF(1);   // GB channels' registers
     
     s32 samplesPerFrame = mixer->samplesPerFrame;
     float *outBuffer = mixer->outBuffer;
@@ -64,9 +78,11 @@ void RunMixerFrame(void) {
     
     //MixerRamFunc mixerRamFunc = ((MixerRamFunc)MixerCodeBuffer);
     SampleMixer(mixer, maxScanlines, samplesPerFrame, outBuffer, dmaCounter, MIXED_AUDIO_BUFFER_SIZE);
+    SPROF(2);   // mixing the sampled instruments
     #ifdef PORTABLE
         cgb_audio_generate(samplesPerFrame);
     #endif
+    SPROF(3);   // generating the GB channels
 }
 
 

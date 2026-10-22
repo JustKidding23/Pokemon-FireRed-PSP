@@ -1185,6 +1185,16 @@ static void SwitchSlotIfPending(void)
 }
 
 #ifdef PSP_TEST
+// Speed, once a second, written to host0:/speed.log when the test ends: for
+// measuring on the PSP itself (run over PSPLink)
+static char sSpeedLog[32768];
+static size_t sSpeedLogLen;
+static unsigned sBehind;    // display frames that ran more game frames than the speed, to catch up
+#ifdef PSP_PROFILE
+extern unsigned int gDrawProfile[8];
+extern unsigned int gSoundProfile[4];
+#endif
+
 // The emulator tests: PSP buttons from host0:/test_input.txt, a line of
 // "<frames> <buttons>" each, like "30 CROSS+UP" or "60 -". After a line with
 // SHOT in it, like "60 SHOT", the screen is written to host0:/shot_NNN.rgba.
@@ -1306,6 +1316,10 @@ int main(int argc, char **argv)
     // Where the time goes, in microseconds a second
     u64 timeGame = 0, timeDraw = 0, timeSound = 0, timeStart;
     int speed, lastSpeed = 1;
+    // How long the last display frame's work took, before waiting to show it,
+    // and how many game frames it ran (see the catching up below)
+    u64 loopStart = 0, lastWork = 0, lastDraw = 0, drawTime = 0;
+    int lastFrames = 1;
     bool menuWasOpen;
     u32 soundFrame = 0;
     char speedText[80] = "";
@@ -1336,6 +1350,7 @@ int main(int argc, char **argv)
     clockStart = speedStart = PspHw_Microseconds();
     while (PspHw_Running())
     {
+        loopStart = PspHw_Microseconds();
 #ifdef PSP_TEST
         static int sShots;
         bool testDone, testShot;
@@ -1347,7 +1362,10 @@ int main(int argc, char **argv)
             PspHw_DumpScreen(path);
         }
         if (testDone)
+        {
+            PspHw_WriteFile("host0:/speed.log", sSpeedLog, sSpeedLogLen);
             break;
+        }
 #else
         u32 buttons = PspHw_ReadButtons();
 #endif
@@ -1393,6 +1411,18 @@ int main(int argc, char **argv)
         framesDue = (int)((now - clockStart) * speed / FRAME_MICROSECONDS - framesRun) + 1;
         if (framesDue < 1 || sSettings.frameskip == FRAMESKIP_OFF)
             framesDue = speed;
+        // Showing a frame waits for the screen's refresh, so work that just
+        // misses one looks like being a refresh behind, and catching up (twice
+        // the frames) then misses every refresh: stuck at 30 drawn. When the
+        // last refresh's work for the usual number of frames fitted well
+        // within a refresh, that lag is let go instead. Really slow scenes
+        // still catch up by skipping drawing, so the game keeps its speed.
+        if (framesDue > speed && framesDue <= 2 * speed
+            && lastDraw + (lastWork - lastDraw) * speed / lastFrames < FRAME_MICROSECONDS * 9 / 10)
+        {
+            framesRun += framesDue - speed;
+            framesDue = speed;
+        }
         if (framesDue > 4 * speed)
         {
             // Too far behind to catch up, like after loading: carry on from here
@@ -1402,6 +1432,10 @@ int main(int argc, char **argv)
         }
 #ifdef PSP_TEST_FORCE_SKIP
         framesDue = 2;
+#endif
+#ifdef PSP_TEST
+        if (framesDue > speed)
+            sBehind++;
 #endif
         sKeys = menuWasOpen ? 0 : MapButtons(buttons & ~sMaskedButtons);
 
@@ -1425,8 +1459,9 @@ int main(int argc, char **argv)
             PspHw_SetDiag(PSP_DIAG_STEP, PSP_STEP_DRAW);
             if (i == framesDue - 1)
             {
-                memset(image, 0, sizeof(image));
+                drawTime = PspHw_Microseconds();
                 DrawFrame(image);
+                drawTime = PspHw_Microseconds() - drawTime;
                 speedDrawn++;
             }
             else
@@ -1463,6 +1498,43 @@ int main(int argc, char **argv)
             if (sSettingsMenu.open)
                 DrawSettings();
         }
+#ifdef PSP_TEST
+        if (PspHw_Microseconds() - speedStart >= 1000000 && sSpeedLogLen < sizeof(sSpeedLog) - 200)
+        {
+            sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,
+                                     "speed %d: %u game frames, %u drawn, behind %u  game %.2f ms  draw %.2f ms/drawn  sound %.2f ms\n",
+                                     speed, (unsigned)speedFrames, (unsigned)speedDrawn, sBehind,
+                                     speedFrames ? timeGame / 1000.0f / speedFrames : 0.0f,
+                                     speedDrawn ? timeDraw / 1000.0f / speedDrawn : 0.0f,
+                                     speedFrames ? timeSound / 1000.0f / speedFrames : 0.0f);
+            sBehind = 0;
+#ifdef PSP_PROFILE
+            if (speedDrawn && sSpeedLogLen < sizeof(sSpeedLog) - 200)
+            {
+                sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,
+                                         "  per drawn frame: setup %.2f  layers %.2f  windows %.2f  sprites %.2f  compose %.2f  edges %.2f ms\n",
+                                         gDrawProfile[0] / 1000.0f / speedDrawn, gDrawProfile[1] / 1000.0f / speedDrawn,
+                                         gDrawProfile[2] / 1000.0f / speedDrawn, gDrawProfile[3] / 1000.0f / speedDrawn,
+                                         gDrawProfile[4] / 1000.0f / speedDrawn, gDrawProfile[5] / 1000.0f / speedDrawn);
+            }
+            if (speedFrames && sSpeedLogLen < sizeof(sSpeedLog) - 200)
+            {
+                sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,
+                                         "  sound per game frame: player %.2f  gb regs %.2f  mixer %.2f  gb channels %.2f ms\n",
+                                         gSoundProfile[0] / 1000.0f / speedFrames, gSoundProfile[1] / 1000.0f / speedFrames,
+                                         gSoundProfile[2] / 1000.0f / speedFrames, gSoundProfile[3] / 1000.0f / speedFrames);
+            }
+            memset(gDrawProfile, 0, sizeof(gDrawProfile));
+            memset(gSoundProfile, 0, sizeof(gSoundProfile));
+#endif
+            if (!sSettings.showSpeed)
+            {
+                speedFrames = speedDrawn = 0;
+                timeGame = timeDraw = timeSound = 0;
+                speedStart = PspHw_Microseconds();
+            }
+        }
+#endif
         if (sSettings.showSpeed)
         {
             now = PspHw_Microseconds();
@@ -1485,6 +1557,9 @@ int main(int argc, char **argv)
             PspHw_Print(1, 33, COLOR_YELLOW, sStatus);
             sStatusFrames--;
         }
+        lastWork = PspHw_Microseconds() - loopStart;
+        lastDraw = drawTime < lastWork ? drawTime : lastWork;   // drawn once, however many frames ran
+        lastFrames = framesDue > 0 ? framesDue : 1;
         PspHw_Present();
     }
 

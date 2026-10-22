@@ -270,6 +270,11 @@ static u32 RunTimer(u8 channel, u32 period){
         return 0;
     }
     over = CYCLES_PER_SAMPLE - gb.timer[channel];
+    // Usually it runs out once, which needs no division (slow on the PSP)
+    if(over < period){
+        gb.timer[channel] = period - over;
+        return 1;
+    }
     gb.timer[channel] = period - over % period;
     return 1 + over / period;
 }
@@ -280,13 +285,13 @@ static u32 RunTimer(u8 channel, u32 period){
 static float WaveLevel(u8 sample){
     switch(gb.Vol[2]){
         case 4:  // full
-            return (2 * sample - 15) / 15.0f;
+            return (2 * sample - 15) * (1.0f / 15.0f);
         case 3:  // 3 quarters
-            return (2 * ((sample * 3) >> 2) - 11) / 15.0f;
+            return (2 * ((sample * 3) >> 2) - 11) * (1.0f / 15.0f);
         case 2:  // half
-            return (2 * (sample >> 1) - 7) / 15.0f;
+            return (2 * (sample >> 1) - 7) * (1.0f / 15.0f);
         case 1:  // quarter
-            return (2 * (sample >> 2) - 3) / 15.0f;
+            return (2 * (sample >> 2) - 3) * (1.0f / 15.0f);
         default:
             return 0.0f;
     }
@@ -316,12 +321,12 @@ static void GenerateSample(float *out){
 
     if(REG_NR52 & 0x80){
         if((gb.DAC[0]) && (REG_NR52 & 0x01)){
-            level = gb.Vol[0] * sDutyLevels[REG_NR11 >> 6][gb.position[0]] / 15.0f;
+            level = gb.Vol[0] * sDutyLevels[REG_NR11 >> 6][gb.position[0]] * (1.0f / 15.0f);
             if(REG_NR51 & 0x10) outputL += level;
             if(REG_NR51 & 0x01) outputR += level;
         }
         if((gb.DAC[1]) && (REG_NR52 & 0x02)){
-            level = gb.Vol[1] * sDutyLevels[REG_NR21 >> 6][gb.position[1]] / 15.0f;
+            level = gb.Vol[1] * sDutyLevels[REG_NR21 >> 6][gb.position[1]] * (1.0f / 15.0f);
             if(REG_NR51 & 0x20) outputL += level;
             if(REG_NR51 & 0x02) outputR += level;
         }
@@ -331,13 +336,13 @@ static void GenerateSample(float *out){
             if(REG_NR51 & 0x04) outputR += level;
         }
         if((gb.DAC[3]) && (REG_NR52 & 0x08)){
-            level = gb.Vol[3] * ((gb.lfsr & 1) ? -1.0f : 1.0f) / 15.0f;
+            level = gb.Vol[3] * ((gb.lfsr & 1) ? -1.0f : 1.0f) * (1.0f / 15.0f);
             if(REG_NR51 & 0x80) outputL += level;
             if(REG_NR51 & 0x08) outputR += level;
         }
     }
-    out[0] = outputL / 4.0f;
-    out[1] = outputR / 4.0f;
+    out[0] = outputL * 0.25f;
+    out[1] = outputR * 0.25f;
 }
 
 
@@ -370,11 +375,19 @@ void cgb_audio_generate(u16 samplesPerFrame){
         }
 
         if(first < sHighRateSoundEnd){
+            // Four sums at a time, so the PSP's FPU doesn't wait on each one
+            const float *in = sHighRate[first];
+            float l0 = 0, l1 = 0, r0 = 0, r1 = 0;
+
             coefficients = sCoefficients[(sResampleFrac * PHASES + sampleRate / 2) / sampleRate];
-            for(u32 tap = 0; tap < TAPS; tap++){
-                outputL += coefficients[tap] * sHighRate[first + tap][0];
-                outputR += coefficients[tap] * sHighRate[first + tap][1];
+            for(u32 tap = 0; tap < TAPS; tap += 2, in += 4){
+                l0 += coefficients[tap] * in[0];
+                r0 += coefficients[tap] * in[1];
+                l1 += coefficients[tap + 1] * in[2];
+                r1 += coefficients[tap + 1] * in[3];
             }
+            outputL = l0 + l1;
+            outputR = r0 + r1;
         }
         outBuffer[0] = outputL;
         outBuffer[1] = outputR;

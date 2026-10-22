@@ -17,7 +17,12 @@
 #define getRedChannel(x) ((x >>  0) & 0x1F)
 #define getGreenChannel(x) ((x >>  5) & 0x1F)
 #define getBlueChannel(x) ((x >>  10) & 0x1F)
-#define isbgEnabled(x) ((REG_DISPCNT >> 8) & 0xF) & (1 << x)
+// A window over the whole line (the overworld keeps WIN0 over the whole
+// screen) works like no windows with the layers and effects it lets through:
+// sLineLayers (BG0-3, OBJ) and sLineEffects, set for each line
+static uint8_t sLineLayers = 0x1F;
+static bool sLineEffects = true;
+#define isbgEnabled(x) (((REG_DISPCNT >> 8) & 0xF) & sLineLayers & (1 << (x)))
 
 #define WINMASK_BG0    (1 << 0)
 #define WINMASK_BG1    (1 << 1)
@@ -156,6 +161,23 @@ static void RenderBGScanlineDirect(int bgNum, uint16_t control, uint16_t hoffs, 
 
         if (winMask == NULL)
         {
+            // A whole row with no clear pixel (most of the overworld's bottom
+            // layer): no need to check each one
+            if (run == 8 && ((pixels - 0x11111111) & ~pixels & 0x88888888) == 0)
+            {
+                uint16_t *out = &line[x];
+
+                out[0] = subPal[pixels & 0xF] | 0x8000;
+                out[1] = subPal[(pixels >> 4) & 0xF] | 0x8000;
+                out[2] = subPal[(pixels >> 8) & 0xF] | 0x8000;
+                out[3] = subPal[(pixels >> 12) & 0xF] | 0x8000;
+                out[4] = subPal[(pixels >> 16) & 0xF] | 0x8000;
+                out[5] = subPal[(pixels >> 20) & 0xF] | 0x8000;
+                out[6] = subPal[(pixels >> 24) & 0xF] | 0x8000;
+                out[7] = subPal[pixels >> 28] | 0x8000;
+                x = end;
+                continue;
+            }
             for (; x < end; x++, pixels >>= 4)
             {
                 if (pixels & 0xF)
@@ -834,8 +856,13 @@ static void DecodeSprites(void)
     sSpritesDecoded = true;
 }
 
+// OAM only changes between frames, so it's compared once a frame (at line 0)
+static bool sCheckOam = true;
 static void UpdateSprites(void)
 {
+    if (!sCheckOam)
+        return;
+    sCheckOam = false;
     if (!sSpritesDecoded || memcmp(sDecodedOam, OAM, OAM_SIZE) != 0)
         DecodeSprites();
 }
@@ -956,7 +983,7 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
                     //this code runs if pixel is to be drawn
                     {
                         //check if its enabled in the window (if window is enabled)
-                        winShouldBlendPixel = (windowsEnabled == false || scanline->winMask[bx] & WINMASK_CLR);
+                        winShouldBlendPixel = windowsEnabled ? (scanline->winMask[bx] & WINMASK_CLR) != 0 : sLineEffects;
                         
                         //has to be separated from the blend mode switch statement because of OBJ semi transparancy feature
                         if ((blendMode == 1 && REG_BLDCNT & BLDCNT_TGT1_OBJ && winShouldBlendPixel) || isSemiTransparent)
@@ -1113,6 +1140,18 @@ static void ExtendEdges(uint16_t *pixels, int lineNum, const uint16_t *bgcnts, b
     }
 }
 
+#ifdef PSP_PROFILE
+// Time spent in each part of drawing, in microseconds, for the speed log
+unsigned int gDrawProfile[8];
+unsigned int sceKernelGetSystemTimeLow(void);
+static unsigned int sProfMark;
+#define PROF(n) do { unsigned int t_ = sceKernelGetSystemTimeLow(); gDrawProfile[n] += t_ - sProfMark; sProfMark = t_; } while (0)
+#define PROF_START() (sProfMark = sceKernelGetSystemTimeLow())
+#else
+#define PROF(n) ((void)0)
+#define PROF_START() ((void)0)
+#endif
+
 static void DrawScanline(uint16_t *pixels, uint16_t vcount)
 {
     unsigned int mode = REG_DISPCNT & 3;
@@ -1126,6 +1165,70 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     unsigned int xpos;
 
     sSpriteAtEdge[0] = sSpriteAtEdge[1] = false;
+    PROF_START();
+
+    bool windowsEnabled = false;
+    uint16_t WIN0bottom, WIN0top, WIN0right, WIN0left;
+    uint16_t WIN1bottom, WIN1top, WIN1right, WIN1left;
+    bool WIN0enable, WIN1enable;
+    WIN0enable = false;
+    WIN1enable = false;
+
+    //figure out if WIN0 masks on this scanline
+    if (REG_DISPCNT & DISPCNT_WIN0_ON)
+    {
+        //acquire the window coordinates
+        WIN0bottom = (REG_WIN0V & 0xFF); //y2;
+        WIN0top = (REG_WIN0V & 0xFF00) >> 8; //y1;
+        WIN0right = (REG_WIN0H & 0xFF); //x2
+        WIN0left = (REG_WIN0H & 0xFF00) >> 8; //x1
+        
+        //figure out WIN Y wraparound and check bounds accordingly
+        if (WIN0top > WIN0bottom) {
+            if (vcount >= WIN0top || vcount < WIN0bottom)
+                WIN0enable = true;
+        } else {
+            if (vcount >= WIN0top && vcount < WIN0bottom)
+                WIN0enable = true;
+        }
+        
+        windowsEnabled = true;
+    }
+    //figure out if WIN1 masks on this scanline
+    if (REG_DISPCNT & DISPCNT_WIN1_ON)
+    {
+        WIN1bottom = (REG_WIN1V & 0xFF); //y2;
+        WIN1top = (REG_WIN1V & 0xFF00) >> 8; //y1;
+        WIN1right = (REG_WIN1H & 0xFF); //x2
+        WIN1left = (REG_WIN1H & 0xFF00) >> 8; //x1
+        
+        if (WIN1top > WIN1bottom) {
+            if (vcount >= WIN1top || vcount < WIN1bottom)
+                WIN1enable = true;
+        } else {
+            if (vcount >= WIN1top && vcount < WIN1bottom)
+                WIN1enable = true;
+        }
+        
+        windowsEnabled = true;
+    }
+    //enable windows if OBJwin is enabled
+    if (REG_DISPCNT & DISPCNT_OBJWIN_ON && REG_DISPCNT & DISPCNT_OBJ_ON)
+    {
+        windowsEnabled = true;
+    }
+    
+    sLineLayers = 0x1F;
+    sLineEffects = true;
+    if (WIN0enable && WIN0left == 0 && WIN0right >= DISPLAY_WIDTH && WIN0right > WIN0left)
+    {
+        sLineLayers = REG_WININ & 0x1F;
+        sLineEffects = (REG_WININ & WINMASK_CLR) != 0;
+        windowsEnabled = false;
+        if (!sLineEffects)
+            blendMode = 0;
+    }
+
 
     //initialize all priority bookkeeping data
     memset(scanline.prioritySortedBgsCount, 0, sizeof(scanline.prioritySortedBgsCount));
@@ -1181,6 +1284,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
         }
     }
 
+    PROF(0);   // setup and sprite decoding
     switch (mode)
     {
     case 0:
@@ -1222,57 +1326,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
         break;
     }
     
-    bool windowsEnabled = false;
-    uint16_t WIN0bottom, WIN0top, WIN0right, WIN0left;
-    uint16_t WIN1bottom, WIN1top, WIN1right, WIN1left;
-    bool WIN0enable, WIN1enable;
-    WIN0enable = false;
-    WIN1enable = false;
-
-    //figure out if WIN0 masks on this scanline
-    if (REG_DISPCNT & DISPCNT_WIN0_ON)
-    {
-        //acquire the window coordinates
-        WIN0bottom = (REG_WIN0V & 0xFF); //y2;
-        WIN0top = (REG_WIN0V & 0xFF00) >> 8; //y1;
-        WIN0right = (REG_WIN0H & 0xFF); //x2
-        WIN0left = (REG_WIN0H & 0xFF00) >> 8; //x1
-        
-        //figure out WIN Y wraparound and check bounds accordingly
-        if (WIN0top > WIN0bottom) {
-            if (vcount >= WIN0top || vcount < WIN0bottom)
-                WIN0enable = true;
-        } else {
-            if (vcount >= WIN0top && vcount < WIN0bottom)
-                WIN0enable = true;
-        }
-        
-        windowsEnabled = true;
-    }
-    //figure out if WIN1 masks on this scanline
-    if (REG_DISPCNT & DISPCNT_WIN1_ON)
-    {
-        WIN1bottom = (REG_WIN1V & 0xFF); //y2;
-        WIN1top = (REG_WIN1V & 0xFF00) >> 8; //y1;
-        WIN1right = (REG_WIN1H & 0xFF); //x2
-        WIN1left = (REG_WIN1H & 0xFF00) >> 8; //x1
-        
-        if (WIN1top > WIN1bottom) {
-            if (vcount >= WIN1top || vcount < WIN1bottom)
-                WIN1enable = true;
-        } else {
-            if (vcount >= WIN1top && vcount < WIN1bottom)
-                WIN1enable = true;
-        }
-        
-        windowsEnabled = true;
-    }
-    //enable windows if OBJwin is enabled
-    if (REG_DISPCNT & DISPCNT_OBJWIN_ON && REG_DISPCNT & DISPCNT_OBJ_ON)
-    {
-        windowsEnabled = true;
-    }
-    
+    PROF(1);   // backgrounds drawn into layers
     //draw to pixel mask: outside, then WIN1 over it, then WIN0, which wins
     //where they overlap
     if (windowsEnabled)
@@ -1284,8 +1338,10 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
             FillWindowSpan(scanline.winMask, WIN0left, WIN0right, REG_WININ & 0x3F);
     }
 
-    if (REG_DISPCNT & DISPCNT_OBJ_ON)
+    PROF(2);   // windows
+    if ((REG_DISPCNT & DISPCNT_OBJ_ON) && (sLineLayers & 0x10))
         DrawSprites(&scanline, vcount, windowsEnabled);
+    PROF(3);   // sprites into their layers
 
     //iterate trough every priority in order
     for (prnum = 3; prnum >= 0; prnum--)
@@ -1396,6 +1452,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
         }
     }
 
+    PROF(4);   // putting the line together (direct backgrounds included)
     for (prnum = 0; prnum < 4; prnum++)
     {
         if (scanline.spritePriorities & (1 << prnum))
@@ -1404,6 +1461,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     scanline.spritePriorities = 0;
 
     ExtendEdges(pixels, vcount, scanline.bgcnts, windowsEnabled, scanline.winMask);
+    PROF(5);   // clearing sprite layers, carrying edges on
 }
 
 uint16_t *memsetu16(uint16_t *dst, uint16_t fill, size_t count)
@@ -1477,6 +1535,8 @@ static void EndLine(void)
 void DrawFrame(uint16_t *pixels)
 {
     int i;
+
+    sCheckOam = true;
 
     for (i = 0; i < DISPLAY_HEIGHT; i++)
     {
