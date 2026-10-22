@@ -3,7 +3,9 @@
 # (2026-10-21, research/mockups/X1-xmb-art.png in the port's folder):
 #   psp/ICON0.PNG (144x80): the US box's "POKéMON FIRERED VERSION" logo, cut
 #                           out of the cover onto transparency
-#   psp/PIC1.PNG (480x272): the US box's Charizard, below the logo
+#   psp/PIC1.PNG (480x272): the US box's Charizard, cut out whole, on a swirl
+#                           like the box's (make_pic1.py; without OpenCV, a
+#                           crop of the box below the logo)
 #   psp/SND0.AT3:           the title screen's music (Charizard), from the ROM
 # They're made from the box art and the game, so don't share them; .gitignore
 # leaves them out. `make psp` puts them in the EBOOT if they're here.
@@ -15,7 +17,8 @@
 #   GBAREF: ~/Projects/PSP-Ports/Tools/gbaref/gbaref (records the ROM's sound)
 #   ATRACDENC: https://github.com/dcherednik/atracdenc release 0.2.3. A PSP
 #              3001 played its files in the menu but not those of later versions.
-# Needs Python 3 with Pillow, and ffmpeg.
+# Needs Python 3 with Pillow, ffmpeg, and for the background OpenCV; PYTHON
+# names a Python that has OpenCV if the default one doesn't.
 set -euo pipefail
 boxart=$(realpath "$1")
 rom=$(realpath "$2")
@@ -25,13 +28,13 @@ cd "$(dirname "$0")/.."
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-python3 -I - "$boxart" psp/ICON0.PNG psp/PIC1.PNG <<'EOF'
+python3 -I - "$boxart" psp/ICON0.PNG psp/PIC1.PNG "$work/logo_mask.png" <<'EOF'
 import sys
 from collections import deque
 from PIL import Image
 
 cover = Image.open(sys.argv[1]).convert('RGB')
-icon_path, pic_path = sys.argv[2], sys.argv[3]
+icon_path, pic_path, mask_path = sys.argv[2], sys.argv[3], sys.argv[4]
 
 # The background: Charizard below the logo, between the GBA strip on the left
 # and the rating badges at the bottom
@@ -96,6 +99,10 @@ for part in parts:
                     or max(r, g, b) - min(r, g, b) >= 40:
                 continue
         o[x, y] = (r, g, b, 255)
+# The logo's place on the cover, for make_pic1.py to leave it out
+full = Image.new('RGBA', cover.size)
+full.paste(out, (130, 5))
+full.save(mask_path)
 out = out.crop(out.getbbox())
 scale = min(144 / out.width, 80 / out.height)
 small = out.convert('RGBa').resize((round(out.width * scale), round(out.height * scale)), Image.LANCZOS).convert('RGBA')
@@ -103,6 +110,8 @@ icon = Image.new('RGBA', (144, 80))
 icon.paste(small, ((144 - small.width) // 2, (80 - small.height) // 2))
 icon.save(icon_path)
 EOF
+"${PYTHON:-python3}" psp/make_pic1.py "$boxart" "$work/logo_mask.png" psp/PIC1.PNG \
+    || echo "No OpenCV: PIC1.PNG is the plain crop of the box"
 
 # 20 seconds of the title music, from where it starts (24.4 s into the intro
 # with no save, after a second of silence), about 330 KB as ATRAC3, inside
