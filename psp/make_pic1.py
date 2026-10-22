@@ -39,7 +39,7 @@ count, labels, stats, _ = cv2.connectedComponentsWithStats(fg, connectivity=8)
 fg = (labels == 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])).astype(np.uint8)
 alpha = cv2.resize(fg * 255, (W, H), interpolation=cv2.INTER_LINEAR).astype(np.float32) / 255
 
-# The swirl without him or the logo. It turns round (1020, 790), with its
+# The swirl without him or the logo. It turns round (947, 659), with its
 # streaks running round that point, so each ring is filled from the swirl
 # showing elsewhere on the same ring.
 unknown = np.zeros((H, W), np.uint8)
@@ -49,7 +49,7 @@ swirl = (r > 150) & (r - b > 60) & (g < 200) & (r - g > 25)
 logo = np.zeros((H, W), np.uint8)
 logo[270:820, 960:1900] = 1
 unknown |= cv2.dilate((logo & ~swirl).astype(np.uint8), np.ones((31, 31), np.uint8))
-cx, cy = 1020.0, 790.0
+cx, cy = 947.0, 659.0
 R = int(np.hypot(max(cx, W - cx), max(cy, H - cy))) + 2
 A = 2048
 polar = cv2.WARP_POLAR_LINEAR
@@ -69,9 +69,11 @@ for rr in range(R):
         v = rings[k, rr, c]
         rings[~k, rr, c] = np.interp(angles[~k], np.concatenate([ka - A, ka, ka + A]), np.concatenate([v, v, v]))
 rings[:, :first] = rings[:, first:first + 1].mean(0, keepdims=True)
-fill = cv2.GaussianBlur(cv2.warpPolar(rings, (W, H), (cx, cy), R, polar + cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP), (0, 0), 1.5)
-soft = cv2.GaussianBlur(unknown.astype(np.float32), (0, 0), 6)[..., None]
-background = img.astype(np.float32) * (1 - soft) + fill * soft
+# The box's swirl isn't quite circles, so mixing it with the filled rings shows
+# where the streaks change course. All of it is smoothed a little along the
+# rings instead, so every streak follows the same circles.
+rings = cv2.GaussianBlur(np.vstack([rings] * 3), (0, 0), sigmaX=0.1, sigmaY=22)[A:2 * A]
+background = cv2.GaussianBlur(cv2.warpPolar(rings, (W, H), (cx, cy), R, polar + cv2.INTER_LINEAR + cv2.WARP_INVERSE_MAP), (0, 0), 1.5)
 
 # Him, a little bigger, on the right (the menu shows its icon and the name on
 # the left), with his white glow
