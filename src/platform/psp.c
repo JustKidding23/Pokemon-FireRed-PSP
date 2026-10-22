@@ -1200,6 +1200,8 @@ extern unsigned int gSpriteStats[4];
 // "<frames> <buttons>" each, like "30 CROSS+UP" or "60 -". After a line with
 // SHOT in it, like "60 SHOT", the screen is written to host0:/shot_NNN.rgba.
 // The game exits at the end.
+static u64 sTimePresent;   // putting the frames on the screen, for the speed log
+
 static u32 TestButtons(bool *done, bool *shot)
 {
     static const struct { const char *name; u32 button; } sNames[] = {
@@ -1449,7 +1451,10 @@ int main(int argc, char **argv)
             timeGame += now - timeStart;
             timeStart = now;
             PspHw_SetDiag(PSP_DIAG_STEP, PSP_STEP_DRAW);
-            if (i == framesDue - 1)
+            // Under the settings menu the game is dimmed almost to black, so
+            // the frame from when it opened stays: drawing it plus the menu
+            // could take longer than a refresh and make the sound skip
+            if (i == framesDue - 1 && !(sSettingsMenu.open && menuWasOpen))
             {
                 DrawFrame(image);
                 speedDrawn++;
@@ -1465,16 +1470,20 @@ int main(int argc, char **argv)
             timeDraw += now - timeStart;
             timeStart = now;
             // In turbo the sound engine runs once for every turbo-speed
-            // frames: the music keeps its tempo, and costs no more than usual
+            // frames: the music keeps its tempo, and costs no more than usual.
+            // The sound effects keep up with the game in between.
+            PspHw_SetDiag(PSP_DIAG_STEP, PSP_STEP_SOUND);
             if (soundFrame++ % speed == 0)
-            {
-                PspHw_SetDiag(PSP_DIAG_STEP, PSP_STEP_SOUND);
                 AudioUpdate();
-                timeSound += PspHw_Microseconds() - timeStart;
-            }
+            else
+                AudioUpdateEffectsOnly();
+            timeSound += PspHw_Microseconds() - timeStart;
         }
 
         PspHw_SetDiag(PSP_DIAG_STEP, PSP_STEP_PRESENT);
+#ifdef PSP_TEST
+        u64 presentStart = PspHw_Microseconds();
+#endif
         UpdateSavesFade();
         if (sSavesShown)
         {
@@ -1492,7 +1501,7 @@ int main(int argc, char **argv)
         if (PspHw_Microseconds() - speedStart >= 1000000 && sSpeedLogLen < sizeof(sSpeedLog) - 200)
         {
             sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,
-                                     "speed %d: %u game frames, %u drawn, behind %u  game %.2f ms  draw %.2f ms/drawn  sound %.2f ms\n",
+                                     "speed %d: %u game frames, %u drawn, behind %u  game %.2f ms  draw %.2f ms/drawn  sound %.2f ms  present %.2f ms/drawn\n",
                                      speed, (unsigned)speedFrames, (unsigned)speedDrawn, sBehind,
                                      speedFrames ? timeGame / 1000.0f / speedFrames : 0.0f,
                                      speedDrawn ? timeDraw / 1000.0f / speedDrawn : 0.0f,
@@ -1554,6 +1563,9 @@ int main(int argc, char **argv)
             sStatusFrames--;
         }
         PspHw_Present();
+#ifdef PSP_TEST
+        sTimePresent += PspHw_Microseconds() - presentStart;
+#endif
         // Frames are shown without waiting for the refresh (see PspHw_Present),
         // so the game waits here while it's ahead of time
         while ((PspHw_Microseconds() - clockStart) * speed / FRAME_MICROSECONDS < framesRun)

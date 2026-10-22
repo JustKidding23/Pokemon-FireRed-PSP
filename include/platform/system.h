@@ -17,6 +17,8 @@
 void RunDMAsAndVBlank(void);
 void ResetIoRegisters(void);
 void AudioUpdate(void);
+void AudioUpdateEffectsOnly(void);
+void RunSoundEffectsOnly(void);
 bool8 RunMainLoop(void);
 void RequestSoftReset(void);
 #define ENTER_VBLANK() REG_VCOUNT = 161

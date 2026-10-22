@@ -396,6 +396,10 @@ void MP2K_event_port(struct MP2KPlayerState *unused, struct MP2KTrack *track) {
 #endif
 }
 
+// Set while only the sound effects' players run (see RunSoundEffectsOnly)
+bool8 gSoundEffectsOnly;
+extern struct MusicPlayerInfo gMPlayInfo_BGM;
+
 void MP2KPlayerMain(void *voidPtrPlayer) {
     struct MP2KPlayerState *player = (struct MP2KPlayerState *)voidPtrPlayer;
     struct SoundMixerState *mixer = (struct SoundMixerState *)SOUND_INFO_PTR;
@@ -411,6 +415,9 @@ void MP2KPlayerMain(void *voidPtrPlayer) {
         player->nextPlayerFunc(player->nextPlayer);
     }
     
+    if (gSoundEffectsOnly && voidPtrPlayer == (void *)&gMPlayInfo_BGM) {
+        goto returnEarly;
+    }
     if (player->status & MUSICPLAYER_STATUS_PAUSE) {
         goto returnEarly;
     }

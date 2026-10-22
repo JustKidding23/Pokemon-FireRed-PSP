@@ -42,6 +42,24 @@ unsigned int sceKernelGetSystemTimeLow(void);
 #define SPROF(n) ((void)0)
 #endif
 
+// In turbo the sound is made once for every turbo-speed game frames, so the
+// music keeps its tempo. The sound effects' players read their songs on the
+// game frames in between too, so they keep up with the game: one the game
+// starts and soon replaces or stops still gets played (the owner's choice,
+// 2026-10-21).
+extern bool8 gSoundEffectsOnly;
+
+void RunSoundEffectsOnly(void) {
+    struct SoundMixerState *mixer = (struct SoundMixerState *)SOUND_INFO_PTR;
+
+    if (mixer->lockStatus != MIXER_UNLOCKED || mixer->firstPlayerFunc == NULL) {
+        return;
+    }
+    gSoundEffectsOnly = TRUE;
+    mixer->firstPlayerFunc(mixer->firstPlayer);
+    gSoundEffectsOnly = FALSE;
+}
+
 void RunMixerFrame(void) {
     struct SoundMixerState *mixer = (struct SoundMixerState *)SOUND_INFO_PTR;
     SPROF_DECL;

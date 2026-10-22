@@ -174,4 +174,12 @@ void AudioUpdate(void)
 	m4aSoundMain();
 	m4aSoundVSync();
 }
+
+void AudioUpdateEffectsOnly(void)
+{
+	if (gSoundInit == FALSE)
+		return;
+
+	RunSoundEffectsOnly();
+}
 #endif
