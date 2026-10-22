@@ -211,6 +211,17 @@ void HS_DrawBgTilemapRect(u16 baseTile, u8 left, u8 top, u8 width, u8 height, u1
 {
     u16 i, j;
 
+#ifdef PORTABLE
+    // The wide view leaves out the black bars down the sides (see
+    // HS_ShowOrHideVerticalBlackBarsAlongSides), so the lines and panels that
+    // run between them go on to the screen's edge columns, which the margins
+    // then carry on to the sides of the PSP's screen
+    if (left == 1 && width == 28 && increment == 0)
+    {
+        left = 0;
+        width = 30;
+    }
+#endif
     for (i = top; i < top + height; i++)
     {
         for (j = left; j < left + width; j++)
@@ -334,8 +345,10 @@ void HS_ShowOrHideVerticalBlackBarsAlongSides(u8 mode)
         HS_DrawBgTilemapRect(0x1FF, 29, 0, 1, 20, 0);
         break;
     case 1:
+#ifndef PORTABLE
         HS_DrawBgTilemapRect(0x1F9,  0, 0, 1, 20, 0);
         HS_DrawBgTilemapRect(0x1F9, 29, 0, 1, 20, 0);
+#endif
         break;
     }
 }
