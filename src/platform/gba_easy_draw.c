@@ -1343,6 +1343,13 @@ static unsigned int sProfMark;
 #define PROF_START() ((void)0)
 #endif
 
+// Each line's fade over everything that's still to be done, as mode << 8 |
+// strength (see DrawScanline), or 0
+static uint16_t sLineFade[DISPLAY_HEIGHT];
+// The whole frame's, when every line has the same one, for the PSP's GE to do
+// as it puts the frame on the screen (see DrawFrameFade)
+static uint16_t sFrameFade;
+
 static void DrawScanline(uint16_t *pixels, uint16_t vcount)
 {
     unsigned int mode = REG_DISPCNT & 3;
@@ -1706,23 +1713,14 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     scanline.spritePriorities = 0;
 
     ExtendEdges(pixels, vcount, scanline.bgcnts, windowsEnabled, scanline.winMask);
+    sLineFade[vcount] = 0;
     if (lateBrightness != 0)
     {
         unsigned int evy = REG_BLDY & 0x1F;
-        uint8_t channel[32];
 
         REG_BLDCNT = savedBldcnt;
-        if (evy > 16)
-            evy = 16;
-        for (unsigned int c = 0; c < 32; c++)
-            channel[c] = lateBrightness == 2 ? c + (31 - c) * evy / 16 : c - c * evy / 16;
-        for (unsigned int x = 0; x < RENDER_WIDTH; x++)
-        {
-            uint16_t color = pixels[x];
-
-            pixels[x] = channel[color & 0x1F] | (channel[(color >> 5) & 0x1F] << 5)
-                      | (channel[(color >> 10) & 0x1F] << 10) | (1 << 15);
-        }
+        // Done once the frame's drawn (see FinishFades)
+        sLineFade[vcount] = (lateBrightness << 8) | (evy > 16 ? 16 : evy);
     }
     PROF(5);   // clearing sprite layers, carrying edges on
 }
@@ -1795,6 +1793,48 @@ static void EndLine(void)
     REG_DISPSTAT &= ~INTR_FLAG_VCOUNT;
 }
 
+// A fade over everything is the same change to every pixel of the line. When
+// the whole frame has the same one (most fades) the GE does it for nothing;
+// otherwise the lines that have one are changed here.
+static void FinishFades(uint16_t *pixels)
+{
+    bool same = true;
+
+    for (int i = 1; i < DISPLAY_HEIGHT && same; i++)
+        same = sLineFade[i] == sLineFade[0];
+#ifdef __PSP__
+    if (same)
+    {
+        sFrameFade = sLineFade[0];
+        return;
+    }
+#endif
+    sFrameFade = 0;
+    for (int i = 0; i < DISPLAY_HEIGHT; i++)
+    {
+        uint16_t *line = &pixels[i * RENDER_STRIDE];
+        unsigned int evy = sLineFade[i] & 0xFF;
+        uint8_t channel[32];
+
+        if (sLineFade[i] == 0)
+            continue;
+        for (unsigned int c = 0; c < 32; c++)
+            channel[c] = (sLineFade[i] >> 8) == 2 ? c + (31 - c) * evy / 16 : c - c * evy / 16;
+        for (unsigned int x = 0; x < RENDER_WIDTH; x++)
+        {
+            uint16_t color = line[x];
+
+            line[x] = channel[color & 0x1F] | (channel[(color >> 5) & 0x1F] << 5)
+                    | (channel[(color >> 10) & 0x1F] << 10) | (1 << 15);
+        }
+    }
+}
+
+unsigned int DrawFrameFade(void)
+{
+    return sFrameFade;
+}
+
 void DrawFrame(uint16_t *pixels)
 {
     int i;
@@ -1807,6 +1847,7 @@ void DrawFrame(uint16_t *pixels)
         DrawLine(&pixels[i * RENDER_STRIDE], i);
         EndLine();
     }
+    FinishFades(pixels);
 }
 
 void SkipFrame(void)
@@ -1894,6 +1935,7 @@ void DrawFramePS2(void)
         DrawLine(&image[i * RENDER_STRIDE], i);
     }
     LoadLineRegs(&after);
+    FinishFades(image);
     PS2GS_DrawImage(image);
 }
 #endif // __PS2__

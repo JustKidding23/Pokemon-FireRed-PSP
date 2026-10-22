@@ -80,7 +80,8 @@ uint64_t PspHw_Microseconds(void);
 
 // A frame: the game's picture (240x160, ABGR1555), maybe dimmed under the
 // menu, then text on top, then shown at the next vertical blank
-void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, bool filter, int dim, bool zoom);
+// fade: the game's fade over the whole frame, see DrawFrameFade
+void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, bool filter, int dim, bool zoom, unsigned int fade);
 void PspHw_Print(int column, int row, uint32_t color, const char *text);
 void PspHw_Present(void);
 // Waits for the screen's next refresh (the game is ahead of time)

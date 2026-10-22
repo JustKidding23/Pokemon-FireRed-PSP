@@ -1468,15 +1468,15 @@ int main(int argc, char **argv)
                     u64 d = PspHw_Microseconds() - timeStart;
                     static int sSlowDraws;
 
-                    if (d > 14000 && sSlowDraws < 400 && sSpeedLogLen < sizeof(sSpeedLog) - 200)
+                    if (d > 12000 && sTotalFrames > 3000 && sSlowDraws < 400 && sSpeedLogLen < sizeof(sSpeedLog) - 200)
                         sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,
                                                  "slowdraw f%u %u us dispcnt %04x bldcnt %04x bldalpha %04x bldy %u win %04x/%04x cb2 %08x\n",
                                                  (unsigned)sTotalFrames, (unsigned)d, REG_DISPCNT, REG_BLDCNT, REG_BLDALPHA, REG_BLDY,
                                                  REG_WININ, REG_WINOUT, (unsigned)(uintptr_t)gMain.callback2);
-                    if (d > 14000)
+                    if (d > 12000 && sTotalFrames > 3000)
                         sSlowDraws++;
 #ifdef PSP_PROFILE
-                    if (d > 14000 && sSlowDraws < 400 && sSpeedLogLen < sizeof(sSpeedLog) - 200)
+                    if (d > 12000 && sTotalFrames > 3000 && sSlowDraws < 400 && sSpeedLogLen < sizeof(sSpeedLog) - 200)
                         sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,
                                                  "  stages %u %u %u %u %u %u us\n",
                                                  gDrawProfile[0] - profBefore[0], gDrawProfile[1] - profBefore[1],
@@ -1515,12 +1515,12 @@ int main(int argc, char **argv)
         if (sSavesShown)
         {
             DrawSavesScreen();
-            PspHw_DrawGame(sSavesImage, RENDER_WIDTH, RENDER_STRIDE, sSettings.scale, sSettings.filter, sSavesFade * 255 / 16, false);
+            PspHw_DrawGame(sSavesImage, RENDER_WIDTH, RENDER_STRIDE, sSettings.scale, sSettings.filter, sSavesFade * 255 / 16, false, 0);
         }
         else
         {
             PspHw_DrawGame(image, RENDER_WIDTH, RENDER_STRIDE, sSettings.scale, sSettings.filter,
-                           sSettingsMenu.open ? 0xE0 : sSavesFade * 255 / 16, gWideViewZoom);
+                           sSettingsMenu.open ? 0xE0 : sSavesFade * 255 / 16, gWideViewZoom, DrawFrameFade());
             if (sSettingsMenu.open)
                 DrawSettings();
         }

@@ -337,7 +337,7 @@ struct ColorVertex
 // stride pixels apart, a multiple of 8. zoom shows its middle at twice the size
 // instead, for letterboxed scenes that can't be widened (the "fit" size only).
 // dim darkens it, from 0 (not at all) to 255 (black).
-void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, bool filter, int dim, bool zoom)
+void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, bool filter, int dim, bool zoom, unsigned int fade)
 {
     int x = 0, y = 0, w = SCREEN_WIDTH, h = SCREEN_HEIGHT;
     int u0 = 0, v0 = 0, u1 = width, v1 = GBA_HEIGHT;
@@ -423,6 +423,26 @@ void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, boo
         sceGuDrawArray(GU_SPRITES, GU_TEXTURE_16BIT | GU_VERTEX_16BIT | GU_TRANSFORM_2D, strips * 2, NULL, verts);
     }
     sceGuDisable(GU_TEXTURE_2D);
+
+    // The game's fade over the whole frame (see DrawFrameFade): black or
+    // white over the picture, as strong as the fade
+    if ((fade & 0xFF) != 0)
+    {
+        struct ColorVertex *rect = sceGuGetMemory(2 * sizeof(struct ColorVertex));
+        unsigned int alpha = (fade & 0xFF) * 255 / 16;
+
+        rect[0].color = rect[1].color = (alpha << 24) | ((fade >> 8) == 2 ? 0xFFFFFF : 0);
+        rect[0].x = x;
+        rect[0].y = y;
+        rect[0].z = 0;
+        rect[1].x = x + w;
+        rect[1].y = y + h;
+        rect[1].z = 0;
+        sceGuEnable(GU_BLEND);
+        sceGuBlendFunc(GU_ADD, GU_SRC_ALPHA, GU_ONE_MINUS_SRC_ALPHA, 0, 0);
+        sceGuDrawArray(GU_SPRITES, GU_COLOR_8888 | GU_VERTEX_16BIT | GU_TRANSFORM_2D, 2, NULL, rect);
+        sceGuDisable(GU_BLEND);
+    }
 
     if (dim > 0)
     {

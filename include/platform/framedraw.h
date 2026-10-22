@@ -17,6 +17,9 @@
 #define RENDER_STRIDE ((RENDER_WIDTH + 7) & ~7)
 
 void DrawFrame(uint16_t *pixels);
+// The fade to black (3 << 8 | strength out of 16) or white (2 << 8 | strength)
+// over the whole frame DrawFrame drew, which it left for the screen to do, or 0
+unsigned int DrawFrameFade(void);
 // Runs a frame's line interrupts and HBlank DMAs like DrawFrame, without
 // drawing it, for a frame that's skipped
 void SkipFrame(void);
