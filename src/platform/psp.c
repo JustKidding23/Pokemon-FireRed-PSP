@@ -1187,7 +1187,7 @@ static void SwitchSlotIfPending(void)
 #ifdef PSP_TEST
 // Speed, once a second, written to host0:/speed.log when the test ends: for
 // measuring on the PSP itself (run over PSPLink)
-static char sSpeedLog[32768];
+static char sSpeedLog[262144];
 static size_t sSpeedLogLen;
 static unsigned sBehind;    // display frames that ran more game frames than the speed, to catch up
 #ifdef PSP_PROFILE
@@ -1456,8 +1456,35 @@ int main(int argc, char **argv)
             // could take longer than a refresh and make the sound skip
             if (i == framesDue - 1 && !(sSettingsMenu.open && menuWasOpen))
             {
+#ifdef PSP_PROFILE
+                unsigned int profBefore[8];
+                memcpy(profBefore, gDrawProfile, sizeof(profBefore));
+#endif
                 DrawFrame(image);
                 speedDrawn++;
+#ifdef PSP_TEST
+                {
+                    // Slow drawn frames and what the screen was doing, for the speed log
+                    u64 d = PspHw_Microseconds() - timeStart;
+                    static int sSlowDraws;
+
+                    if (d > 14000 && sSlowDraws < 400 && sSpeedLogLen < sizeof(sSpeedLog) - 200)
+                        sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,
+                                                 "slowdraw f%u %u us dispcnt %04x bldcnt %04x bldalpha %04x bldy %u win %04x/%04x cb2 %08x\n",
+                                                 (unsigned)sTotalFrames, (unsigned)d, REG_DISPCNT, REG_BLDCNT, REG_BLDALPHA, REG_BLDY,
+                                                 REG_WININ, REG_WINOUT, (unsigned)(uintptr_t)gMain.callback2);
+                    if (d > 14000)
+                        sSlowDraws++;
+#ifdef PSP_PROFILE
+                    if (d > 14000 && sSlowDraws < 400 && sSpeedLogLen < sizeof(sSpeedLog) - 200)
+                        sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,
+                                                 "  stages %u %u %u %u %u %u us\n",
+                                                 gDrawProfile[0] - profBefore[0], gDrawProfile[1] - profBefore[1],
+                                                 gDrawProfile[2] - profBefore[2], gDrawProfile[3] - profBefore[3],
+                                                 gDrawProfile[4] - profBefore[4], gDrawProfile[5] - profBefore[5]);
+#endif
+                }
+#endif
             }
             else
             {

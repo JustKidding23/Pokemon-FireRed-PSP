@@ -1411,15 +1411,68 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     
     sLineLayers = 0x1F;
     sLineEffects = true;
-    if (WIN0enable && WIN0left == 0 && WIN0right >= DISPLAY_WIDTH && WIN0right > WIN0left)
+    if (windowsEnabled)
     {
-        sLineLayers = REG_WININ & 0x1F;
-        sLineEffects = (REG_WININ & WINMASK_CLR) != 0;
-        windowsEnabled = false;
-        if (!sLineEffects)
-            blendMode = 0;
+        // Where one window's settings cover the whole line, like the
+        // battle's: WIN0 or WIN1 across it, or neither on it and no sprite
+        // window, so it's all outside. Then the line is drawn as if there
+        // were no windows, with that window's layers and effects.
+        bool win0Full = WIN0enable && WIN0left == 0 && WIN0right >= DISPLAY_WIDTH && WIN0right > WIN0left;
+        bool win0None = !WIN0enable || WIN0left == WIN0right;
+        bool win1Full = WIN1enable && WIN1left == 0 && WIN1right >= DISPLAY_WIDTH && WIN1right > WIN1left;
+        bool win1None = !WIN1enable || WIN1left == WIN1right;
+        int mask = -1;
+
+        if (win0Full)
+            mask = REG_WININ & 0x3F;
+        else if (win0None && win1Full)
+            mask = (REG_WININ >> 8) & 0x3F;
+        else if (win0None && win1None)
+        {
+            bool objWin = false;
+
+            if ((REG_DISPCNT & DISPCNT_OBJWIN_ON) && (REG_DISPCNT & DISPCNT_OBJ_ON) && vcount < DISPLAY_HEIGHT)
+            {
+                UpdateSprites();
+                for (int n = 0; n < sLineSpriteCount[vcount] && !objWin; n++)
+                    objWin = sSprites[sLineSprites[vcount][n]].oam->objMode == 2;
+            }
+            if (!objWin)
+                mask = REG_WINOUT & 0x3F;
+        }
+        if (mask >= 0)
+        {
+            sLineLayers = mask & 0x1F;
+            sLineEffects = (mask & WINMASK_CLR) != 0;
+            windowsEnabled = false;
+            if (!sLineEffects)
+                blendMode = 0;
+        }
     }
 
+
+    // A fade to or from black or white over everything (all layers, sprites
+    // and the backdrop are first targets, nothing on the line limits the
+    // effect, no sprite is semi-transparent), like the battle's after the
+    // party menu: the line is drawn as without it, which keeps the fast
+    // paths, and every finished pixel is brightened or darkened once. On the
+    // GBA the effect changes the top pixel wherever it's a first target,
+    // which here is every pixel, so it's the same.
+    uint16_t savedBldcnt = 0;
+    unsigned int lateBrightness = 0;
+    if ((blendMode == 2 || blendMode == 3) && (REG_BLDCNT & 0x3F) == 0x3F && !windowsEnabled && sLineEffects)
+    {
+        UpdateSprites();
+        if (!sAnySemiTransparent)
+        {
+            lateBrightness = blendMode;
+            savedBldcnt = REG_BLDCNT;
+            REG_BLDCNT = 0;
+            blendMode = 0;
+            // DrawLine filled it with the changed backdrop
+            memsetu16(pixels, *(uint16_t *)PLTT, RENDER_WIDTH);
+        }
+    }
 
     //initialize all priority bookkeeping data
     memset(scanline.prioritySortedBgsCount, 0, sizeof(scanline.prioritySortedBgsCount));
@@ -1653,6 +1706,24 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     scanline.spritePriorities = 0;
 
     ExtendEdges(pixels, vcount, scanline.bgcnts, windowsEnabled, scanline.winMask);
+    if (lateBrightness != 0)
+    {
+        unsigned int evy = REG_BLDY & 0x1F;
+        uint8_t channel[32];
+
+        REG_BLDCNT = savedBldcnt;
+        if (evy > 16)
+            evy = 16;
+        for (unsigned int c = 0; c < 32; c++)
+            channel[c] = lateBrightness == 2 ? c + (31 - c) * evy / 16 : c - c * evy / 16;
+        for (unsigned int x = 0; x < RENDER_WIDTH; x++)
+        {
+            uint16_t color = pixels[x];
+
+            pixels[x] = channel[color & 0x1F] | (channel[(color >> 5) & 0x1F] << 5)
+                      | (channel[(color >> 10) & 0x1F] << 10) | (1 << 15);
+        }
+    }
     PROF(5);   // clearing sprite layers, carrying edges on
 }
 
