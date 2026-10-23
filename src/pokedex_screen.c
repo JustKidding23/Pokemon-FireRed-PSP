@@ -299,7 +299,14 @@ static const struct WindowTemplate sWindowTemplate_ModeSelect = {
 
 static const struct WindowTemplate sWindowTemplate_SelectionIcon = {
     .bg = 1,
+#ifdef PORTABLE
+    // The pictures run off the screen's right edge. In the wider view they
+    // go 3 tiles further right, out to the end of the map, so the edge of the
+    // PSP's screen cuts them (the owner's choice, 2026-10-22)
+    .tilemapLeft = 24,
+#else
     .tilemapLeft = 21,
+#endif
     .tilemapTop = 11,
     .width = 8,
     .height = 6,
@@ -1126,7 +1133,14 @@ static void DexScreen_InitGfxForTopMenu(void)
     struct ListMenuTemplate listMenuTemplate;
     FillBgTilemapBufferRect(3, 0x00E, 0, 0, 30, 20, 0);
     FillBgTilemapBufferRect(2, 0x000, 0, 0, 30, 20, 17);
+#ifdef PORTABLE
+    // All 32 columns: the picture's map columns past the GBA's 30 show in
+    // the right margin here (see sWindowTemplate_SelectionIcon)
+    FillBgTilemapBufferRect(1, 0x000, 0, 0, 32, 20, 17);
+    gWideViewNoWrapBgs |= 1 << 1;
+#else
     FillBgTilemapBufferRect(1, 0x000, 0, 0, 30, 20, 17);
+#endif
     sPokedexScreenData->modeSelectWindowId = AddWindow(&sWindowTemplate_ModeSelect);
     sPokedexScreenData->selectionIconWindowId = AddWindow(&sWindowTemplate_SelectionIcon);
     sPokedexScreenData->dexCountsWindowId = AddWindow(&sWindowTemplate_DexCounts);
@@ -2126,6 +2140,11 @@ static bool32 DexScreen_TryScrollMonsVertical(u8 direction)
 
 static void DexScreen_RemoveWindow(u8 *windowId_p)
 {
+#ifdef PORTABLE
+    // The contents page's picture is gone, and with it what fills the margin
+    if (windowId_p == &sPokedexScreenData->selectionIconWindowId)
+        gWideViewNoWrapBgs &= ~(1 << 1);
+#endif
     if (*windowId_p != 0xFF)
     {
         RemoveWindow(*windowId_p);

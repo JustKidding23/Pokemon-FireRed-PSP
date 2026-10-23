@@ -1262,7 +1262,8 @@ static bool TextBgOpaqueAt(uint16_t control, uint16_t hoffs, uint16_t voffs, int
 // color. Boxes that stop short of the edges, like dialogue, stay as they are.
 // Where no background covers the edge column, the GBA shows the backdrop
 // there, like the controls guide's blue page, so the margin keeps it too.
-static void ExtendEdges(uint16_t *pixels, int lineNum, const uint16_t *bgcnts, bool windowsEnabled, const uint16_t *winMask)
+static void ExtendEdges(uint16_t *pixels, int lineNum, const uint16_t *bgcnts, bool windowsEnabled, const uint16_t *winMask,
+                        uint16_t (*layers)[RENDER_WIDTH])
 {
     static const int sEdgeColumns[2] = {0, DISPLAY_WIDTH - 1};
     unsigned int mode = REG_DISPCNT & 3;
@@ -1282,6 +1283,9 @@ static void ExtendEdges(uint16_t *pixels, int lineNum, const uint16_t *bgcnts, b
             if (!isbgEnabled(bgnum))
                 continue;
             if (windowsEnabled && !(winMask[gx + RENDER_MARGIN] & (1 << bgnum)))
+                continue;
+            // Drawn over whatever the margin carries on, below
+            if (gWideViewNoWrapBgs & (1 << bgnum))
                 continue;
             if (gWideViewEndsAtEdgeBgs & (1 << bgnum))
             {
@@ -1331,6 +1335,26 @@ static void ExtendEdges(uint16_t *pixels, int lineNum, const uint16_t *bgcnts, b
                 memsetu16(pixels, color, RENDER_MARGIN);
             else
                 memsetu16(&pixels[RENDER_MARGIN + DISPLAY_WIDTH], color, RENDER_MARGIN);
+
+            // Backgrounds that show their own map in the margins (see
+            // gWideViewNoWrapBgs) go over what's carried on, where they're
+            // above it, from the bottom up
+            for (int priority = bestNarrow - 1; priority >= 0; priority--)
+            {
+                for (int bgnum = 3; bgnum >= 0; bgnum--)
+                {
+                    unsigned int first = side == 0 ? 0 : RENDER_MARGIN + DISPLAY_WIDTH;
+
+                    if (!(gWideViewNoWrapBgs & (1 << bgnum)) || !isbgEnabled(bgnum) || (bgcnts[bgnum] & 3) != priority
+                     || (windowsEnabled && !(winMask[gx + RENDER_MARGIN] & (1 << bgnum))))
+                        continue;
+                    for (unsigned int x = first; x < first + RENDER_MARGIN; x++)
+                    {
+                        if (layers[bgnum][x] & (1 << 15))
+                            pixels[x] = layers[bgnum][x];
+                    }
+                }
+            }
         }
         // (a background that fills the margin from its map counts too, for
         // screens that only fill one, see gWideViewLeftOnlyBgs)
@@ -1725,7 +1749,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     }
     scanline.spritePriorities = 0;
 
-    ExtendEdges(pixels, vcount, scanline.bgcnts, windowsEnabled, scanline.winMask);
+    ExtendEdges(pixels, vcount, scanline.bgcnts, windowsEnabled, scanline.winMask, scanline.layers);
     sLineFade[vcount] = 0;
     if (lateBrightness != 0)
     {
