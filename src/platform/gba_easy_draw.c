@@ -982,7 +982,54 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
                     continue;
                 if (flipY)
                     texY = height - 1 - texY;
-                for (int local_x = firstX; local_x <= lastX; local_x++)
+                if (!is8BPP)
+                {
+                    // A tile's row of 8 pixels at a time, read as one word
+                    const uint8_t *rowBase = tiles + ((texY / 8) * rowTiles + oam->tileNum) * 32 + (texY % 8) * 4;
+                    const uint16_t *subPal = pal + oam->paletteNum * 16;
+                    uint16_t *out = &pixels[x + firstX + RENDER_MARGIN];
+                    int local_x = firstX;
+
+                    while (local_x <= lastX)
+                    {
+                        unsigned int texX = local_x + width / 2;
+                        uint32_t row;
+                        unsigned int sub, n;
+
+                        if (flipX)
+                            texX = width - 1 - texX;
+                        row = *(const uint32_t *)(rowBase + (texX / 8) * 32);
+                        // Mirrored, the row is flipped so it still runs left to right
+                        if (flipX)
+                        {
+                            row = FlipTileRow4(row);
+                            sub = 7 - texX % 8;
+                        }
+                        else
+                        {
+                            sub = texX % 8;
+                        }
+                        n = 8 - sub;
+                        if (n > (unsigned int)(lastX - local_x + 1))
+                            n = lastX - local_x + 1;
+                        row >>= sub * 4;
+                        local_x += n;
+                        if (row == 0)
+                        {
+                            out += n;
+                            continue;
+                        }
+                        for (; n > 0; n--, out++, row >>= 4)
+                        {
+                            if (row & 0xF)
+                            {
+                                *out = subPal[row & 0xF] | (1 << 15);
+                                drew = true;
+                            }
+                        }
+                    }
+                }
+                else for (int local_x = firstX; local_x <= lastX; local_x++)
                 {
                     unsigned int texX = local_x + width / 2;
                     unsigned int pixel;
@@ -1495,6 +1542,21 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     }
 
 
+    // The layers every window region on the line shows, like the summary
+    // screen's backgrounds, which only its sprites differ on: those need no
+    // window check for each pixel
+    uint8_t winAll = 0x3F;
+    if (windowsEnabled)
+    {
+        winAll = REG_WINOUT & 0x3F;
+        if (WIN0enable && WIN0left != WIN0right)
+            winAll &= REG_WININ & 0x3F;
+        if (WIN1enable && WIN1left != WIN1right)
+            winAll &= (REG_WININ >> 8) & 0x3F;
+        if ((REG_DISPCNT & DISPCNT_OBJWIN_ON) && (REG_DISPCNT & DISPCNT_OBJ_ON))
+            winAll &= (REG_WINOUT >> 8) & 0x3F;
+    }
+
     // A fade to or from black or white over everything (all layers, sprites
     // and the backdrop are first targets, nothing on the line limits the
     // effect, no sprite is semi-transparent), like the battle's after the
@@ -1558,7 +1620,14 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
         if (REG_DISPCNT & DISPCNT_OBJ_ON)
         {
             UpdateSprites();
-            spritesBlend = (blendMode == 1 && (REG_BLDCNT & BLDCNT_TGT1_OBJ)) || sAnySemiTransparent;
+            spritesBlend = blendMode == 1 && (REG_BLDCNT & BLDCNT_TGT1_OBJ);
+            // A semi-transparent sprite blends with the layers below only on
+            // its own lines, like the summary screen's
+            if (sAnySemiTransparent && !spritesBlend && vcount < DISPLAY_HEIGHT)
+            {
+                for (int n = 0; n < sLineSpriteCount[vcount] && !spritesBlend; n++)
+                    spritesBlend = sSprites[sLineSprites[vcount][n]].oam->objMode == 1;
+            }
         }
         layersRead = spritesBlend || (blendMode == 1 && (REG_BLDCNT & (REG_DISPCNT >> 8) & 0xF));
         if (!layersRead)
@@ -1652,9 +1721,9 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
                         uint16_t bgvoffs = *(uint16_t *)(REG_ADDR_BG0VOFS + bgnum * 4);
 
                         RenderBGScanlineDirect(bgnum, scanline.bgcnts[bgnum], bghoffs, bgvoffs, vcount, pixels,
-                                               windowsEnabled ? scanline.winMask : NULL);
+                                               (windowsEnabled && !(winAll & (1 << bgnum))) ? scanline.winMask : NULL);
                     }
-                    else if (!windowsEnabled)
+                    else if (!windowsEnabled || (winAll & (1 << bgnum)))
                     {
                         for (xpos = 0; xpos < RENDER_WIDTH; xpos++)
                         {
