@@ -69,6 +69,7 @@ extern u8 gWideViewRepeatingBgs;
 extern u8 gWideViewEndsAtEdgeBgs;
 extern u8 gWideViewClampBgs;
 extern u8 gWideViewNoWrapBgs;
+extern u8 gWideViewLeftOnlyBgs;
 
 static inline bool BgFillsMargins(int bgNum, unsigned int mapWidthInPixels)
 {
@@ -76,9 +77,15 @@ static inline bool BgFillsMargins(int bgNum, unsigned int mapWidthInPixels)
         || ((gWideViewRepeatingBgs | gWideViewClampBgs | gWideViewNoWrapBgs) & (1 << bgNum));
 }
 
+// Whether it fills the left margin, or the right one (see gWideViewLeftOnlyBgs)
+static inline bool BgFillsMargin(int bgNum, unsigned int mapWidthInPixels, int side)
+{
+    return BgFillsMargins(bgNum, mapWidthInPixels) || (side == 0 && (gWideViewLeftOnlyBgs & (1 << bgNum)));
+}
+
 static inline unsigned int BgFirstColumn(int bgNum, unsigned int mapWidthInPixels)
 {
-    return BgFillsMargins(bgNum, mapWidthInPixels) ? 0 : RENDER_MARGIN;
+    return BgFillsMargin(bgNum, mapWidthInPixels, 0) ? 0 : RENDER_MARGIN;
 }
 
 static inline unsigned int BgEndColumn(int bgNum, unsigned int mapWidthInPixels)
@@ -224,7 +231,7 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
     // entry, so it only needs looking up once per tile instead of for every
     // pixel. The overworld keeps mosaic on for BG1-3 with a size of 0, which
     // changes nothing.
-    if ((!(control & BGCNT_MOSAIC) || mosaicBGEffectX == 0) && !((gWideViewClampBgs | gWideViewNoWrapBgs) & (1 << bgNum)))
+    if ((!(control & BGCNT_MOSAIC) || mosaicBGEffectX == 0) && !((gWideViewClampBgs | gWideViewNoWrapBgs | gWideViewLeftOnlyBgs) & (1 << bgNum)))
     {
         unsigned int yy = (lineNum + voffs) & 0x1FF;
         uint16_t *bgmapRow = (uint16_t *)BG_SCREEN_ADDR(screenBaseBlock);
@@ -238,10 +245,9 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
 
         // A narrow map leaves the margins clear
         if (BgFirstColumn(bgNum, mapWidthInPixels) != 0)
-        {
             memset(line, 0, RENDER_MARGIN * sizeof(line[0]));
+        if (lineEnd < RENDER_WIDTH)
             memset(&line[lineEnd], 0, (RENDER_WIDTH - lineEnd) * sizeof(line[0]));
-        }
         for (unsigned int x = BgFirstColumn(bgNum, mapWidthInPixels); x < lineEnd;)
         {
             unsigned int xx = (x - RENDER_MARGIN + hoffs) & 0x1FF;
@@ -318,6 +324,10 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
 
             xx = (col < 0 ? 0 : col > DISPLAY_WIDTH - 1 ? DISPLAY_WIDTH - 1 : col) & 0x1FF;
         }
+        else if ((gWideViewLeftOnlyBgs & (1 << bgNum)) && gx < -16)
+            // Past the 16 pixels of map left of the screen, their first column
+            // carries on (see gWideViewLeftOnlyBgs)
+            xx = (-16 + hoffs) & 0x1FF;
         else
             xx = (gx + hoffs) & 0x1FF;
         // In the margins, only where the map seen at the screen's edge
@@ -1267,7 +1277,7 @@ static void ExtendEdges(uint16_t *pixels, int lineNum, const uint16_t *bgcnts, b
         {
             uint16_t control = bgcnts[bgnum];
             int priority = control & 3;
-            bool wide = BgFillsMargins(bgnum, bgMapSizes[control >> 14][0] * 8);
+            bool wide = BgFillsMargin(bgnum, bgMapSizes[control >> 14][0] * 8, side);
 
             if (!isbgEnabled(bgnum))
                 continue;
@@ -1322,7 +1332,10 @@ static void ExtendEdges(uint16_t *pixels, int lineNum, const uint16_t *bgcnts, b
             else
                 memsetu16(&pixels[RENDER_MARGIN + DISPLAY_WIDTH], color, RENDER_MARGIN);
         }
-        bool extended = (bestNarrow < 4 && bestNarrow <= bestWide) || (bestNarrow == 4 && bestWide == 4);
+        // (a background that fills the margin from its map counts too, for
+        // screens that only fill one, see gWideViewLeftOnlyBgs)
+        bool extended = (bestNarrow < 4 && bestNarrow <= bestWide) || (bestNarrow == 4 && bestWide == 4)
+                     || bestWide < bestNarrow;
 
         if (side == 0)
             sExtendedLeft = extended;
@@ -1529,7 +1542,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
             for (bgnum = 0; bgnum < (mode == 0 ? 4 : mode == 1 ? 2 : 0); bgnum++)
             {
                 if (CanDrawBGDirectly(scanline.bgcnts[bgnum]) && !(blendMode != 0 && (REG_BLDCNT & (1 << bgnum)))
-                 && !((gWideViewClampBgs | gWideViewNoWrapBgs) & (1 << bgnum)))
+                 && !((gWideViewClampBgs | gWideViewNoWrapBgs | gWideViewLeftOnlyBgs) & (1 << bgnum)))
                     directBgs |= 1 << bgnum;
             }
         }

@@ -441,6 +441,11 @@ static void BuyMenuInitBgs(void)
 {
     ResetBgsAndClearDma3BusyFlags(0);
     InitBgsFromTemplates(0, sShopBuyMenuBgTemplates, NELEMS(sShopBuyMenuBgTemplates));
+#ifdef PORTABLE
+    // The room's view carries on into the left margin from the columns of
+    // the room drawn past the map's end (see BuyMenuDrawMapBg)
+    gWideViewLeftOnlyBgs = (1 << 1) | (1 << 2) | (1 << 3);
+#endif
     SetBgTilemapBuffer(1, gShopTilemapBuffer2);
     SetBgTilemapBuffer(2, gShopTilemapBuffer4);
     SetBgTilemapBuffer(3, gShopTilemapBuffer3);
@@ -734,7 +739,14 @@ static void BuyMenuDrawMapBg(void)
 
     for (j = 0; j < 10; j++)
     {
+#ifdef PORTABLE
+        // One more column of the room to the left, for the wider view's
+        // margin: it goes in the map's last two tile columns, which it wraps
+        // round to left of the screen (see gWideViewLeftOnlyBgs)
+        for (i = -1; i < 5; i++)
+#else
         for (i = 0; i < 5; i++)
+#endif
         {
             metatile = MapGridGetMetatileIdAt(x + i, y + j);
             metatileLayerType = MapGridGetMetatileLayerTypeAt(x + i, y + j);
@@ -749,7 +761,7 @@ static void BuyMenuDrawMapBg(void)
 
 static void BuyMenuDrawMapMetatile(s16 x, s16 y, const u16 *src, u8 metatileLayerType)
 {
-    u16 offset1 = x * 2;
+    u16 offset1 = (x * 2) & 31;
     u16 offset2 = y * 64 + 64;
 
     switch (metatileLayerType)

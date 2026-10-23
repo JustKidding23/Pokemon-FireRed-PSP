@@ -145,6 +145,11 @@ extern u8 gWideViewClampBgs;
 // him past the screen's left edge shows, but not his own left side again
 // past the right edge
 extern u8 gWideViewNoWrapBgs;
+// Backgrounds (bits 0-3) that fill only the left margin from their map, like
+// the shop's view of the room, which has one more column of the room drawn in
+// the 16 pixels left of the screen (further left carries that column's first
+// pixels on); the right margin carries on their edge as usual
+extern u8 gWideViewLeftOnlyBgs;
 #endif
 
 #endif // GUARD_BG_H
