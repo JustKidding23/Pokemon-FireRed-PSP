@@ -2131,6 +2131,12 @@ static void ScrollBackground(void)
 static void LoadPokeStorageMenuGfx(void)
 {
     InitBgsFromTemplates(0, sBgTemplates, ARRAY_COUNT(sBgTemplates));
+#ifdef PORTABLE
+    // The box's wallpaper is on a 512-pixel map, which holds the next box's
+    // as it slides in, so the margins show the map rather than its edge. The
+    // pattern behind it repeats, so it carries on into them too.
+    gWideViewRepeatingBgs = (1 << 2) | (1 << 3);
+#endif
     DecompressAndLoadBgGfxUsingHeap(1, gPokeStorageMenu_Gfx, 0, 0, 0);
     LZ77UnCompWram(sMenu_Tilemap, gStorage->menuTilemapBuffer);
     SetBgTilemapBuffer(1, gStorage->menuTilemapBuffer);
