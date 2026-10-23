@@ -375,6 +375,11 @@ bool32 MapHasPreviewScreen_HandleQLState2(u8 mapsec, u8 type)
 void MapPreview_InitBgs(void)
 {
     InitBgsFromTemplates(0, sMapPreviewBgTemplate, NELEMS(sMapPreviewBgTemplate));
+#ifdef PORTABLE
+    // The area's picture is the GBA screen's width: it ends there in the
+    // wider view instead of its edges being stretched across the margins
+    gWideViewEndsAtEdgeBgs = 1 << 0;
+#endif
     ShowBg(0);
 }
 
@@ -431,6 +436,11 @@ void MapPreview_StartForestTransition(u8 mapsec)
     gTasks[taskId].data[8] = 16;
     gTasks[taskId].data[9] = 0;
     SetBgAttribute(0, BG_ATTR_PRIORITY, 0);
+#ifdef PORTABLE
+    // The picture fades over the forest, which carries on in the margins
+    // beside it (see MapPreview_InitBgs)
+    gWideViewEndsAtEdgeBgs |= 1 << 0;
+#endif
     SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT1_BG0 | BLDCNT_EFFECT_BLEND | BLDCNT_TGT2_BG1 | BLDCNT_TGT2_BG2 | BLDCNT_TGT2_BG3 | BLDCNT_TGT2_OBJ | BLDCNT_TGT2_BD);
     SetGpuReg(REG_OFFSET_BLDALPHA, BLDALPHA_BLEND(16, 0));
     SetGpuRegBits(REG_OFFSET_WININ, WININ_WIN0_CLR | WININ_WIN1_CLR);
@@ -547,6 +557,9 @@ static void Task_RunMapPreviewScreenForest(u8 taskId)
             SetGpuReg(REG_OFFSET_BLDALPHA, data[5]);
             SetGpuReg(REG_OFFSET_WININ, data[6]);
             SetGpuReg(REG_OFFSET_WINOUT, data[7]);
+#ifdef PORTABLE
+            gWideViewEndsAtEdgeBgs &= ~(1 << 0);
+#endif
             DestroyTask(taskId);
         }
         break;

@@ -13,6 +13,7 @@
 #include "characters.h"
 #include "constants/flags.h"
 #include "constants/items.h"
+#include "constants/moves.h"
 #include "constants/species.h"
 
 extern void EnableNationalPokedex(void);
@@ -70,5 +71,24 @@ void TestMakeCompleteSave(void)
             AddPCItem(item, 5);
     }
     SetMoney(&gSaveBlock1Ptr->money, 999999);
+
+    // Two Mew that know every field move between them, after the party, for
+    // testing the field effects: Fly, Surf, Strength, Flash; Cut, Rock Smash,
+    // Waterfall, Dig
+    {
+        static const u16 sFieldMoves[2][MAX_MON_MOVES] = {
+            {MOVE_FLY, MOVE_SURF, MOVE_STRENGTH, MOVE_FLASH},
+            {MOVE_CUT, MOVE_ROCK_SMASH, MOVE_WATERFALL, MOVE_DIG},
+        };
+        u8 count = CalculatePlayerPartyCount();
+
+        for (int i = 0; i < 2 && count < PARTY_SIZE; i++, count++)
+        {
+            CreateMon(&gPlayerParty[count], SPECIES_MEW, 70, 31, FALSE, 0, OT_ID_PLAYER_ID, 0);
+            for (int m = 0; m < MAX_MON_MOVES; m++)
+                SetMonMoveSlot(&gPlayerParty[count], sFieldMoves[i][m], m);
+        }
+        CalculatePlayerPartyCount();
+    }
 }
 #endif
