@@ -2478,3 +2478,49 @@ static void PrintHelpSystemTopicMouseoverDescription(struct HelpSystemListMenu *
         HelpSystem_PrintTopicMouseoverDescription(sHelpSystemTopicMouseoverDescriptionPtrs[index]);
     HS_ShowOrHideToplevelTooltipWindow(1);
 }
+
+#ifdef PSP_TEST
+// The HELPWIDTHS test: every help text drawn into a scratch box as the help
+// screens draw it (26 tiles wide), and the ones whose widest line doesn't fit,
+// or comes within 2 pixels of the edge, written to the test log
+extern s32 gHelpTestWidest;
+void TestLog(const char *format, ...);
+void HelpSystemRenderText(u8 fontId, u8 * dest, const u8 * src, u8 x, u8 y, u8 width, u8 height);
+
+static void TestHelpTable(const char *name, const u8 *const *table, int count)
+{
+    static u8 scratch[26 * 8 * 16 * 8 / 2];
+    int fits = 0;
+
+    for (int i = 0; i < count; i++)
+    {
+        if (table[i] == NULL)
+            continue;
+        gHelpTestWidest = 0;
+        HelpSystemRenderText(FONT_NORMAL, scratch, table[i], 0, 0, 26, 16);
+        if (gHelpTestWidest > 26 * 8 - 2)
+            TestLog("help %s[%d]: widest line %d px of %d\n", name, i, (int)gHelpTestWidest, 26 * 8);
+        else
+            fits++;
+    }
+    TestLog("help %s: %d of %d fit\n", name, fits, count);
+}
+
+void TestHelpWidths(void)
+{
+#define TABLE(t) TestHelpTable(#t, t, ARRAY_COUNT(t))
+    TABLE(sHelpSystemTopicPtrs);
+    TABLE(sHelpSystemTopicMouseoverDescriptionPtrs);
+    TABLE(sHelpSystemSpecializedQuestionTextPtrs);
+    TABLE(sHelpSystemSpecializedAnswerTextPtrs);
+    TABLE(sHelpSystemMenuTopicTextPtrs);
+    TABLE(sHelpSystemHowToUseMenuTextPtrs);
+    TABLE(sHelpSystemTermTextPtrs);
+    TABLE(sHelpSystemTermDefinitionsTextPtrs);
+    TABLE(sHelpSystemGeneralTopicTextPtrs);
+    TABLE(sHelpSystemGeneralTopicDescriptionTextPtrs);
+    TABLE(sHelpSystemTypeMatchupTextPtrs);
+    TABLE(sHelpSystemTypeMatchupDescriptionTextPtrs);
+#undef TABLE
+}
+#endif

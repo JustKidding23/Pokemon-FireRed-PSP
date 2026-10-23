@@ -1,6 +1,7 @@
 #if defined(PORTABLE) && defined(__PSP__)
 // The PSP backend: the frame loop, the buttons, the save files and the menu
 // that switches between them. psp_hw.c does the talking to the system.
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1206,6 +1207,18 @@ extern unsigned int gSpriteStats[4];
 // to map group g, number n, at x,y, from the overworld.
 // The game exits at the end.
 static u64 sTimePresent;   // putting the frames on the screen, for the speed log
+
+// Adds a line to the test log (host0:/speed.log), for tests in the game's code
+void TestLog(const char *format, ...)
+{
+    va_list args;
+
+    if (sSpeedLogLen >= sizeof(sSpeedLog) - 200)
+        return;
+    va_start(args, format);
+    sSpeedLogLen += vsnprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen, format, args);
+    va_end(args);
+}
 static bool sMakeComplete;  // the test input's COMPLETE, waiting for the overworld
 static bool sEnterHallOfFame;  // and HOF
 static bool sHallOfFamePC;     // and HOFPC
@@ -1275,6 +1288,11 @@ static u32 TestButtons(bool *done, bool *shot)
                 sEnterHallOfFame = true;
             if (strcmp(name, "HOFPC") == 0)
                 sHallOfFamePC = true;
+            if (strcmp(name, "HELPWIDTHS") == 0)
+            {
+                void TestHelpWidths(void);
+                TestHelpWidths();
+            }
             if (sscanf(name, "WARP:%d:%d:%d:%d", &sWarp[0], &sWarp[1], &sWarp[2], &sWarp[3]) == 4)
                 sWarpPending = true;
             for (size_t i = 0; i < ARRAY_COUNT(sNames); i++)

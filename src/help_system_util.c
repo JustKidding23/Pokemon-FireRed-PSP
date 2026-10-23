@@ -383,6 +383,15 @@ void HS_ShowOrHideScrollArrows(u8 which, u8 mode)
     }
 }
 
+#ifdef PSP_TEST
+// The widest line HelpSystemRenderText has drawn since it was last reset, in
+// pixels past where the text starts, for the HELPWIDTHS test
+s32 gHelpTestWidest;
+#define HELP_TEST_NOTE_WIDTH() do { if (x - orig_x > gHelpTestWidest) gHelpTestWidest = x - orig_x; } while (0)
+#else
+#define HELP_TEST_NOTE_WIDTH() ((void)0)
+#endif
+
 void HelpSystemRenderText(u8 fontId, u8 * dest, const u8 * src, u8 x, u8 y, u8 width, u8 height)
 {
     // fontId -> sp+24
@@ -534,6 +543,7 @@ void HelpSystemRenderText(u8 fontId, u8 * dest, const u8 * src, u8 x, u8 y, u8 w
             destBlit.height = height * 8;
             BlitBitmapRect4Bit(&srcBlit, &destBlit, 0, 0, x, y, GetKeypadIconWidth(curChar), GetKeypadIconHeight(curChar), 0);
             x += GetKeypadIconWidth(curChar);
+            HELP_TEST_NOTE_WIDTH();
             break;
         case CHAR_EXTRA_SYMBOL:
             curChar = *src + 0x100;
@@ -562,6 +572,7 @@ void HelpSystemRenderText(u8 fontId, u8 * dest, const u8 * src, u8 x, u8 y, u8 w
                 {
                     x += gGlyphInfo.width + ZERO;
                 }
+                HELP_TEST_NOTE_WIDTH();
             }
             break;
         }
