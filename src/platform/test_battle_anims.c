@@ -7,6 +7,7 @@
 #include "battle.h"
 #include "battle_anim.h"
 #include "battle_gfx_sfx_util.h"
+#include "battle_main.h"
 #include "battle_setup.h"
 #include "palette.h"
 #include "pokemon.h"
@@ -27,8 +28,16 @@ static const u16 sShotFrames[] = {6, 18, 36, 60, 96};
 #define tLast  data[1]
 #define tFrame data[2]
 #define tState data[3]
+#define tTurn  data[4]
 
 static struct DisableStruct sDisable;
+// The player's battle controller, paused during the test: the action menu
+// would start the Pokémon bobbing again every frame
+static void (*sSavedControllerFunc)(void);
+
+static void ControllerPaused(void)
+{
+}
 
 void TestStartWildBattle(void)
 {
@@ -47,18 +56,23 @@ static void Task_TestBattleAnims(u8 taskId)
     case 0:
         if (gAnimScriptActive || gPaletteFade.active)
             break;
-        // What the player's battle controller sets up for a move
+        // What the player's battle controller sets up for a move, after the
+        // menu's bobbing stops (some animations move the Pokémon until it's
+        // exactly back in place)
+        EndBounceEffect(0, BOUNCE_HEALTHBOX);
+        EndBounceEffect(0, BOUNCE_MON);
         memset(&sDisable, 0, sizeof(sDisable));
         gBattlerAttacker = 0;
         gBattlerTarget = 1;
-        gAnimMoveTurn = 1;
+        // Both turns, in order, as a battle plays two-turn moves like Dig
+        gAnimMoveTurn = tTurn;
         gAnimMovePower = 60;
         gAnimMoveDmg = 30;
         gAnimFriendship = 255;
         gWeatherMoveAnim = 0;
         gAnimDisableStructPtr = &sDisable;
         SetBattlerSpriteAffineMode(ST_OAM_AFFINE_OFF);
-        TestLog("anim %d start\n", tMove);
+        TestLog("anim %d turn %d start\n", tMove, tTurn);
         DoMoveAnim(tMove);
         tFrame = 0;
         tState = 1;
@@ -70,8 +84,16 @@ static void Task_TestBattleAnims(u8 taskId)
         {
             if (tFrame == sShotFrames[i] && gAnimScriptActive)
             {
-                snprintf(path, sizeof(path), "host0:/anim_%03d_%u.rgba", tMove, i);
+                snprintf(path, sizeof(path), "host0:/anim_%03d_%d%u.rgba", tMove, tTurn, i);
                 PspHw_DumpScreen(path);
+                {
+                    extern bool8 gWideViewMargins;
+                    extern u8 gWideViewRepeatingBgs;
+
+                    TestLog("  shot %u: dispcnt %04x bg %04x %04x %04x %04x bldcnt %04x win %04x/%04x margins %d repeat %02x\n", i,
+                            REG_DISPCNT, REG_BG0CNT, REG_BG1CNT, REG_BG2CNT, REG_BG3CNT, REG_BLDCNT, REG_WININ, REG_WINOUT,
+                            gWideViewMargins, gWideViewRepeatingBgs);
+                }
             }
         }
         if (!gAnimScriptActive || tFrame > 900)
@@ -80,6 +102,13 @@ static void Task_TestBattleAnims(u8 taskId)
             {
                 TestLog("anim %d still running after %d frames: %d visual tasks, %d sound tasks\n",
                         tMove, tFrame, gAnimVisualTaskCount, gAnimSoundTaskCount);
+                for (u32 battler = 0; battler < 2; battler++)
+                {
+                    struct Sprite *sprite = &gSprites[gBattlerSpriteIds[battler]];
+
+                    TestLog("  battler %u sprite %u x2 %d y2 %d callback %08x\n", battler, gBattlerSpriteIds[battler],
+                            sprite->x2, sprite->y2, (unsigned)(uintptr_t)sprite->callback);
+                }
                 for (u32 i = 0; i < NUM_TASKS; i++)
                 {
                     if (gTasks[i].isActive && i != taskId)
@@ -91,7 +120,7 @@ static void Task_TestBattleAnims(u8 taskId)
             TestLog("anim %d end %d frames\n", tMove, tFrame);
             SetBattlerSpriteAffineMode(ST_OAM_AFFINE_NORMAL);
             // Moves like Fly and Dig leave the Pokémon hidden or moved
-            for (u32 battler = 0; battler < 2; battler++)
+            for (u32 battler = 0; battler < 2 && tTurn == 1; battler++)
             {
                 struct Sprite *sprite = &gSprites[gBattlerSpriteIds[battler]];
 
@@ -105,8 +134,17 @@ static void Task_TestBattleAnims(u8 taskId)
     case 2:
         if (++tFrame < 20)
             break;
+        if (tTurn == 0)
+        {
+            // The second turn, without the Pokémon put back in between
+            tTurn = 1;
+            tState = 0;
+            break;
+        }
+        tTurn = 0;
         if (++tMove > tLast)
         {
+            gBattlerControllerFuncs[0] = sSavedControllerFunc;
             TestLog("anims done\n");
             DestroyTask(taskId);
             break;
@@ -120,8 +158,12 @@ void TestStartBattleAnims(int first, int last)
 {
     u8 taskId = CreateTask(Task_TestBattleAnims, 0);
 
+    sSavedControllerFunc = gBattlerControllerFuncs[0];
+    gBattlerControllerFuncs[0] = ControllerPaused;
+
     gTasks[taskId].tMove = first;
     gTasks[taskId].tLast = last;
     gTasks[taskId].tState = 0;
+    gTasks[taskId].tTurn = 0;
 }
 #endif

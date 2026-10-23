@@ -1102,6 +1102,14 @@ static void Task_FadeToBg(u8 taskId)
 static void LoadMoveBg(u16 bgId)
 {
     LZDecompressVram(gBattleAnimBackgroundTable[bgId].tilemap, (void *)(BG_SCREEN_ADDR(26)));
+#ifdef PORTABLE
+    // BG3 is 512 pixels wide in battle, and most moves' backgrounds 256: the
+    // GBA's screen only ever shows the first half, but the wider view's
+    // margins show the second, which still held the battle's own background.
+    // A copy of the move's there makes it repeat, as the GBA wraps it.
+    if ((*(const u32 *)gBattleAnimBackgroundTable[bgId].tilemap >> 8) <= BG_SCREEN_SIZE)
+        CpuCopy32((void *)BG_SCREEN_ADDR(26), (void *)BG_SCREEN_ADDR(27), BG_SCREEN_SIZE);
+#endif
     LZDecompressVram(gBattleAnimBackgroundTable[bgId].image, (void *)(BG_CHAR_ADDR(2)));
     LoadCompressedPalette(gBattleAnimBackgroundTable[bgId].palette, BG_PLTT_ID(2), PLTT_SIZE_4BPP);
 }

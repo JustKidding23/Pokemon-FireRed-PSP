@@ -957,11 +957,19 @@ void ToggleBg3Mode(bool8 largeScreenSize)
     {
         SetAnimBgAttribute(3, BG_ANIM_SCREEN_SIZE, 0);
         SetAnimBgAttribute(3, BG_ANIM_AREA_OVERFLOW_MODE, 1);
+#ifdef PORTABLE
+        // The move's background on a 256-pixel map, which the GBA wraps:
+        // it repeats into the wider view's margins
+        gWideViewRepeatingBgs |= 1 << 3;
+#endif
     }
     else
     {
         SetAnimBgAttribute(3, BG_ANIM_SCREEN_SIZE, 1);
         SetAnimBgAttribute(3, BG_ANIM_AREA_OVERFLOW_MODE, 0);
+#ifdef PORTABLE
+        gWideViewRepeatingBgs &= ~(1 << 3);
+#endif
     }
 }
 
