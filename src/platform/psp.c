@@ -1200,10 +1200,16 @@ extern unsigned int gSpriteStats[4];
 // "<frames> <buttons>" each, like "30 CROSS+UP" or "60 -". After a line with
 // SHOT in it, like "60 SHOT", the screen is written to host0:/shot_NNN.rgba.
 // COMPLETE makes the save a complete game's as soon as the overworld runs
-// (see test_complete.c), for the script to save.
+// (see test_complete.c), for the script to save. HOF enters the Hall of Fame
+// from the overworld as after beating the Champion (then the credits); HOFPC
+// opens the PC's Hall of Fame viewer from the overworld.
 // The game exits at the end.
 static u64 sTimePresent;   // putting the frames on the screen, for the speed log
 static bool sMakeComplete;  // the test input's COMPLETE, waiting for the overworld
+static bool sEnterHallOfFame;  // and HOF
+static bool sHallOfFamePC;     // and HOFPC
+bool8 EnterHallOfFame(void);
+void HallOfFamePCBeginFade(void);
 bool32 IsOverworldRunning(void);
 void TestMakeCompleteSave(void);
 
@@ -1260,6 +1266,10 @@ static u32 TestButtons(bool *done, bool *shot)
                 sLineShot = true;
             if (strcmp(name, "COMPLETE") == 0)
                 sMakeComplete = true;
+            if (strcmp(name, "HOF") == 0)
+                sEnterHallOfFame = true;
+            if (strcmp(name, "HOFPC") == 0)
+                sHallOfFamePC = true;
             for (size_t i = 0; i < ARRAY_COUNT(sNames); i++)
             {
                 if (strcmp(name, sNames[i].name) == 0)
@@ -1460,6 +1470,16 @@ int main(int argc, char **argv)
         {
             TestMakeCompleteSave();
             sMakeComplete = false;
+        }
+        if (sEnterHallOfFame && IsOverworldRunning())
+        {
+            EnterHallOfFame();
+            sEnterHallOfFame = false;
+        }
+        if (sHallOfFamePC && IsOverworldRunning())
+        {
+            HallOfFamePCBeginFade();
+            sHallOfFamePC = false;
         }
 #endif
         for (int i = 0; i < framesDue; i++)

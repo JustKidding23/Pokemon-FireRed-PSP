@@ -61,6 +61,10 @@ void TestMakeCompleteSave(void)
 
         if (ItemId_GetName(item)[0] == CHAR_QUESTION_MARK)
             continue;
+        // Key items only Ruby, Sapphire and Emerald have: no player has them,
+        // and they'd fill the pocket before FireRed's own
+        if (item == ITEM_MACH_BIKE || (item >= ITEM_CONTEST_PASS && item <= ITEM_DEVON_SCOPE))
+            continue;
         AddBagItem(item, (pocket == POCKET_KEY_ITEMS || pocket == POCKET_TM_CASE) ? 1 : 99);
         if (item <= ITEM_TINY_MUSHROOM && pocket == POCKET_ITEMS)
             AddPCItem(item, 5);
