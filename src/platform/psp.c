@@ -1204,7 +1204,9 @@ extern unsigned int gSpriteStats[4];
 // (see test_complete.c), for the script to save. HOF enters the Hall of Fame
 // from the overworld as after beating the Champion (then the credits); HOFPC
 // opens the PC's Hall of Fame viewer from the overworld. WARP:g:n:x:y warps
-// to map group g, number n, at x,y, from the overworld.
+// to map group g, number n, at x,y, from the overworld. WILDBATTLE starts a
+// wild battle from the overworld, and ANIMS:a:b plays the battle animations of
+// moves a to b in a battle (see test_battle_anims.c).
 // The game exits at the end.
 static u64 sTimePresent;   // putting the frames on the screen, for the speed log
 
@@ -1223,6 +1225,8 @@ static bool sMakeComplete;  // the test input's COMPLETE, waiting for the overwo
 static bool sEnterHallOfFame;  // and HOF
 static bool sHallOfFamePC;     // and HOFPC
 static bool sWarpPending;      // and WARP:g:n:x:y
+static bool sWildBattle;       // and WILDBATTLE
+void TestStartWildBattle(void);
 static int sWarp[4];
 void SetWarpDestination(s8 mapGroup, s8 mapNum, s8 warpId, s8 x, s8 y);
 void DoWarp(void);
@@ -1288,6 +1292,17 @@ static u32 TestButtons(bool *done, bool *shot)
                 sEnterHallOfFame = true;
             if (strcmp(name, "HOFPC") == 0)
                 sHallOfFamePC = true;
+            if (strcmp(name, "WILDBATTLE") == 0)
+                sWildBattle = true;
+            {
+                int first, last;
+
+                if (sscanf(name, "ANIMS:%d:%d", &first, &last) == 2)
+                {
+                    void TestStartBattleAnims(int first, int last);
+                    TestStartBattleAnims(first, last);
+                }
+            }
             if (strcmp(name, "HELPWIDTHS") == 0)
             {
                 void TestHelpWidths(void);
@@ -1505,6 +1520,11 @@ int main(int argc, char **argv)
         {
             HallOfFamePCBeginFade();
             sHallOfFamePC = false;
+        }
+        if (sWildBattle && IsOverworldRunning())
+        {
+            TestStartWildBattle();
+            sWildBattle = false;
         }
         if (sWarpPending && IsOverworldRunning())
         {

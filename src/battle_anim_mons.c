@@ -1689,7 +1689,14 @@ void PrepareAffineAnimInTaskData(struct Task *task, u8 spriteId, const union Aff
 
 bool8 RunAffineAnimFromTaskData(struct Task *task)
 {
+#ifdef PORTABLE
+    // The GBA's compiler pads an AffineAnimCmd to 8 bytes; others leave it at
+    // 6, so the command is found by index, not as 8 bytes a command (which
+    // read garbage and could hang a move's animation, like Thrash's)
+    sAnimTaskAffineAnim = (const union AffineAnimCmd *)LoadPointerFromVars(task->data[13], task->data[14]) + task->data[7];
+#else
     sAnimTaskAffineAnim = LoadPointerFromVars(task->data[13], task->data[14]) + (task->data[7] << 3);
+#endif
     switch (sAnimTaskAffineAnim->type)
     {
     default:
