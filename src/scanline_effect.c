@@ -25,8 +25,15 @@ EWRAM_DATA u16 gScanlineEffectRegBuffers[2][0x3C0] = {0};
 EWRAM_DATA struct ScanlineEffect gScanlineEffect = {0};
 EWRAM_DATA static bool8 sShouldStopWaveTask = FALSE;
 
+#ifdef PORTABLE
+extern bool8 gWideViewFlashActive;
+#endif
+
 void ScanlineEffect_Stop(void)
 {
+#ifdef PORTABLE
+    gWideViewFlashActive = FALSE;   // see field_screen_effect.c
+#endif
     gScanlineEffect.state = 0;
     DmaStop(0);
     if (gScanlineEffect.waveTaskId != 0xFF)

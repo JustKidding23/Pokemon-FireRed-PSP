@@ -1202,12 +1202,17 @@ extern unsigned int gSpriteStats[4];
 // COMPLETE makes the save a complete game's as soon as the overworld runs
 // (see test_complete.c), for the script to save. HOF enters the Hall of Fame
 // from the overworld as after beating the Champion (then the credits); HOFPC
-// opens the PC's Hall of Fame viewer from the overworld.
+// opens the PC's Hall of Fame viewer from the overworld. WARP:g:n:x:y warps
+// to map group g, number n, at x,y, from the overworld.
 // The game exits at the end.
 static u64 sTimePresent;   // putting the frames on the screen, for the speed log
 static bool sMakeComplete;  // the test input's COMPLETE, waiting for the overworld
 static bool sEnterHallOfFame;  // and HOF
 static bool sHallOfFamePC;     // and HOFPC
+static bool sWarpPending;      // and WARP:g:n:x:y
+static int sWarp[4];
+void SetWarpDestination(s8 mapGroup, s8 mapNum, s8 warpId, s8 x, s8 y);
+void DoWarp(void);
 bool8 EnterHallOfFame(void);
 void HallOfFamePCBeginFade(void);
 bool32 IsOverworldRunning(void);
@@ -1270,6 +1275,8 @@ static u32 TestButtons(bool *done, bool *shot)
                 sEnterHallOfFame = true;
             if (strcmp(name, "HOFPC") == 0)
                 sHallOfFamePC = true;
+            if (sscanf(name, "WARP:%d:%d:%d:%d", &sWarp[0], &sWarp[1], &sWarp[2], &sWarp[3]) == 4)
+                sWarpPending = true;
             for (size_t i = 0; i < ARRAY_COUNT(sNames); i++)
             {
                 if (strcmp(name, sNames[i].name) == 0)
@@ -1480,6 +1487,12 @@ int main(int argc, char **argv)
         {
             HallOfFamePCBeginFade();
             sHallOfFamePC = false;
+        }
+        if (sWarpPending && IsOverworldRunning())
+        {
+            SetWarpDestination(sWarp[0], sWarp[1], -1, sWarp[2], sWarp[3]);
+            DoWarp();
+            sWarpPending = false;
         }
 #endif
         for (int i = 0; i < framesDue; i++)

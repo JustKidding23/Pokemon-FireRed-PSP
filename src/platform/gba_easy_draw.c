@@ -70,6 +70,8 @@ extern u8 gWideViewEndsAtEdgeBgs;
 extern u8 gWideViewClampBgs;
 extern u8 gWideViewNoWrapBgs;
 extern u8 gWideViewLeftOnlyBgs;
+extern bool8 gWideViewFlashActive;
+extern s16 gWideViewFlashSpans[2][DISPLAY_HEIGHT + 1][2];
 
 static inline bool BgFillsMargins(int bgNum, unsigned int mapWidthInPixels)
 {
@@ -1500,6 +1502,27 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
         windowsEnabled = true;
     }
     
+    // A dark cave's light (Flash): WIN0 is the circle, clamped to the GBA's
+    // screen. Where the line's WIN0 is what the game worked out for it, the
+    // circle's own span carries on round into the margins
+    bool win0Wide = false;
+    int win0WideLeft = 0, win0WideRight = 0;
+    if (WIN0enable && gWideViewFlashActive && vcount < DISPLAY_HEIGHT)
+    {
+        for (int b = 0; b < 2 && !win0Wide; b++)
+        {
+            int l = gWideViewFlashSpans[b][vcount][0], r = gWideViewFlashSpans[b][vcount][1];
+            int cl = l < 0 ? 0 : l > 255 ? 255 : l, cr = r < 0 ? 0 : r > 255 ? 255 : r;
+
+            if (((cl << 8) | cr) == REG_WIN0H)
+            {
+                win0Wide = true;
+                win0WideLeft = l < -RENDER_MARGIN ? -RENDER_MARGIN : l;
+                win0WideRight = r > DISPLAY_WIDTH + RENDER_MARGIN ? DISPLAY_WIDTH + RENDER_MARGIN : r;
+            }
+        }
+    }
+
     sLineLayers = 0x1F;
     sLineEffects = true;
     if (windowsEnabled)
@@ -1508,8 +1531,9 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
         // battle's: WIN0 or WIN1 across it, or neither on it and no sprite
         // window, so it's all outside. Then the line is drawn as if there
         // were no windows, with that window's layers and effects.
-        bool win0Full = WIN0enable && WIN0left == 0 && WIN0right >= DISPLAY_WIDTH && WIN0right > WIN0left;
-        bool win0None = !WIN0enable || WIN0left == WIN0right;
+        bool win0Full = win0Wide ? (win0WideLeft <= -RENDER_MARGIN && win0WideRight >= DISPLAY_WIDTH + RENDER_MARGIN)
+                                 : (WIN0enable && WIN0left == 0 && WIN0right >= DISPLAY_WIDTH && WIN0right > WIN0left);
+        bool win0None = !WIN0enable || (win0Wide ? win0WideLeft >= win0WideRight : WIN0left == WIN0right);
         bool win1Full = WIN1enable && WIN1left == 0 && WIN1right >= DISPLAY_WIDTH && WIN1right > WIN1left;
         bool win1None = !WIN1enable || WIN1left == WIN1right;
         int mask = -1;
@@ -1691,7 +1715,9 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
         memsetu16(scanline.winMask, (REG_WINOUT & 0x3F) | WINMASK_WINOUT, RENDER_WIDTH);
         if (WIN1enable)
             FillWindowSpan(scanline.winMask, WIN1left, WIN1right, (REG_WININ >> 8) & 0x3F);
-        if (WIN0enable)
+        if (win0Wide)
+            FillColumns(scanline.winMask, win0WideLeft, win0WideRight, REG_WININ & 0x3F);
+        else if (WIN0enable)
             FillWindowSpan(scanline.winMask, WIN0left, WIN0right, REG_WININ & 0x3F);
     }
 

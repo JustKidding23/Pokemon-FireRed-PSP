@@ -34,10 +34,23 @@ static const u8 sWhiteoutTextColors[] = { TEXT_COLOR_TRANSPARENT, TEXT_COLOR_WHI
 static void Task_EnableScriptAfterMusicFade(u8 taskId);
 static void Task_BarnDoorWipeChild(u8 taskId);
 
+#ifdef PORTABLE
+// The light's spans before they're clamped to the GBA's screen, for each of
+// the two scanline buffers, so the wider view can draw the circle round past
+// the GBA's edges instead of flat (see DrawScanline in gba_easy_draw.c)
+bool8 gWideViewFlashActive;
+s16 gWideViewFlashSpans[2][DISPLAY_HEIGHT + 1][2];
+static s16 (*sWideFlashDest)[2];
+#endif
+
 static void SetFlashScanlineEffectWindowBoundary(u16 *dest, u32 y, s32 left, s32 right)
 {
     if (y <= 160)
     {
+#ifdef PORTABLE
+        sWideFlashDest[y][0] = left;
+        sWideFlashDest[y][1] = right;
+#endif
         if (left < 0)
             left = 0;
         if (left > 255)
@@ -92,6 +105,10 @@ void SetFlashScanlineEffectWindowBoundaries(u16 *dest, s32 centerX, s32 centerY,
     s32 xy = radius;
     s32 error = radius;
     s32 yx = 0;
+#ifdef PORTABLE
+    sWideFlashDest = gWideViewFlashSpans[dest == gScanlineEffectRegBuffers[1] ? 1 : 0];
+    gWideViewFlashActive = TRUE;
+#endif
     while (xy >= yx)
     {
         SetFlashScanlineEffectWindowBoundary(dest, centerY - yx, centerX - xy, centerX + xy);
@@ -208,6 +225,9 @@ void WriteFlashScanlineEffectBuffer(u8 flashLevel)
     {
         SetFlashScanlineEffectWindowBoundaries(&gScanlineEffectRegBuffers[0][0], 120, 80, sFlashLevelToRadius[flashLevel]);
         CpuFastCopy(&gScanlineEffectRegBuffers[0], &gScanlineEffectRegBuffers[1], 240 * 8);
+#ifdef PORTABLE
+        memcpy(gWideViewFlashSpans[1], gWideViewFlashSpans[0], sizeof(gWideViewFlashSpans[0]));
+#endif
     }
 }
 
