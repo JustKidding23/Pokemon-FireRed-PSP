@@ -402,6 +402,11 @@ static void VBlankCB_PokeStorage(void)
 static void CB2_PokeStorage(void)
 {
     RunTasks();
+#ifdef UBFIX
+    // Leaving the boxes frees gStorage in a task; the rest would read it
+    if (gStorage == NULL)
+        return;
+#endif
     DoScheduledBgTilemapCopiesToVram();
     ScrollBackground();
     UpdateCloseBoxButtonFlash();

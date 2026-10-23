@@ -297,16 +297,15 @@ static const struct WindowTemplate sWindowTemplate_ModeSelect = {
     .baseBlock = 0x0008
 };
 
+#ifdef PORTABLE
+#define DEX_PATTERN_WIDTH 32
+#else
+#define DEX_PATTERN_WIDTH 30
+#endif
+
 static const struct WindowTemplate sWindowTemplate_SelectionIcon = {
     .bg = 1,
-#ifdef PORTABLE
-    // The pictures run off the screen's right edge. In the wider view they
-    // go 3 tiles further right, out to the end of the map, so the edge of the
-    // PSP's screen cuts them (the owner's choice, 2026-10-22)
-    .tilemapLeft = 24,
-#else
     .tilemapLeft = 21,
-#endif
     .tilemapTop = 11,
     .width = 8,
     .height = 6,
@@ -896,6 +895,11 @@ void DexScreen_LoadResources(void)
     ScanlineEffect_Stop();
     ResetBgsAndClearDma3BusyFlags(TRUE);
     InitBgsFromTemplates(0, sBgTemplates, NELEMS(sBgTemplates));
+#ifdef PORTABLE
+    // BG3 is only ever the pages' pattern, which repeats into the margins
+    // instead of stretching (all 32 columns of it, DEX_PATTERN_WIDTH)
+    gWideViewRepeatingBgs = 1 << 3;
+#endif
     SetBgTilemapBuffer(3, (u16 *)Alloc(BG_SCREEN_SIZE));
     SetBgTilemapBuffer(2, (u16 *)Alloc(BG_SCREEN_SIZE));
     SetBgTilemapBuffer(1, (u16 *)Alloc(BG_SCREEN_SIZE));
@@ -1131,16 +1135,9 @@ static void Task_PokedexScreen(u8 taskId)
 static void DexScreen_InitGfxForTopMenu(void)
 {
     struct ListMenuTemplate listMenuTemplate;
-    FillBgTilemapBufferRect(3, 0x00E, 0, 0, 30, 20, 0);
+    FillBgTilemapBufferRect(3, 0x00E, 0, 0, DEX_PATTERN_WIDTH, 20, 0);
     FillBgTilemapBufferRect(2, 0x000, 0, 0, 30, 20, 17);
-#ifdef PORTABLE
-    // All 32 columns: the picture's map columns past the GBA's 30 show in
-    // the right margin here (see sWindowTemplate_SelectionIcon)
-    FillBgTilemapBufferRect(1, 0x000, 0, 0, 32, 20, 17);
-    gWideViewNoWrapBgs |= 1 << 1;
-#else
     FillBgTilemapBufferRect(1, 0x000, 0, 0, 30, 20, 17);
-#endif
     sPokedexScreenData->modeSelectWindowId = AddWindow(&sWindowTemplate_ModeSelect);
     sPokedexScreenData->selectionIconWindowId = AddWindow(&sWindowTemplate_SelectionIcon);
     sPokedexScreenData->dexCountsWindowId = AddWindow(&sWindowTemplate_DexCounts);
@@ -1280,7 +1277,7 @@ static void Task_DexScreen_NumericalOrder(u8 taskId)
 static void DexScreen_InitGfxForNumericalOrderList(void)
 {
     struct ListMenuTemplate template;
-    FillBgTilemapBufferRect(3, 0x00E, 0, 0, 30, 20, 0);
+    FillBgTilemapBufferRect(3, 0x00E, 0, 0, DEX_PATTERN_WIDTH, 20, 0);
     FillBgTilemapBufferRect(1, 0x000, 0, 0, 32, 32, 17);
     sPokedexScreenData->numericalOrderWindowId = AddWindow(&sWindowTemplate_OrderedListMenu);
     template = sListMenuTemplate_OrderedListMenu;
@@ -1366,7 +1363,7 @@ static void Task_DexScreen_CharacteristicOrder(u8 taskId)
 static void DexScreen_CreateCharacteristicListMenu(void)
 {
     struct ListMenuTemplate template;
-    FillBgTilemapBufferRect(3, 0x00E, 0, 0, 30, 20, 0);
+    FillBgTilemapBufferRect(3, 0x00E, 0, 0, DEX_PATTERN_WIDTH, 20, 0);
     FillBgTilemapBufferRect(1, 0x000, 0, 0, 32, 32, 17);
     sPokedexScreenData->numericalOrderWindowId = AddWindow(&sWindowTemplate_OrderedListMenu);
     template = sListMenuTemplate_OrderedListMenu;
@@ -2140,11 +2137,6 @@ static bool32 DexScreen_TryScrollMonsVertical(u8 direction)
 
 static void DexScreen_RemoveWindow(u8 *windowId_p)
 {
-#ifdef PORTABLE
-    // The contents page's picture is gone, and with it what fills the margin
-    if (windowId_p == &sPokedexScreenData->selectionIconWindowId)
-        gWideViewNoWrapBgs &= ~(1 << 1);
-#endif
     if (*windowId_p != 0xFF)
     {
         RemoveWindow(*windowId_p);

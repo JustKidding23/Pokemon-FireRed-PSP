@@ -1199,8 +1199,13 @@ extern unsigned int gSpriteStats[4];
 // The emulator tests: PSP buttons from host0:/test_input.txt, a line of
 // "<frames> <buttons>" each, like "30 CROSS+UP" or "60 -". After a line with
 // SHOT in it, like "60 SHOT", the screen is written to host0:/shot_NNN.rgba.
+// COMPLETE makes the save a complete game's as soon as the overworld runs
+// (see test_complete.c), for the script to save.
 // The game exits at the end.
 static u64 sTimePresent;   // putting the frames on the screen, for the speed log
+static bool sMakeComplete;  // the test input's COMPLETE, waiting for the overworld
+bool32 IsOverworldRunning(void);
+void TestMakeCompleteSave(void);
 
 static u32 TestButtons(bool *done, bool *shot)
 {
@@ -1253,6 +1258,8 @@ static u32 TestButtons(bool *done, bool *shot)
         {
             if (strcmp(name, "SHOT") == 0)
                 sLineShot = true;
+            if (strcmp(name, "COMPLETE") == 0)
+                sMakeComplete = true;
             for (size_t i = 0; i < ARRAY_COUNT(sNames); i++)
             {
                 if (strcmp(name, sNames[i].name) == 0)
@@ -1433,6 +1440,13 @@ int main(int argc, char **argv)
 #endif
         sKeys = menuWasOpen ? 0 : MapButtons(buttons & ~sMaskedButtons);
 
+#ifdef PSP_TEST
+        if (sMakeComplete && IsOverworldRunning())
+        {
+            TestMakeCompleteSave();
+            sMakeComplete = false;
+        }
+#endif
         for (int i = 0; i < framesDue; i++)
         {
             SwitchSlotIfPending();

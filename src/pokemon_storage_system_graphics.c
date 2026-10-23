@@ -929,6 +929,12 @@ bool8 ResetReleaseMonSpritePtr(void)
 
 void SetMovingMonPriority(u8 priority)
 {
+#ifdef UBFIX
+    // Called as the cursor moves even when it holds no Pokémon: the GBA
+    // writes near address 0 harmlessly, the PSP crashes
+    if (gStorage->movingMonSprite == NULL)
+        return;
+#endif
     gStorage->movingMonSprite->oam.priority = priority;
 }
 

@@ -865,6 +865,18 @@ static void BuyMenuCopyTilemapData(void)
     {
         if (src[i] == 0)
             continue;
+#ifdef PORTABLE
+        // The frame's last two columns are blank, and they're the room's
+        // there (see BuyMenuDrawMapBg); where the frame's boxes reach the
+        // screen's left edge, they carry on there like their plain right-hand
+        // column (29), which carries on into the right margin
+        if (i % 32 >= 30)
+        {
+            if (src[i - i % 32] > 1)
+                dst[i] = src[i - i % 32 + 29] + 0xb3dc;
+            continue;
+        }
+#endif
         dst[i] = src[i] + 0xb3dc;
     }
 }
