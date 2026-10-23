@@ -298,6 +298,96 @@ static float WaveLevel(u8 sample){
 }
 
 
+// What the channels' registers say, worked out once a frame and after each
+// sequencer step instead of for every sample: they only change when the game
+// writes them, which it does between frames, or in StepSequencer
+static struct {
+    u32 period[4];
+    bool8 on[4];        // making sound: enabled, DAC on, master on
+    u8 leftMask, rightMask;
+    bool8 noise7Bit;
+    float duty[2][8];   // the square channels' levels at their volume
+    float wave[16];     // the wave channel's level for each 4-bit sample
+    float noise;        // the noise channel's level when its bit is 0
+    u32 noiseQuotient;  // CYCLES_PER_SAMPLE / and % the noise's period, so
+    u32 noiseRemainder; // its timer needs no division (see RunNoiseTimer)
+} sMix;
+
+static void UpdateMix(void){
+    u8 nr52 = REG_NR52;
+    bool8 master = (nr52 & 0x80) != 0;
+
+    sMix.period[0] = SquarePeriod(REG_SOUND1CNT_X);
+    sMix.period[1] = SquarePeriod(REG_SOUND2CNT_H);
+    sMix.period[2] = WavePeriod();
+    sMix.period[3] = NoisePeriod();
+    sMix.on[0] = master && gb.DAC[0] && (nr52 & 0x01);
+    sMix.on[1] = master && gb.DAC[1] && (nr52 & 0x02);
+    sMix.on[2] = master && (REG_NR30 & 0x80) && (nr52 & 0x04);
+    sMix.on[3] = master && gb.DAC[3] && (nr52 & 0x08);
+    sMix.leftMask = REG_NR51 >> 4;
+    sMix.rightMask = REG_NR51 & 0x0F;
+    sMix.noise7Bit = (REG_NR43 & 0x08) != 0;
+    // The levels as GenerateSample used to add them, with the final quarter
+    for(u32 pos = 0; pos < 8; pos++){
+        sMix.duty[0][pos] = gb.Vol[0] * sDutyLevels[REG_NR11 >> 6][pos] * (1.0f / 15.0f) * 0.25f;
+        sMix.duty[1][pos] = gb.Vol[1] * sDutyLevels[REG_NR21 >> 6][pos] * (1.0f / 15.0f) * 0.25f;
+    }
+    for(u32 sample = 0; sample < 16; sample++)
+        sMix.wave[sample] = WaveLevel(sample) * 0.25f;
+    sMix.noise = gb.Vol[3] * (1.0f / 15.0f) * 0.25f;
+    if(sMix.period[3] != 0){
+        sMix.noiseQuotient = CYCLES_PER_SAMPLE / sMix.period[3];
+        sMix.noiseRemainder = CYCLES_PER_SAMPLE % sMix.period[3];
+    }
+}
+
+// RunTimer for the noise channel, which at its fastest runs out 8 times a
+// sample: the same results, from the quotient and remainder worked out once
+static u32 RunNoiseTimer(void){
+    u32 period = sMix.period[3];
+    u32 t = gb.timer[3];
+
+    if(period == 0)
+        return 0;
+    if(t > CYCLES_PER_SAMPLE){
+        gb.timer[3] = t - CYCLES_PER_SAMPLE;
+        return 0;
+    }
+    if(t > period){
+        // Left over from a slower period: the plain way
+        return RunTimer(3, period);
+    }
+    // 64 - t cycles after it next runs out at t: (64 - t) / period more times
+    if(t <= sMix.noiseRemainder){
+        gb.timer[3] = period - (sMix.noiseRemainder - t);
+        return 1 + sMix.noiseQuotient;
+    }
+    gb.timer[3] = t - sMix.noiseRemainder;
+    return sMix.noiseQuotient;
+}
+
+// Clocks the noise's LFSR. In 15-bit mode up to 13 steps at once: each new
+// bit is the XOR of two of the register's bits that are still the original
+// ones, and they all go in at the top
+static void ClockNoise(u32 clocks){
+    if(!sMix.noise7Bit){
+        while(clocks > 0){
+            u32 k = clocks > 13 ? 13 : clocks;
+            u32 feedback = (gb.lfsr ^ (gb.lfsr >> 1)) & ((1 << k) - 1);
+
+            gb.lfsr = (gb.lfsr >> k) | (feedback << (15 - k));
+            clocks -= k;
+        }
+        return;
+    }
+    for(; clocks > 0; clocks--){
+        u16 bit = (gb.lfsr ^ (gb.lfsr >> 1)) & 1;
+        gb.lfsr = (gb.lfsr >> 1) | (bit << 14);
+        gb.lfsr = (gb.lfsr & ~0x40) | (bit << 6);
+    }
+}
+
 // One 65536 Hz sample of all four channels
 static void GenerateSample(float *out){
     float outputL = 0;
@@ -307,72 +397,117 @@ static void GenerateSample(float *out){
     if(--gb.sequencerSamples == 0){
         gb.sequencerSamples = SEQUENCER_SAMPLES;
         StepSequencer();
+        UpdateMix();
     }
 
-    gb.position[0] = (gb.position[0] + RunTimer(0, SquarePeriod(REG_SOUND1CNT_X))) & 7;
-    gb.position[1] = (gb.position[1] + RunTimer(1, SquarePeriod(REG_SOUND2CNT_H))) & 7;
-    gb.position[2] = (gb.position[2] + RunTimer(2, WavePeriod())) & 31;
-    for(u32 clocks = RunTimer(3, NoisePeriod()); clocks > 0; clocks--){
-        u16 bit = (gb.lfsr ^ (gb.lfsr >> 1)) & 1;
-        gb.lfsr = (gb.lfsr >> 1) | (bit << 14);
-        if(REG_NR43 & 0x08)  // 7-bit mode
-            gb.lfsr = (gb.lfsr & ~0x40) | (bit << 6);
-    }
+    gb.position[0] = (gb.position[0] + RunTimer(0, sMix.period[0])) & 7;
+    gb.position[1] = (gb.position[1] + RunTimer(1, sMix.period[1])) & 7;
+    gb.position[2] = (gb.position[2] + RunTimer(2, sMix.period[2])) & 31;
+    // The noise only matters while it plays: triggering it resets the LFSR
+    if(sMix.on[3])
+        ClockNoise(RunNoiseTimer());
 
-    if(REG_NR52 & 0x80){
-        if((gb.DAC[0]) && (REG_NR52 & 0x01)){
-            level = gb.Vol[0] * sDutyLevels[REG_NR11 >> 6][gb.position[0]] * (1.0f / 15.0f);
-            if(REG_NR51 & 0x10) outputL += level;
-            if(REG_NR51 & 0x01) outputR += level;
-        }
-        if((gb.DAC[1]) && (REG_NR52 & 0x02)){
-            level = gb.Vol[1] * sDutyLevels[REG_NR21 >> 6][gb.position[1]] * (1.0f / 15.0f);
-            if(REG_NR51 & 0x20) outputL += level;
-            if(REG_NR51 & 0x02) outputR += level;
-        }
-        if((REG_NR30 & 0x80) && (REG_NR52 & 0x04)){
-            level = WaveLevel(gb.wave[gb.position[2]]);
-            if(REG_NR51 & 0x40) outputL += level;
-            if(REG_NR51 & 0x04) outputR += level;
-        }
-        if((gb.DAC[3]) && (REG_NR52 & 0x08)){
-            level = gb.Vol[3] * ((gb.lfsr & 1) ? -1.0f : 1.0f) * (1.0f / 15.0f);
-            if(REG_NR51 & 0x80) outputL += level;
-            if(REG_NR51 & 0x08) outputR += level;
-        }
+    if(sMix.on[0]){
+        level = sMix.duty[0][gb.position[0]];
+        if(sMix.leftMask & 1) outputL += level;
+        if(sMix.rightMask & 1) outputR += level;
     }
-    out[0] = outputL * 0.25f;
-    out[1] = outputR * 0.25f;
+    if(sMix.on[1]){
+        level = sMix.duty[1][gb.position[1]];
+        if(sMix.leftMask & 2) outputL += level;
+        if(sMix.rightMask & 2) outputR += level;
+    }
+    if(sMix.on[2]){
+        level = sMix.wave[gb.wave[gb.position[2]]];
+        if(sMix.leftMask & 4) outputL += level;
+        if(sMix.rightMask & 4) outputR += level;
+    }
+    if(sMix.on[3]){
+        level = (gb.lfsr & 1) ? -sMix.noise : sMix.noise;
+        if(sMix.leftMask & 8) outputL += level;
+        if(sMix.rightMask & 8) outputR += level;
+    }
+    out[0] = outputL;
+    out[1] = outputR;
 }
 
 
+#ifdef PSP_PROFILE
+extern unsigned int gSoundProfile[6];
+unsigned int sceKernelGetSystemTimeLow(void);
+#endif
+
+#ifdef CGB_BENCH
+// Microseconds for COUNT samples of each part, for the test build's log
+unsigned int sceKernelGetSystemTimeLow(void);
+void cgb_bench(unsigned int *results){
+    static float out[2];
+    unsigned int t0, t1, t2, t3;
+
+    UpdateMix();
+    t0 = sceKernelGetSystemTimeLow();
+    for(int i = 0; i < 100000; i++) GenerateSample(out);
+    t1 = sceKernelGetSystemTimeLow();
+    for(int i = 0; i < 100000; i++) RunTimer(0, 1000);
+    t2 = sceKernelGetSystemTimeLow();
+    for(int i = 0; i < 100000; i++) StepSequencer();
+    t3 = sceKernelGetSystemTimeLow();
+    results[0] = t1 - t0; results[1] = t2 - t1; results[2] = t3 - t2;
+}
+#endif
+
 void cgb_audio_generate(u16 samplesPerFrame){
     float *outBuffer = gb.outBuffer;
+    u32 need = 0;
+
+    UpdateMix();
+
+    // First every 65536 Hz sample the frame's output needs, then the filter
+    // over them: done together, the filter's big coefficient table pushed the
+    // channels' state out of the PSP's cache for every sample
+    {
+        u32 index = sResampleIndex, frac = sResampleFrac;
+
+        for(u16 i = 0; i < samplesPerFrame; i++){
+            need = index + TAPS / 2 + 1;
+            frac += APU_RATE;
+            while(frac >= sampleRate){
+                frac -= sampleRate;
+                index++;
+            }
+        }
+    }
+    if(need > HIGH_RATE_CAPACITY){
+        // Drop the samples that have been filtered for the last time
+        u32 first = sResampleIndex - (TAPS / 2 - 1);
+
+        memmove(sHighRate, sHighRate[first], (sHighRateCount - first) * sizeof(sHighRate[0]));
+        sHighRateCount -= first;
+        sHighRateSoundEnd = sHighRateSoundEnd > first ? sHighRateSoundEnd - first : 0;
+        sResampleIndex -= first;
+        need -= first;
+    }
+#ifdef PSP_PROFILE
+    unsigned int profStart = sceKernelGetSystemTimeLow();
+#endif
+    while(sHighRateCount < need){
+        u32 bits[2];
+
+        GenerateSample(sHighRate[sHighRateCount]);
+        memcpy(bits, sHighRate[sHighRateCount], sizeof(bits));
+        sHighRateCount++;
+        if(bits[0] != 0 || bits[1] != 0)
+            sHighRateSoundEnd = sHighRateCount;
+    }
+#ifdef PSP_PROFILE
+    gSoundProfile[4] += sceKernelGetSystemTimeLow() - profStart;
+#endif
 
     for(u16 i = 0; i < samplesPerFrame; i++, outBuffer += 2){
-        u32 center = sResampleIndex;
-        u32 first = center - (TAPS / 2 - 1);
+        u32 first = sResampleIndex - (TAPS / 2 - 1);
         const float *coefficients;
         float outputL = 0;
         float outputR = 0;
-
-        if(center + TAPS / 2 >= HIGH_RATE_CAPACITY){
-            // Drop the samples that have been filtered for the last time
-            memmove(sHighRate, sHighRate[first], (sHighRateCount - first) * sizeof(sHighRate[0]));
-            sHighRateCount -= first;
-            sHighRateSoundEnd = sHighRateSoundEnd > first ? sHighRateSoundEnd - first : 0;
-            sResampleIndex -= first;
-            first = 0;
-        }
-        while(sHighRateCount < first + TAPS){
-            u32 bits[2];
-
-            GenerateSample(sHighRate[sHighRateCount]);
-            memcpy(bits, sHighRate[sHighRateCount], sizeof(bits));
-            sHighRateCount++;
-            if(bits[0] != 0 || bits[1] != 0)
-                sHighRateSoundEnd = sHighRateCount;
-        }
 
         if(first < sHighRateSoundEnd){
             // Four sums at a time, so the PSP's FPU doesn't wait on each one

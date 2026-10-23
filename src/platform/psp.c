@@ -1192,7 +1192,7 @@ static size_t sSpeedLogLen;
 static unsigned sBehind;    // display frames that ran more game frames than the speed, to catch up
 #ifdef PSP_PROFILE
 extern unsigned int gDrawProfile[8];
-extern unsigned int gSoundProfile[4];
+extern unsigned int gSoundProfile[6];
 extern unsigned int gSpriteStats[4];
 #endif
 
@@ -1349,6 +1349,7 @@ int main(int argc, char **argv)
     ReadSaveFile(sSettings.slot);
 
     cgb_audio_init(AUDIO_SAMPLE_RATE);
+
     PspHw_AudioInit(AUDIO_SAMPLE_RATE);
     PspHw_StartWatchdog();
     ResetIoRegisters();
@@ -1440,6 +1441,20 @@ int main(int argc, char **argv)
 #endif
         sKeys = menuWasOpen ? 0 : MapButtons(buttons & ~sMaskedButtons);
 
+#ifdef CGB_BENCH
+        if (sTotalFrames == 3500)
+        {
+            void cgb_bench(unsigned int *results);
+            unsigned int r[3];
+
+            sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,
+                                     "cgb regs: nr52 %02x nr51 %02x nr43 %02x nr30 %02x snd1 %04x snd2 %04x snd3 %04x\n",
+                                     REG_NR52, REG_NR51, REG_NR43, REG_NR30, REG_SOUND1CNT_X, REG_SOUND2CNT_H, REG_SOUND3CNT_X);
+            cgb_bench(r);
+            sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,
+                                     "cgb bench 100000x in game: sample %u us, timer %u us, sequencer %u us\n", r[0], r[1], r[2]);
+        }
+#endif
 #ifdef PSP_TEST
         if (sMakeComplete && IsOverworldRunning())
         {
@@ -1462,6 +1477,13 @@ int main(int argc, char **argv)
                 continue;
             }
             now = PspHw_Microseconds();
+#ifdef PSP_TEST
+            // Game frames that take long by themselves, like loading a screen
+            if (now - timeStart > 6000 && sTotalFrames > 3000 && sSpeedLogLen < sizeof(sSpeedLog) - 200)
+                sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,
+                                         "slowgame f%u %u us cb2 %08x\n", (unsigned)sTotalFrames,
+                                         (unsigned)(now - timeStart), (unsigned)(uintptr_t)gMain.callback2);
+#endif
             timeGame += now - timeStart;
             timeStart = now;
             PspHw_SetDiag(PSP_DIAG_STEP, PSP_STEP_DRAW);
@@ -1515,7 +1537,22 @@ int main(int argc, char **argv)
             // The sound effects keep up with the game in between.
             PspHw_SetDiag(PSP_DIAG_STEP, PSP_STEP_SOUND);
             if (soundFrame++ % speed == 0)
+            {
                 AudioUpdate();
+#ifdef CGB_DUMP
+                // The GB channels' output for 1000 frames, to compare sound
+                // code changes
+                {
+                    static float sDump[1000][AUDIO_SAMPLES_PER_FRAME * 2];
+                    static int sDumped = -CGB_DUMP;   // CGB_DUMP: sound frames to skip first
+
+                    if (sDumped >= 0 && sDumped < 1000)
+                        memcpy(sDump[sDumped], cgb_get_buffer(), sizeof(sDump[0]));
+                    if (++sDumped == 1000)
+                        PspHw_WriteFile("host0:/cgb.raw", sDump, sizeof(sDump));
+                }
+#endif
+            }
             else
                 AudioUpdateEffectsOnly();
             timeSound += PspHw_Microseconds() - timeStart;
@@ -1560,9 +1597,10 @@ int main(int argc, char **argv)
             if (speedFrames && sSpeedLogLen < sizeof(sSpeedLog) - 200)
             {
                 sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,
-                                         "  sound per game frame: player %.2f  gb regs %.2f  mixer %.2f  gb channels %.2f ms\n",
+                                         "  sound per game frame: player %.2f  gb regs %.2f  mixer %.2f  gb channels %.2f ms (making %.2f)\n",
                                          gSoundProfile[0] / 1000.0f / speedFrames, gSoundProfile[1] / 1000.0f / speedFrames,
-                                         gSoundProfile[2] / 1000.0f / speedFrames, gSoundProfile[3] / 1000.0f / speedFrames);
+                                         gSoundProfile[2] / 1000.0f / speedFrames, gSoundProfile[3] / 1000.0f / speedFrames,
+                                         gSoundProfile[4] / 1000.0f / speedFrames);
             }
             memset(gDrawProfile, 0, sizeof(gDrawProfile));
             if (speedDrawn && sSpeedLogLen < sizeof(sSpeedLog) - 200)

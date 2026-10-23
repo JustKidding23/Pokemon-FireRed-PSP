@@ -33,7 +33,7 @@ static inline float SamplesPerOutputSample(const struct MixerSource *chan, float
 
 #ifdef PSP_PROFILE
 // Time in each part of the sound, in microseconds, for the speed log
-unsigned int gSoundProfile[4];
+unsigned int gSoundProfile[6];
 unsigned int sceKernelGetSystemTimeLow(void);
 #define SPROF_DECL unsigned int t0_ = sceKernelGetSystemTimeLow(), t1_
 #define SPROF(n) (t1_ = sceKernelGetSystemTimeLow(), gSoundProfile[n] += t1_ - t0_, t0_ = t1_)
