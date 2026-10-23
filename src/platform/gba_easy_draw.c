@@ -95,6 +95,28 @@ static inline unsigned int BgEndColumn(int bgNum, unsigned int mapWidthInPixels)
     return BgFillsMargins(bgNum, mapWidthInPixels) ? RENDER_WIDTH : RENDER_MARGIN + DISPLAY_WIDTH;
 }
 
+// The columns a background draws on (see BgFirstColumn and BgEndColumn),
+// narrowed for one that stops where its map would wrap round
+// (gWideViewNoWrapBgs): on each side, the map seen at the screen's edge
+// carries on only up to its end. The GBA's own columns are always drawn.
+static inline void BgColumns(int bgNum, unsigned int mapWidthInPixels, unsigned int hoffs,
+                             unsigned int *first, unsigned int *end)
+{
+    *first = BgFirstColumn(bgNum, mapWidthInPixels);
+    *end = BgEndColumn(bgNum, mapWidthInPixels);
+    if (gWideViewNoWrapBgs & (1 << bgNum))
+    {
+        int left = RENDER_MARGIN - (int)(hoffs % mapWidthInPixels);
+        unsigned int right = RENDER_MARGIN + DISPLAY_WIDTH
+                           + (mapWidthInPixels - 1 - (hoffs + DISPLAY_WIDTH - 1) % mapWidthInPixels);
+
+        if (left > (int)*first)
+            *first = left;
+        if (right < *end)
+            *end = right;
+    }
+}
+
 static const uint16_t bgMapSizes[][2] =
 {
     {32, 32},
@@ -144,7 +166,10 @@ static void RenderBGScanlineDirect(int bgNum, uint16_t control, uint16_t hoffs, 
     yy &= 0xFF;
     bgmapRow += (yy / 8) * 32;
 
-    for (unsigned int x = BgFirstColumn(bgNum, mapWidthInPixels), lineEnd = BgEndColumn(bgNum, mapWidthInPixels); x < lineEnd;)
+    unsigned int firstColumn, lineEnd;
+
+    BgColumns(bgNum, mapWidthInPixels, hoffs, &firstColumn, &lineEnd);
+    for (unsigned int x = firstColumn; x < lineEnd;)
     {
         unsigned int xx = (x - RENDER_MARGIN + hoffs) & 0x1FF;
         uint16_t *bgmap = bgmapRow;
@@ -233,7 +258,7 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
     // entry, so it only needs looking up once per tile instead of for every
     // pixel. The overworld keeps mosaic on for BG1-3 with a size of 0, which
     // changes nothing.
-    if ((!(control & BGCNT_MOSAIC) || mosaicBGEffectX == 0) && !((gWideViewClampBgs | gWideViewNoWrapBgs | gWideViewLeftOnlyBgs) & (1 << bgNum)))
+    if ((!(control & BGCNT_MOSAIC) || mosaicBGEffectX == 0) && !((gWideViewClampBgs | gWideViewLeftOnlyBgs) & (1 << bgNum)))
     {
         unsigned int yy = (lineNum + voffs) & 0x1FF;
         uint16_t *bgmapRow = (uint16_t *)BG_SCREEN_ADDR(screenBaseBlock);
@@ -243,14 +268,15 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
         yy &= 0xFF;
         bgmapRow += (yy / 8) * 32;
 
-        unsigned int lineEnd = BgEndColumn(bgNum, mapWidthInPixels);
+        unsigned int firstColumn, lineEnd;
 
+        BgColumns(bgNum, mapWidthInPixels, hoffs, &firstColumn, &lineEnd);
         // A narrow map leaves the margins clear
-        if (BgFirstColumn(bgNum, mapWidthInPixels) != 0)
-            memset(line, 0, RENDER_MARGIN * sizeof(line[0]));
+        if (firstColumn != 0)
+            memset(line, 0, firstColumn * sizeof(line[0]));
         if (lineEnd < RENDER_WIDTH)
             memset(&line[lineEnd], 0, (RENDER_WIDTH - lineEnd) * sizeof(line[0]));
-        for (unsigned int x = BgFirstColumn(bgNum, mapWidthInPixels); x < lineEnd;)
+        for (unsigned int x = firstColumn; x < lineEnd;)
         {
             unsigned int xx = (x - RENDER_MARGIN + hoffs) & 0x1FF;
             uint16_t *bgmap = bgmapRow;
@@ -1659,7 +1685,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
             for (bgnum = 0; bgnum < (mode == 0 ? 4 : mode == 1 ? 2 : 0); bgnum++)
             {
                 if (CanDrawBGDirectly(scanline.bgcnts[bgnum]) && !(blendMode != 0 && (REG_BLDCNT & (1 << bgnum)))
-                 && !((gWideViewClampBgs | gWideViewNoWrapBgs | gWideViewLeftOnlyBgs) & (1 << bgnum)))
+                 && !((gWideViewClampBgs | gWideViewLeftOnlyBgs | gWideViewNoWrapBgs) & (1 << bgnum)))
                     directBgs |= 1 << bgnum;
             }
         }
