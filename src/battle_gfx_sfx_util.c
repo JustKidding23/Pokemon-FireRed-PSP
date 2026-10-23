@@ -915,6 +915,16 @@ static void SpriteCB_EnemyShadow(struct Sprite *shadowSprite)
         shadowSprite->callback = SpriteCB_SetInvisible;
         return;
     }
+#ifdef UBFIX
+    // When a battle ends with a floating Pokémon still out (running from a
+    // Zubat), its data is freed a few frames before the shadow goes: the GBA
+    // reads through the NULL harmlessly, the PSP crashes
+    if (gBattleSpritesDataPtr == NULL)
+    {
+        shadowSprite->invisible = TRUE;
+        return;
+    }
+#endif
     if (gAnimScriptActive || battlerSprite->invisible)
         invisible = TRUE;
     else if (gBattleSpritesDataPtr->battlerData[battlerId].transformSpecies != SPECIES_NONE

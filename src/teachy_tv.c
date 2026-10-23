@@ -1135,7 +1135,13 @@ static void TeachyTvGrassAnimationObjCallback(struct Sprite *sprite)
     s16 *data = gTasks[sprite->data[0]].data;
     struct Sprite *objAddr = &gSprites[data[1]];
 
+#ifdef UBFIX
+    // The demo's battle frees sResources in a task, and the sprites are
+    // animated after the tasks in the same frame: gone, as when disabled
+    if (sResources == NULL || sResources->grassAnimDisabled == 1)
+#else
     if (sResources->grassAnimDisabled == 1)
+#endif
         DestroySprite(sprite);
     else
     {
