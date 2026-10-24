@@ -17,6 +17,9 @@
 #include "constants/species.h"
 
 void TestLog(const char *format, ...);
+extern u32 gTestDrawMax, gTestDrawSlow;
+u32 gTestBehind(void);
+static u32 sBehindAtStart;
 void PspHw_DumpScreen(const char *path);
 void CopyAllBattleSpritesInvisibilities(void);
 void SetBattlerSpriteAffineMode(u8 affineMode);
@@ -73,6 +76,8 @@ static void Task_TestBattleAnims(u8 taskId)
         gAnimDisableStructPtr = &sDisable;
         SetBattlerSpriteAffineMode(ST_OAM_AFFINE_OFF);
         TestLog("anim %d turn %d start\n", tMove, tTurn);
+        gTestDrawMax = gTestDrawSlow = 0;
+        sBehindAtStart = gTestBehind();
         DoMoveAnim(tMove);
         tFrame = 0;
         tState = 1;
@@ -82,7 +87,12 @@ static void Task_TestBattleAnims(u8 taskId)
         tFrame++;
         for (u32 i = 0; i < ARRAY_COUNT(sShotFrames); i++)
         {
+#ifdef PSP_PROFILE
+            // Timed on the PSP: screenshots over USB would stall it
+            if (FALSE)
+#else
             if (tFrame == sShotFrames[i] && gAnimScriptActive)
+#endif
             {
                 snprintf(path, sizeof(path), "host0:/anim_%03d_%d%u.rgba", tMove, tTurn, i);
                 PspHw_DumpScreen(path);
@@ -124,7 +134,8 @@ static void Task_TestBattleAnims(u8 taskId)
                                 gTasks[i].data[12], gTasks[i].data[13], gTasks[i].data[14], gTasks[i].data[15], gTasks[i].data[0]);
                 }
             }
-            TestLog("anim %d end %d frames\n", tMove, tFrame);
+            TestLog("anim %d end %d frames, slowest draw %u us, %u over 13 ms, %u skipped\n", tMove, tFrame,
+                    gTestDrawMax, gTestDrawSlow, gTestBehind() - sBehindAtStart);
             SetBattlerSpriteAffineMode(ST_OAM_AFFINE_NORMAL);
             // Moves like Fly and Dig leave the Pokémon hidden or moved
             for (u32 battler = 0; battler < 2 && tTurn == 1; battler++)

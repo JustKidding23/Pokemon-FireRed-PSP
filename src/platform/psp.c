@@ -1209,6 +1209,13 @@ extern unsigned int gSpriteStats[4];
 // moves a to b in a battle (see test_battle_anims.c).
 // The game exits at the end.
 static u64 sTimePresent;   // putting the frames on the screen, for the speed log
+u32 gTestDrawMax, gTestDrawSlow;   // slowest drawn frame and ones over 13 ms, for tests to reset and read
+u32 gTestBehind(void);
+
+u32 gTestBehind(void)
+{
+    return sBehind;
+}
 
 // Adds a line to the test log (host0:/speed.log), for tests in the game's code
 void TestLog(const char *format, ...)
@@ -1582,6 +1589,11 @@ int main(int argc, char **argv)
                                                  REG_WININ, REG_WINOUT, (unsigned)(uintptr_t)gMain.callback2);
                     if (d > 12000 && sTotalFrames > 3000)
                         sSlowDraws++;
+                    // For tests that time their own parts (test_battle_anims.c)
+                    if (d > gTestDrawMax)
+                        gTestDrawMax = d;
+                    if (d > 13000)
+                        gTestDrawSlow++;
 #ifdef PSP_PROFILE
                     if (d > 12000 && sTotalFrames > 3000 && sSlowDraws < 400 && sSpeedLogLen < sizeof(sSpeedLog) - 200)
                         sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,

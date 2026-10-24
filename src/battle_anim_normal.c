@@ -768,6 +768,15 @@ static void AnimTask_TintPalettes(u8 taskId)
 #undef tColorG
 #undef tColorB
 
+// The u16 that data[6] and data[7] point to. Their halves are s16: the low
+// one must not spread its sign over the high one, which the GBA's addresses
+// for these never had, but the PSP's do (Earthquake crashed reading 0xffffc1a6)
+#ifdef UBFIX
+#define SHAKE_TARGET(sprite) ((u16 *)(uintptr_t)((u16)(sprite)->data[6] | ((u32)(u16)(sprite)->data[7] << 16)))
+#else
+#define SHAKE_TARGET(sprite) ((u16 *)((sprite)->data[6] | ((sprite)->data[7] << 16)))
+#endif
+
 static void AnimShakeMonOrBattleTerrain(struct Sprite *sprite)
 {
     u16 var0;
@@ -793,7 +802,7 @@ static void AnimShakeMonOrBattleTerrain(struct Sprite *sprite)
         StoreSpriteCallbackInData6(sprite, (void *)&gSpriteCoordOffsetY);
         break;
     }
-    sprite->data[4] = *(u16 *)(sprite->data[6] | (sprite->data[7] << 16));
+    sprite->data[4] = *SHAKE_TARGET(sprite);
     sprite->data[5] = gBattleAnimArgs[3];
     var0 = sprite->data[5] - 2;
     if (var0 < 2)
@@ -816,13 +825,13 @@ static void AnimShakeMonOrBattleTerrain_Step(struct Sprite *sprite)
         else
         {
             sprite->data[1] = sprite->data[2];
-            *(u16 *)(sprite->data[6] | (sprite->data[7] << 16)) += sprite->data[0];
+            *SHAKE_TARGET(sprite) += sprite->data[0];
             sprite->data[0] = -sprite->data[0];
         }
     }
     else
     {
-        *(u16 *)(sprite->data[6] | (sprite->data[7] << 16)) = sprite->data[4];
+        *SHAKE_TARGET(sprite) = sprite->data[4];
         var0 = sprite->data[5] - 2;
         if (var0 < 2)
             for (i = 0; i < gBattlersCount; ++i)
