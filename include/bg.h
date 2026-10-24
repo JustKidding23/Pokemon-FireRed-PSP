@@ -150,6 +150,10 @@ extern u8 gWideViewNoWrapBgs;
 // the 16 pixels left of the screen (further left carries that column's first
 // pixels on); the right margin carries on their edge as usual
 extern u8 gWideViewLeftOnlyBgs;
+// Backgrounds (bits 0-3) whose maps don't fill the margins however wide they
+// are (unless made to repeat), like the battle's BG1 and BG2, whose maps past
+// the GBA's screen hold whatever was left there
+extern u8 gWideViewNarrowBgs;
 #endif
 
 #endif // GUARD_BG_H

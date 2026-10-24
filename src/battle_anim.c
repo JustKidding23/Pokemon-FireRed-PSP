@@ -1108,7 +1108,34 @@ static void LoadMoveBg(u16 bgId)
     // margins show the second, which still held the battle's own background.
     // A copy of the move's there makes it repeat, as the GBA wraps it.
     if ((*(const u32 *)gBattleAnimBackgroundTable[bgId].tilemap >> 8) <= BG_SCREEN_SIZE)
+    {
+        u16 *map = (u16 *)BG_SCREEN_ADDR(26);
+
+        // Some, like Psychic's, are a pattern 30 tiles wide with the last two
+        // columns blank: the pattern carries on into them, where it repeats
+        // evenly in 32, so the map wraps without a seam
+        for (u32 row = 0; row < 32; row++)
+        {
+            u16 *line = &map[row * 32];
+
+            if (line[30] != 0 || line[31] != 0)
+                continue;
+            for (u32 period = 1; period <= 16; period *= 2)
+            {
+                u32 col;
+
+                for (col = 0; col + period < 30 && line[col] == line[col + period]; col++)
+                    ;
+                if (col + period >= 30)
+                {
+                    line[30] = line[30 - period];
+                    line[31] = line[31 - period];
+                    break;
+                }
+            }
+        }
         CpuCopy32((void *)BG_SCREEN_ADDR(26), (void *)BG_SCREEN_ADDR(27), BG_SCREEN_SIZE);
+    }
 #endif
     LZDecompressVram(gBattleAnimBackgroundTable[bgId].image, (void *)(BG_CHAR_ADDR(2)));
     LoadCompressedPalette(gBattleAnimBackgroundTable[bgId].palette, BG_PLTT_ID(2), PLTT_SIZE_4BPP);

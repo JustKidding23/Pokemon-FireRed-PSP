@@ -93,6 +93,13 @@ static void Task_TestBattleAnims(u8 taskId)
                     TestLog("  shot %u: dispcnt %04x bg %04x %04x %04x %04x bldcnt %04x win %04x/%04x margins %d repeat %02x\n", i,
                             REG_DISPCNT, REG_BG0CNT, REG_BG1CNT, REG_BG2CNT, REG_BG3CNT, REG_BLDCNT, REG_WININ, REG_WINOUT,
                             gWideViewMargins, gWideViewRepeatingBgs);
+                    {
+                        const u16 *map = (const u16 *)BG_SCREEN_ADDR((REG_BG3CNT >> 8) & 0x1F);
+
+                        TestLog("    bg3 hofs %d row5: %04x %04x %04x | %04x %04x %04x %04x | %04x %04x %04x\n",
+                                REG_BG3HOFS, map[5 * 32], map[5 * 32 + 1], map[5 * 32 + 2], map[5 * 32 + 29], map[5 * 32 + 30],
+                                map[5 * 32 + 31], map[0x400 + 5 * 32], map[0x400 + 5 * 32 + 1], map[0x400 + 5 * 32 + 30], map[0x400 + 5 * 32 + 31]);
+                    }
                 }
             }
         }

@@ -675,8 +675,12 @@ void BattleInitBgsAndWindows(void)
     ResetBgsAndClearDma3BusyFlags(FALSE);
     InitBgsFromTemplates(0, gBattleBgTemplates, NELEMS(gBattleBgTemplates));
 #ifdef PORTABLE
-    // The battle backdrop is 512 pixels wide and fills the margins well
+    // The battle backdrop is 512 pixels wide and fills the margins well. BG1
+    // and BG2, which moves' animations use (a Pokémon copied onto them, or
+    // overlays that repeat), only show past the GBA's screen when they repeat:
+    // the rest of their maps there hold leftovers
     gWideViewMargins = TRUE;
+    gWideViewNarrowBgs = (1 << 1) | (1 << 2);
 #endif
     InitWindows(sStandardBattleWindowTemplates);
     DeactivateAllTextPrinters();

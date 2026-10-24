@@ -70,12 +70,13 @@ extern u8 gWideViewEndsAtEdgeBgs;
 extern u8 gWideViewClampBgs;
 extern u8 gWideViewNoWrapBgs;
 extern u8 gWideViewLeftOnlyBgs;
+extern u8 gWideViewNarrowBgs;
 extern bool8 gWideViewFlashActive;
 extern s16 gWideViewFlashSpans[2][DISPLAY_HEIGHT + 1][2];
 
 static inline bool BgFillsMargins(int bgNum, unsigned int mapWidthInPixels)
 {
-    return (gWideViewMargins && mapWidthInPixels >= RENDER_WIDTH)
+    return (gWideViewMargins && mapWidthInPixels >= RENDER_WIDTH && !(gWideViewNarrowBgs & (1 << bgNum)))
         || ((gWideViewRepeatingBgs | gWideViewClampBgs | gWideViewNoWrapBgs) & (1 << bgNum));
 }
 
