@@ -198,6 +198,14 @@ ifeq ($(PORTABLE),1)
     # instead (PPSSPP reads the right bytes), which crashed the game when it
     # called a field effect script's function after leaving the truck.
     OS_CFLAGS += -fdisable-tree-bswap -fno-store-merging
+    # GCC follows each division with a trap if the divisor is 0, which stops
+    # the game with a "Breakpoint" exception. The GBA carries on (its division
+    # gives 0), and the game does divide by 0 here and there: Spark's sparks
+    # froze a PSP 3001. Without the trap the Allegrex carries on too. Test
+    # builds can keep it (ZERO_DIV=-mcheck-zero-division): PPSSPP logs each
+    # trap as "BREAK!" and carries on, which finds them.
+    ZERO_DIV ?= -mno-check-zero-division
+    OS_CFLAGS += $(ZERO_DIV)
     # The vectorizer does the same to copy two 16-bit values as one word, and
     # the PSP has no vector unit it could use anyway
     OS_CFLAGS += -fno-tree-vectorize

@@ -638,7 +638,7 @@ static void AnimSparkElectricityFlashing_Step(struct Sprite *sprite)
     sprite->x2 = Sin(sprite->data[7], sprite->data[5]);
     sprite->y2 = Cos(sprite->data[7], sprite->data[5]);
     sprite->data[7] = (sprite->data[7] + sprite->data[6]) & 0xFF;
-    if (sprite->data[7] % sprite->data[4] == 0)
+    if (SAFE_MOD(sprite->data[7], sprite->data[4]) == 0) // Spark passes 0
         sprite->invisible ^= 1;
     if (sprite->data[0]-- <= 0)
         DestroyAnimSprite(sprite);
