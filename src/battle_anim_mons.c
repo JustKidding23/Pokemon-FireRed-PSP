@@ -917,6 +917,9 @@ void InitBattleAnimBg(u32 bgId)
     struct BattleAnimBgData animBgData;
 
     GetBattleAnimBgData(&animBgData, bgId);
+#ifdef PORTABLE
+    gWideViewRepeatingBgs &= ~(1 << bgId);
+#endif
     CpuFill32(0, animBgData.bgTiles, 0x2000);
     LoadBgTiles(bgId, animBgData.bgTiles, 0x2000, animBgData.tilesOffset);
     FillBgTilemapBufferRect(bgId, 0, 0, 0, 32, 64, 17);
@@ -940,6 +943,12 @@ void AnimLoadCompressedBgTilemap(u32 bgId, const u32 *src)
 {
     InitAnimBgTilemapBuffer(bgId, src);
     CopyBgTilemapBufferToVram(bgId);
+#ifdef PORTABLE
+    // A move's overlay, like Sandstorm's sand, on a 256-pixel map the GBA
+    // wraps as it scrolls: it repeats into the wider view's margins instead of
+    // its edge being stretched, until InitBattleAnimBg clears it
+    gWideViewRepeatingBgs |= 1 << bgId;
+#endif
 }
 
 u8 GetBattleBgPaletteNum(void)
