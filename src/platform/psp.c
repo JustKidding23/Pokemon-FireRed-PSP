@@ -1199,6 +1199,7 @@ static unsigned sBehind;    // display frames that ran more game frames than the
 extern unsigned int gDrawProfile[8];
 extern unsigned int gSoundProfile[6];
 extern unsigned int gSpriteStats[4];
+extern unsigned int gBlendStats[4];
 #endif
 
 // The emulator tests: PSP buttons from host0:/test_input.txt, a line of
@@ -1696,6 +1697,12 @@ int main(int argc, char **argv)
                                          gSpriteStats[0] / speedDrawn, gSpriteStats[1] / speedDrawn,
                                          gSpriteStats[2] / speedDrawn, gSpriteStats[3] / speedDrawn);
             memset(gSpriteStats, 0, sizeof(gSpriteStats));
+            if (speedDrawn && sSpeedLogLen < sizeof(sSpeedLog) - 200)
+                sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,
+                                         "  blending per drawn frame: pixels %u  layers looked at %u  lines with windows %u of %u\n",
+                                         gBlendStats[0] / speedDrawn, gBlendStats[1] / speedDrawn,
+                                         gBlendStats[2] / speedDrawn, gBlendStats[3] / speedDrawn);
+            memset(gBlendStats, 0, sizeof(gBlendStats));
             memset(gSoundProfile, 0, sizeof(gSoundProfile));
 #endif
             if (!sSettings.showSpeed)
