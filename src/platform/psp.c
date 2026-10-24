@@ -1188,7 +1188,11 @@ static void SwitchSlotIfPending(void)
 #ifdef PSP_TEST
 // Speed, once a second, written to host0:/speed.log when the test ends: for
 // measuring on the PSP itself (run over PSPLink)
+#ifdef PSP_PROFILE
+static char sSpeedLog[1048576];  // the battle animation tour's per-move lines
+#else
 static char sSpeedLog[262144];
+#endif
 static size_t sSpeedLogLen;
 static unsigned sBehind;    // display frames that ran more game frames than the speed, to catch up
 #ifdef PSP_PROFILE
