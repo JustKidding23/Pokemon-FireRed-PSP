@@ -34,6 +34,8 @@ static const u16 sShotFrames[] = {6, 18, 36, 60, 96};
 #define tTurn  data[4]
 
 static struct DisableStruct sDisable;
+// Where the two Pokémon stand, put back after each move
+static s16 sHomeX[2], sHomeY[2];
 // The player's battle controller, paused during the test: the action menu
 // would start the Pokémon bobbing again every frame
 static void (*sSavedControllerFunc)(void);
@@ -75,6 +77,11 @@ static void Task_TestBattleAnims(u8 taskId)
         gWeatherMoveAnim = 0;
         gAnimDisableStructPtr = &sDisable;
         SetBattlerSpriteAffineMode(ST_OAM_AFFINE_OFF);
+        for (u32 battler = 0; battler < 2 && tTurn == 0; battler++)
+        {
+            sHomeX[battler] = gSprites[gBattlerSpriteIds[battler]].x;
+            sHomeY[battler] = gSprites[gBattlerSpriteIds[battler]].y;
+        }
         TestLog("anim %d turn %d start\n", tMove, tTurn);
         gTestDrawMax = gTestDrawSlow = 0;
         sBehindAtStart = gTestBehind();
@@ -136,13 +143,25 @@ static void Task_TestBattleAnims(u8 taskId)
             }
             TestLog("anim %d end %d frames, slowest draw %u us, %u over 13 ms, %u skipped\n", tMove, tFrame,
                     gTestDrawMax, gTestDrawSlow, gTestBehind() - sBehindAtStart);
+            // Where the two Pokémon were left: a move that leaves one moved
+            // shows it in the wider view's margins
+            for (u32 battler = 0; battler < 2; battler++)
+            {
+                struct Sprite *sprite = &gSprites[gBattlerSpriteIds[battler]];
+
+                TestLog("  pos %u: x %d y %d x2 %d y2 %d invisible %d\n", battler, sprite->x, sprite->y,
+                        sprite->x2, sprite->y2, sprite->invisible);
+            }
             SetBattlerSpriteAffineMode(ST_OAM_AFFINE_NORMAL);
-            // Moves like Fly and Dig leave the Pokémon hidden or moved
+            // Moves like Fly, Dig and Teleport leave the Pokémon hidden or
+            // moved (Teleport parks it past the right edge, x 272)
             for (u32 battler = 0; battler < 2 && tTurn == 1; battler++)
             {
                 struct Sprite *sprite = &gSprites[gBattlerSpriteIds[battler]];
 
                 sprite->invisible = FALSE;
+                sprite->x = sHomeX[battler];
+                sprite->y = sHomeY[battler];
                 sprite->x2 = sprite->y2 = 0;
             }
             tFrame = 0;
