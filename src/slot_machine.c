@@ -1260,6 +1260,13 @@ static void MainTask_ExitSlots(u8 taskId)
         if (!IsSlotMachineSetupTaskActive(0))
         {
             SetMainCallback2(sSlotMachineState->savedCallback);
+#ifdef UBFIX
+            // Task_SpinReels runs after this task in the same frame and would
+            // read and write the freed state through NULL (harmless on the
+            // GBA's BIOS, a crash on a PSP)
+            DestroyTask(sSlotMachineState->spinReelsTaskId);
+            DestroyTask(taskId);
+#endif
             CleanSupSlotMachineState();
         }
         break;
