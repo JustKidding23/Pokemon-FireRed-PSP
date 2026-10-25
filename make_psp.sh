@@ -118,13 +118,14 @@ if [ "$art" = 1 ]; then
     atracdenc=""
     if [ -x "$work/atracdenc/build/src/atracdenc" ]; then
         atracdenc="$work/atracdenc/build/src/atracdenc"
-    elif have cmake && have ffmpeg; then
+    elif have cmake && have ffmpeg && have git; then
         echo "Building atracdenc 0.2.3 (the PSP menu's music encoder)"
-        rm -rf "$work/atracdenc" && mkdir -p "$work/atracdenc"
-        if curl -fsSL https://github.com/dcherednik/atracdenc/archive/refs/tags/0.2.3.tar.gz \
-                | tar -xz -C "$work/atracdenc" --strip-components=1 \
+        rm -rf "$work/atracdenc"
+        # A clone, not GitHub's archive: the archive leaves out its libgha submodule
+        if git clone -q --depth 1 --branch 0.2.3 --recurse-submodules --shallow-submodules \
+                    https://github.com/dcherednik/atracdenc.git "$work/atracdenc" > "$work/atracdenc.log" 2>&1 \
                 && cmake -S "$work/atracdenc" -B "$work/atracdenc/build" -DCMAKE_BUILD_TYPE=Release \
-                    -DCMAKE_CXX_FLAGS="-include cstdint" > "$work/atracdenc.log" 2>&1 \
+                    -DCMAKE_CXX_FLAGS="-include cstdint" >> "$work/atracdenc.log" 2>&1 \
                 && cmake --build "$work/atracdenc/build" -j"$jobs" >> "$work/atracdenc.log" 2>&1; then
             atracdenc="$work/atracdenc/build/src/atracdenc"
         else
@@ -132,8 +133,8 @@ if [ "$art" = 1 ]; then
         fi
     fi
     if [ -z "$atracdenc" ]; then
-        echo "No music for the menu: it needs cmake, ffmpeg and libsndfile, and a compiler for 32-bit programs:"
-        echo "  $(install_hint 'cmake ffmpeg libsndfile1-dev gcc-multilib' 'cmake ffmpeg libsndfile-devel glibc-devel.i686 libgcc.i686' 'cmake ffmpeg libsndfile lib32-gcc-libs' 'cmake ffmpeg libsndfile')"
+        echo "No music for the menu: it needs git, cmake, ffmpeg and libsndfile, and a compiler for 32-bit programs:"
+        echo "  $(install_hint 'git cmake ffmpeg libsndfile1-dev gcc-multilib' 'git cmake ffmpeg libsndfile-devel glibc-devel.i686 libgcc.i686' 'git cmake ffmpeg libsndfile lib32-gcc-libs' 'git cmake ffmpeg libsndfile')"
     fi
 
     if [ "$art_ok" = 1 ]; then
