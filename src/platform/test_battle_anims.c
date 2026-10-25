@@ -153,6 +153,10 @@ static void Task_TestBattleAnims(u8 taskId)
                         sprite->x2, sprite->y2, sprite->invisible);
             }
             SetBattlerSpriteAffineMode(ST_OAM_AFFINE_NORMAL);
+            // Substitute leaves the player's Pokémon as the doll, and
+            // Transform as the other Pokémon: its own picture back
+            if (tTurn == 1)
+                LoadBattleMonGfxAndAnimate(0, TRUE, gBattlerSpriteIds[0]);
             // Moves like Fly, Dig and Teleport leave the Pokémon hidden or
             // moved (Teleport parks it past the right edge, x 272)
             for (u32 battler = 0; battler < 2 && tTurn == 1; battler++)
