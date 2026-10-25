@@ -116,9 +116,21 @@ found and fixed:
 
 ### Struct padding
 
-agbcc pads structs differently from GCC. `union AffineAnimCmd` is 8 bytes on the GBA and 6 on
-the PSP, so code that stepped through animation commands by 8 bytes read garbage, and Thrash's
-animation never ended. Look for offsets written as `<< 3` or `* 8` on arrays of structs.
+agbcc rounds a struct with a halfword or larger member up to a multiple of 4 bytes. GCC doesn't,
+so such a struct whose size isn't a multiple of 4 is smaller on the PSP. That matters wherever
+the GBA's size is assumed:
+
+- **Saves.** The quest log's object events (18 bytes on the PSP, 20 on the GBA) and the Fame
+  Checker's entries (2 and 4) moved everything saved after them, so saves didn't move between
+  the PSP and a GBA intact. Both are `ALIGNED(4)` now, and `src/save.c` checks at build time
+  every save field whose GBA offset pret notes. Saves written before the fix are moved to the
+  GBA's layout when they're read (`MigrateQuestLogLayout` in `psp.c`).
+- **Code that steps through memory by a fixed size.** `union AffineAnimCmd` is 8 bytes on the
+  GBA and 6 on the PSP, so code that stepped through animation commands by 8 bytes read garbage,
+  and Thrash's animation never ended. Look for offsets written as `<< 3` or `* 8` on arrays of
+  structs.
+
+`pahole` on an ELF built with `CFLAGS=-g` lists every struct's size and its members' offsets.
 
 ### Other differences
 
