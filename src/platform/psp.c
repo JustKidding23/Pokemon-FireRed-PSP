@@ -1189,7 +1189,7 @@ static void SwitchSlotIfPending(void)
 // Speed, once a second, written to host0:/speed.log when the test ends: for
 // measuring on the PSP itself (run over PSPLink)
 #ifdef PSP_PROFILE
-static char sSpeedLog[1048576];  // the battle animation tour's per-move lines
+static char sSpeedLog[2097152];  // the battle animation tour's per-move lines
 #else
 static char sSpeedLog[262144];
 #endif
@@ -1297,7 +1297,25 @@ static u32 TestButtons(bool *done, bool *shot)
         for (char *name = strtok(buttons, "+"); name != NULL; name = strtok(NULL, "+"))
         {
             if (strcmp(name, "SHOT") == 0)
+            {
+                extern bool gTestRenderAB;
+                extern unsigned int gTestRenderABLines, gTestRenderABPixels, gTestRenderABFirst;
+
                 sLineShot = true;
+                // Since the last shot: pixels the old way of blending draws differently
+                if (gTestRenderAB)
+                {
+                    TestLog("renderab: %u lines, %u pixels differ (first at line %u x %u)\n", gTestRenderABLines,
+                            gTestRenderABPixels, gTestRenderABFirst >> 16, gTestRenderABFirst & 0xFFFF);
+                    gTestRenderABLines = gTestRenderABPixels = gTestRenderABFirst = 0;
+                }
+            }
+            if (strcmp(name, "RENDERAB") == 0)
+            {
+                extern bool gTestRenderAB;
+
+                gTestRenderAB = true;
+            }
             if (strcmp(name, "COMPLETE") == 0)
                 sMakeComplete = true;
             if (strcmp(name, "HOF") == 0)

@@ -42,6 +42,10 @@ struct scanlineData {
     // Clear at the start of each line: DrawScanline clears the ones that
     // spritePriorities says were drawn on
     uint16_t spriteLayers[4][RENDER_WIDTH];
+    // Which sprite pixels blend with what's below them (semi-transparent
+    // sprites, or sprites as first targets): done when the line is put
+    // together. Only written and read on lines that have any (sLineSpriteBlend).
+    uint8_t spriteBlend[4][RENDER_WIDTH];
     uint8_t spritePriorities;
     // The columns each priority's sprites were drawn in on this line, so
     // putting the line together and clearing only go over those
@@ -768,6 +772,19 @@ static bool alphaBlendSelectTargetB(struct scanlineData* scanline, uint16_t* col
 // where they are. Borrowed from pokeemerald-dualscreen's widescreen renderer.
 // (idea from Goldoire/pokeemerald-dualscreen)
 static bool sWinExtendMargins;
+// Whether a sprite on this line blends (see spriteBlend)
+static bool sLineSpriteBlend;
+#ifdef PSP_TEST
+// Test builds can draw each line the old way too (blending by searching the
+// layers below) and count the pixels that come out different: the test
+// input's RENDERAB
+bool gTestRenderAB;
+unsigned int gTestRenderABLines, gTestRenderABPixels, gTestRenderABFirst;
+static bool sTestOldBlend;
+#define OLD_BLEND sTestOldBlend
+#else
+#define OLD_BLEND false
+#endif
 // Whether a sprite covers the GBA screen's left or right column on this line,
 // so ExtendEdges carries on the background under it rather than the sprite
 static bool sSpriteAtEdge[2];
@@ -1036,7 +1053,7 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
 #endif
             // A plain sprite that nothing blends (most of them): its row of
             // texels is copied straight, without the checks below for each pixel
-            if (identity && !isObjWin && !isSemiTransparent && !windowsEnabled
+            if (identity && !isObjWin && !isSemiTransparent && !windowsEnabled && !sLineSpriteBlend
              && !((REG_BLDCNT & BLDCNT_TGT1_OBJ) && blendMode != 0 && sLineEffects))
             {
                 int texY = local_y + (int)(height / 2);
@@ -1146,7 +1163,7 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
             // coming out of its ball: the texture's coordinates step along by
             // the matrix's first column instead of being worked out for each
             // pixel, with the same results
-            if (!identity && oam->mosaic != 1 && !isObjWin && !isSemiTransparent && !windowsEnabled
+            if (!identity && oam->mosaic != 1 && !isObjWin && !isSemiTransparent && !windowsEnabled && !sLineSpriteBlend
              && !((REG_BLDCNT & BLDCNT_TGT1_OBJ) && blendMode != 0 && sLineEffects))
             {
                 const uint8_t *tiles = (const uint8_t *)objtiles;
@@ -1291,16 +1308,21 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
                         //check if its enabled in the window (if window is enabled)
                         winShouldBlendPixel = windowsEnabled ? (scanline->winMask[bx] & WINMASK_CLR) != 0 : sLineEffects;
                         
-                        //has to be separated from the blend mode switch statement because of OBJ semi transparancy feature
-                        if ((blendMode == 1 && REG_BLDCNT & BLDCNT_TGT1_OBJ && winShouldBlendPixel) || isSemiTransparent)
+                        // Blending with what's below is done when the line is
+                        // put together (see spriteBlend)
+                        bool blendLater = (blendMode == 1 && REG_BLDCNT & BLDCNT_TGT1_OBJ && winShouldBlendPixel) || isSemiTransparent;
+
+                        if (sLineSpriteBlend)
+                            scanline->spriteBlend[oam->priority][bx] = blendLater;
+                        if (blendLater && OLD_BLEND)
                         {
-                            uint16_t targetA = color;
                             uint16_t targetB = 0;
+
                             if (alphaBlendSelectTargetB(scanline, &targetB, oam->priority, 0, bx, false))
-                            {
-                                color = alphaBlendColor(targetA, targetB);
-                            }
+                                color = alphaBlendColor(color, targetB);
                         }
+                        else if (blendLater)
+                            ;
                         else if (REG_BLDCNT & BLDCNT_TGT1_OBJ && winShouldBlendPixel)
                         {
                             switch (blendMode)
@@ -1718,11 +1740,11 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
                     spritesBlend = sSprites[sLineSprites[vcount][n]].oam->objMode == 1;
             }
         }
-        // Sprites blending read the layers below them (DrawSprites). A
-        // background blending with what's below reads the line drawn so far
-        // instead (see sBelow), so the backgrounds under it can be drawn
-        // straight onto the line too.
-        layersRead = spritesBlend;
+        // Blending reads the line drawn so far (see sBelow), not the layers
+        // below, so the backgrounds that don't blend can be drawn straight
+        // onto the line.
+        sLineSpriteBlend = spritesBlend && !OLD_BLEND;
+        layersRead = OLD_BLEND && (spritesBlend || (blendMode == 1 && (REG_BLDCNT & (REG_DISPCNT >> 8) & 0xF)));
         if (!layersRead)
         {
             for (bgnum = 0; bgnum < (mode == 0 ? 4 : mode == 1 ? 2 : 0); bgnum++)
@@ -1799,9 +1821,16 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
 
     // Blending looks at the pixel below, which the line so far already has.
     // Where it came from (background 0-3, 4 for sprites, 5 for the backdrop)
-    // says whether it's a second target.
+    // says whether it's a second target. A pixel below that was itself
+    // blended (BELOW_BLENDED) has its own color in sRaw: the GBA only blends
+    // the top pixel, with the one under it as it is.
     static uint8_t sBelow[RENDER_WIDTH];
-    bool trackBelow = blendMode == 1;
+    static uint16_t sRaw[RENDER_WIDTH];
+    bool trackBelow = (blendMode == 1 || sLineSpriteBlend) && !OLD_BLEND;
+    // What was below a sprite pixel that went over another (sprites don't
+    // blend with each other: a sprite blends with the background under both)
+    static uint16_t sBgColor[RENDER_WIDTH];
+    static uint8_t sBgSrc[RENDER_WIDTH];
     unsigned int blendTargets = REG_BLDCNT >> 8;
     unsigned int eva = REG_BLDALPHA & 0x1F, evb = (REG_BLDALPHA >> 8) & 0x1F;
 
@@ -1811,6 +1840,8 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
         evb = 16;
     if (trackBelow)
         memset(sBelow, 5, sizeof(sBelow));
+#define BELOW_SOURCE 7
+#define BELOW_BLENDED 0x80
 
     //iterate trough every priority in order
     for (prnum = 3; prnum >= 0; prnum--)
@@ -1869,7 +1900,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
                 }
                 // A blended layer, blended with what's below it where that's a
                 // second target (and where the windows allow effects)
-                if (trackBelow)
+                if (trackBelow && blendMode == 1)
                 {
                     unsigned int bit = 1 << bgnum;
 
@@ -1892,9 +1923,16 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
                                 continue;
                             }
                         }
-                        if (blendTargets & (1 << sBelow[xpos]))
-                            color = BlendColors(color, pixels[xpos], eva, evb);
+                        unsigned int under = sBelow[xpos];
+
                         BLEND_STAT(0, 1);
+                        if (blendTargets & (1 << (under & BELOW_SOURCE)))
+                        {
+                            pixels[xpos] = BlendColors(color, (under & BELOW_BLENDED) ? sRaw[xpos] : pixels[xpos], eva, evb);
+                            sRaw[xpos] = color;
+                            sBelow[xpos] = bgnum | BELOW_BLENDED;
+                            continue;
+                        }
                         pixels[xpos] = color;
                         sBelow[xpos] = bgnum;
                     }
@@ -1943,6 +1981,15 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
                         }
                     }
                     //write the pixel to scanline buffer output
+                    if (trackBelow)
+                    {
+                        sBelow[xpos] = bgnum;
+                        if (color != src[xpos])
+                        {
+                            sRaw[xpos] = src[xpos];
+                            sBelow[xpos] = bgnum | BELOW_BLENDED;
+                        }
+                    }
                     pixels[xpos] = color;
                 }
             }
@@ -1959,9 +2006,27 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
                 if (windowsEnabled && !(scanline.winMask[xpos] & WINMASK_OBJ))
                         continue;
                 //draw the pixel
-                pixels[xpos] = src[xpos];
+                uint16_t color = src[xpos];
+
                 if (trackBelow)
+                {
+                    unsigned int under = sBelow[xpos];
+
+                    // What's under, as it is (not blended itself)
+                    if ((under & BELOW_SOURCE) != 4)
+                    {
+                        sBgColor[xpos] = (under & BELOW_BLENDED) ? sRaw[xpos] : pixels[xpos];
+                        sBgSrc[xpos] = under & BELOW_SOURCE;
+                    }
                     sBelow[xpos] = 4;
+                    if (sLineSpriteBlend && scanline.spriteBlend[prnum][xpos] && (blendTargets & (1 << sBgSrc[xpos])))
+                    {
+                        sRaw[xpos] = color;
+                        sBelow[xpos] = 4 | BELOW_BLENDED;
+                        color = BlendColors(color, sBgColor[xpos], eva, evb);
+                    }
+                }
+                pixels[xpos] = color;
                 if (xpos == RENDER_MARGIN)
                     sSpriteAtEdge[0] = true;
                 else if (xpos == RENDER_MARGIN + DISPLAY_WIDTH - 1)
@@ -2013,7 +2078,42 @@ static void BeginLine(int i)
     }
 }
 
+static void DrawLineOnce(uint16_t *line, int i);
+
 static void DrawLine(uint16_t *line, int i)
+{
+#ifdef PSP_TEST
+    if (gTestRenderAB)
+    {
+        static uint16_t oldLine[RENDER_WIDTH];
+
+        sTestOldBlend = true;
+        DrawLineOnce(oldLine, i);
+        sTestOldBlend = false;
+        DrawLineOnce(line, i);
+        gTestRenderABLines++;
+        for (int x = 0; x < RENDER_WIDTH; x++)
+        {
+            if (oldLine[x] != line[x])
+            {
+                if (gTestRenderABPixels++ == 0)
+                {
+                    void TestLog(const char *format, ...);
+
+                    gTestRenderABFirst = (i << 16) | x;
+                    TestLog("renderab first: line %d x %d old %04x new %04x dispcnt %04x bldcnt %04x bldalpha %04x bldy %04x"
+                            " bg %04x %04x %04x %04x win %04x/%04x\n", i, x, oldLine[x], line[x], REG_DISPCNT, REG_BLDCNT,
+                            REG_BLDALPHA, REG_BLDY, REG_BG0CNT, REG_BG1CNT, REG_BG2CNT, REG_BG3CNT, REG_WININ, REG_WINOUT);
+                }
+            }
+        }
+        return;
+    }
+#endif
+    DrawLineOnce(line, i);
+}
+
+static void DrawLineOnce(uint16_t *line, int i)
 {
     // Render the backdrop color before the each individual scanline.
     // backdrop color brightness effects
