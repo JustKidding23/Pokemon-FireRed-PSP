@@ -1053,7 +1053,7 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
 #endif
             // A plain sprite that nothing blends (most of them): its row of
             // texels is copied straight, without the checks below for each pixel
-            if (identity && !isObjWin && !isSemiTransparent && !windowsEnabled && !sLineSpriteBlend
+            if (identity && !isObjWin && !isSemiTransparent && !windowsEnabled
              && !((REG_BLDCNT & BLDCNT_TGT1_OBJ) && blendMode != 0 && sLineEffects))
             {
                 int texY = local_y + (int)(height / 2);
@@ -1108,6 +1108,9 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
                             if (row & 0xF)
                             {
                                 *out = subPal[row & 0xF] | (1 << 15);
+                                // Over a blending sprite's pixel, this one doesn't blend
+                                if (sLineSpriteBlend)
+                                    scanline->spriteBlend[oam->priority][out - pixels] = 0;
                                 drew = true;
                             }
                         }
@@ -1136,6 +1139,8 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
                     if (pixel != 0)
                     {
                         pixels[x + local_x + RENDER_MARGIN] = pal[pixel] | (1 << 15);
+                        if (sLineSpriteBlend)
+                            scanline->spriteBlend[oam->priority][x + local_x + RENDER_MARGIN] = 0;
                         drew = true;
                     }
                 }
@@ -1163,7 +1168,7 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
             // coming out of its ball: the texture's coordinates step along by
             // the matrix's first column instead of being worked out for each
             // pixel, with the same results
-            if (!identity && oam->mosaic != 1 && !isObjWin && !isSemiTransparent && !windowsEnabled && !sLineSpriteBlend
+            if (!identity && oam->mosaic != 1 && !isObjWin && !isSemiTransparent && !windowsEnabled
              && !((REG_BLDCNT & BLDCNT_TGT1_OBJ) && blendMode != 0 && sLineEffects))
             {
                 const uint8_t *tiles = (const uint8_t *)objtiles;
@@ -1200,6 +1205,8 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
                         int bx = x + local_x + RENDER_MARGIN;
 
                         pixels[bx] = pal[pixel] | (1 << 15);
+                        if (sLineSpriteBlend)
+                            scanline->spriteBlend[oam->priority][bx] = 0;
                         if (first < 0)
                             first = bx;
                         last = bx;
