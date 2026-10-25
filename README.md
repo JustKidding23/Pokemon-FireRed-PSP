@@ -75,45 +75,48 @@ haven't saved is lost.
 
 ## Building
 
-You'll need a PC running Linux, or Windows with WSL (the Ubuntu app works). The game is
-built on the PC, then copied to the PSP.
+You'll need a PC running Linux, or Windows with WSL (the Ubuntu app works), and your own
+Pokémon FireRed (USA) ROM, dumped from your cartridge. The game is built on the PC, then
+copied to the PSP.
 
 1. **Install the build tools.** On Ubuntu or Debian:
 
    ```
-   sudo apt install build-essential git libpng-dev python3
+   sudo apt install build-essential git libpng-dev python3 python3-venv curl
    ```
 
-2. **Install the PSP toolchain.** Download the latest
-   [pspdev release](https://github.com/pspdev/pspdev/releases) for your system and unpack
-   it so that it ends up in `~/pspdev`, which is where the build looks. If you put it
-   somewhere else, set `PSPDEV` to that folder.
+   For the PSP menu's music too, add `cmake ffmpeg libsndfile1-dev gcc-multilib`.
 
-3. **Get this repository and build it:**
+2. **Get this repository and build it,** giving it your ROM:
 
    ```
    git clone https://github.com/JustKidding23/Pokemon-FireRed-PSP.git
    cd Pokemon-FireRed-PSP
-   make psp -j$(nproc)
+   ./make_psp.sh path/to/your/FireRed.gba
    ```
 
-   The first build takes a while (the game's graphics and music are converted first).
-   It ends with the folder `build/psp32/PSP/GAME/FIRERED_PSP/`.
+   It checks that the ROM is Pokémon FireRed, downloads the PSP toolchain into the
+   folder (nothing is installed on your system), builds the game, and makes the PSP
+   menu's icon, background and music. The first time takes a while. If something is
+   missing, it says what to install.
 
-4. **Copy it to the PSP.** Connect the PSP over USB and copy the `FIRERED_PSP` folder into
-   `PSP/GAME/` on the memory stick. It holds `EBOOT.PBP` (the game) and `kbuttons.prx`, a
-   small helper that lets the game read the ♪ button. The PSP needs custom firmware to run
-   homebrew.
+3. **Copy it to the PSP.** Connect the PSP over USB and copy the `PSP` folder from `out/`
+   to the root of the memory stick. The PSP needs custom firmware to run homebrew.
 
 The game then appears in the PSP's Game menu as **Pokemon FireRed PSP**.
 
-### The menu's art and music
+### Building by hand
 
-Without them the game shows the PSP's plain icon. `psp/make_art.sh` makes the icon (the
-FireRed logo), the background (Charizard from the box art) and the music (the title
-screen's theme) from the US box art and your own copy of the game, as its first lines
-explain. Run it before `make psp`. They come from the box and the game, so they stay out
-of the repository.
+`make_psp.sh` runs these steps, for anyone who'd rather do them:
+
+- Install the [pspdev](https://github.com/pspdev/pspdev/releases) toolchain in `~/pspdev`
+  (or set `PSPDEV`), then run `make psp -j$(nproc)`. The game is in
+  `build/psp32/PSP/GAME/FIRERED_PSP/`: `EBOOT.PBP` and `kbuttons.prx`, a small helper
+  that lets the game read the ♪ button.
+- `psp/make_art.sh` makes the menu's art and music from the US box art, as its first lines
+  explain. The music is the title screen's theme, made by the game's own sound engine
+  (`psp/songrender`). Run `make psp` again afterwards to put them in the EBOOT. They come
+  from the box art, so they stay out of the repository.
 
 ## How this was made
 
