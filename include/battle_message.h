@@ -221,7 +221,16 @@ extern struct BattleMsgData *gBattleMsgDataPtr;
 
 #define TEXT_BUFF_ARRAY_COUNT   16
 
-extern u8 gDisplayedStringBattle[300];
+#ifdef UBFIX
+// Brock's defeat text is longer than 300 bytes. On the GBA it spills into an
+// unused array placed after it (sFlickerArray in battle_main.c); other
+// compilers place that array elsewhere, so it ran into gBattleTypeFlags and
+// the battle never ended (or ended as a loss) after beating him.
+#define DISPLAYED_STRING_BATTLE_SIZE 512
+#else
+#define DISPLAYED_STRING_BATTLE_SIZE 300
+#endif
+extern u8 gDisplayedStringBattle[DISPLAYED_STRING_BATTLE_SIZE];
 extern u8 gBattleTextBuff1[TEXT_BUFF_ARRAY_COUNT];
 extern u8 gBattleTextBuff2[TEXT_BUFF_ARRAY_COUNT];
 extern u8 gBattleTextBuff3[TEXT_BUFF_ARRAY_COUNT];

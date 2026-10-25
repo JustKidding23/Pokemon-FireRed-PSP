@@ -15,6 +15,7 @@
 #include "save.h"
 #include "task.h"
 #include "event_data.h"
+#include "pokemon.h"
 #include "fieldmap.h"
 #include "field_player_avatar.h"
 #include "characters.h"
@@ -1474,6 +1475,18 @@ static u32 TestButtons(bool *done, bool *shot)
                     TestLog("shot where: map %d:%d player %d %d\n", gSaveBlock1Ptr->location.mapGroup,
                             gSaveBlock1Ptr->location.mapNum, px - MAP_OFFSET, py - MAP_OFFSET);
                 }
+                {
+                    extern void (*gBattleMainFunc)(void);
+                    extern void (*gBattlerControllerFuncs[])(void);
+                    extern const u8 *gBattlescriptCurrInstr;
+                    extern u32 gBattleControllerExecFlags;
+
+                    TestLog("shot state: cb1 %08x cb2 %08x battleMain %08x ctrl0 %08x ctrl1 %08x script %08x execFlags %08x\n",
+                            (unsigned)(uintptr_t)gMain.callback1, (unsigned)(uintptr_t)gMain.callback2,
+                            (unsigned)(uintptr_t)gBattleMainFunc, (unsigned)(uintptr_t)gBattlerControllerFuncs[0],
+                            (unsigned)(uintptr_t)gBattlerControllerFuncs[1], (unsigned)(uintptr_t)gBattlescriptCurrInstr,
+                            (unsigned)gBattleControllerExecFlags);
+                }
                 TestLog("shot regs: dispcnt %04x bg %04x %04x %04x %04x hofs %d %d %d %d bldcnt %04x win %04x/%04x\n",
                         REG_DISPCNT, REG_BG0CNT, REG_BG1CNT, REG_BG2CNT, REG_BG3CNT, REG_BG0HOFS, REG_BG1HOFS, REG_BG2HOFS,
                         REG_BG3HOFS, REG_BLDCNT, REG_WININ, REG_WINOUT);
@@ -1513,8 +1526,8 @@ static u32 TestButtons(bool *done, bool *shot)
                 sTrade = true;
             if (strcmp(name, "MYSTERYGIFT") == 0)
                 sMysteryGift = true;
-            // SETFLAG:hex and SETVAR:hex:value, straight away (story flags and
-            // variables, like a cutscene seen)
+            // SETFLAG:hex, CLEARFLAG:hex and SETVAR:hex:value, straight away (story
+            // flags and variables, like a cutscene seen)
             {
                 unsigned int id, value;
 
@@ -1522,6 +1535,30 @@ static u32 TestButtons(bool *done, bool *shot)
                     FlagSet(id);
                 if (sscanf(name, "SETVAR:%x:%u", &id, &value) == 2)
                     VarSet(id, value);
+                if (sscanf(name, "CLEARFLAG:%x", &id) == 1)
+                    FlagClear(id);
+                // BATTLESET: the SET battle style, so trainers' next Pokémon
+                // don't come with an offer to switch
+                if (strcmp(name, "BATTLESET") == 0)
+                    gSaveBlock2Ptr->optionsBattleStyle = OPTIONS_BATTLE_STYLE_SET;
+                // OBEDIENT: the party's Mew obey, as event ones do
+                if (strcmp(name, "OBEDIENT") == 0)
+                {
+                    for (int i = 0; i < PARTY_SIZE; i++)
+                    {
+                        u8 obedient = TRUE;
+
+                        SetMonData(&gPlayerParty[i], MON_DATA_MODERN_FATEFUL_ENCOUNTER, &obedient);
+                    }
+                }
+                // PARTYLEAD:n swaps the party's first Pokémon with its nth
+                if (sscanf(name, "PARTYLEAD:%u", &id) == 1 && id < PARTY_SIZE)
+                {
+                    struct Pokemon lead = gPlayerParty[0];
+
+                    gPlayerParty[0] = gPlayerParty[id];
+                    gPlayerParty[id] = lead;
+                }
             }
             {
                 int first, last;
