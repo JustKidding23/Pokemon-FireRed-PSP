@@ -19,9 +19,9 @@ AI assistant, working in Claude Code alongside the owner of this repository, who
 features and tested each build on a real PSP. [How this was made](#how-this-was-made) says
 more. AI-written code can contain mistakes, so review it before relying on it.
 
-**No game files here.** There's no ROM and no ready-made game to download. Building needs
-no ROM, because pret's decompilation keeps the game's graphics and sound as source files,
-but what you build contains the game, so keep it to yourself and own the game you build.
+**No game files here.** There's no ROM and no ready-made game to download. The builder asks
+for your own Pokémon FireRed ROM and checks it, so you build the game you own. What you
+build contains the game, so keep it to yourself.
 
 Also by me: [Pokémon Emerald PSP](https://github.com/JustKidding23/Pokemon-Emerald-PSP),
 [SM64 PSP](https://github.com/JustKidding23/SM64-PSP) and
