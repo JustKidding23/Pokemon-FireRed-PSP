@@ -1238,7 +1238,9 @@ static bool sEnterHallOfFame;  // and HOF
 static bool sHallOfFamePC;     // and HOFPC
 static bool sWarpPending;      // and WARP:g:n:x:y
 static bool sWildBattle;       // and WILDBATTLE
-static bool sEvolve, sHatch, sCoins;  // and EVOLVE, HATCH, COINS (test_field.c)
+static bool sEvolve, sHatch, sCoins, sDaycareEgg, sCurrents;  // and EVOLVE, HATCH, COINS, DAYCAREEGG, CURRENTS (test_field.c)
+void TestSeafoamCurrents(void);
+void TestDaycareEgg(void);
 void TestEvolve(void);
 void TestHatchEgg(void);
 void TestGiveCoins(void);
@@ -1350,6 +1352,10 @@ static u32 TestButtons(bool *done, bool *shot)
                 sHatch = true;
             if (strcmp(name, "COINS") == 0)
                 sCoins = true;
+            if (strcmp(name, "DAYCAREEGG") == 0)
+                sDaycareEgg = true;
+            if (strcmp(name, "CURRENTS") == 0)
+                sCurrents = true;
             {
                 int first, last;
 
@@ -1596,6 +1602,16 @@ int main(int argc, char **argv)
         {
             TestGiveCoins();
             sCoins = false;
+        }
+        if (sDaycareEgg && IsOverworldRunning())
+        {
+            TestDaycareEgg();
+            sDaycareEgg = false;
+        }
+        if (sCurrents && IsOverworldRunning())
+        {
+            TestSeafoamCurrents();
+            sCurrents = false;
         }
         if (sWarpPending && IsOverworldRunning())
         {

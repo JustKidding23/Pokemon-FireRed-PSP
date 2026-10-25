@@ -1,6 +1,7 @@
 // Emulator and PSPLink tests only: shortcuts to screens that take a lot of
 // play to reach, for checking them in the wider view and hunting crashes. The
-// test input's EVOLVE, HATCH and COINS, each done once the overworld is up.
+// test input's EVOLVE, HATCH, COINS, DAYCAREEGG and CURRENTS, each done once
+// the overworld is up.
 #ifdef PSP_TEST
 #include "global.h"
 #include "coins.h"
@@ -53,5 +54,33 @@ void TestGiveCoins(void)
     if (!CheckBagHasItem(ITEM_COIN_CASE, 1))
         AddBagItem(ITEM_COIN_CASE, 1);
     SetCoins(9999);
+}
+
+// Ditto and a Pidgey in the Day Care with an egg waiting, for the Four Island
+// Day Care man to give
+void TestDaycareEgg(void)
+{
+    static const u16 sParents[DAYCARE_MON_COUNT] = {SPECIES_DITTO, SPECIES_PIDGEY};
+    struct Pokemon mon;
+
+    for (int i = 0; i < DAYCARE_MON_COUNT; i++)
+    {
+        CreateMon(&mon, sParents[i], 30, 20, FALSE, 0, OT_ID_PLAYER_ID, 0);
+        memset(&gSaveBlock1Ptr->daycare.mons[i], 0, sizeof(gSaveBlock1Ptr->daycare.mons[i]));
+        gSaveBlock1Ptr->daycare.mons[i].mon = mon.box;
+    }
+    TriggerPendingDaycareEgg();
+}
+
+// Seafoam Islands' currents running again: neither boulder pushed down onto
+// B3F or B4F yet (the complete save has them in place, stopping the currents)
+void TestSeafoamCurrents(void)
+{
+    FlagClear(FLAG_STOPPED_SEAFOAM_B3F_CURRENT);
+    FlagClear(FLAG_STOPPED_SEAFOAM_B4F_CURRENT);
+    FlagSet(FLAG_HIDE_SEAFOAM_B3F_BOULDER_1);
+    FlagSet(FLAG_HIDE_SEAFOAM_B3F_BOULDER_2);
+    FlagSet(FLAG_HIDE_SEAFOAM_B4F_BOULDER_1);
+    FlagSet(FLAG_HIDE_SEAFOAM_B4F_BOULDER_2);
 }
 #endif
