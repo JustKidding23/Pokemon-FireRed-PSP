@@ -267,7 +267,7 @@ static bool32 IsSpeciesOnMap(const struct WildPokemonHeader * data, s32 species)
         return TRUE;
 // When searching the fishing encounters, this incorrectly uses the size of the land encounters.
 // As a result it's reading out of bounds of the fishing encounters tables.
-#ifdef BUGFIX
+#if defined(BUGFIX) || defined(UBFIX)
     if (IsSpeciesInEncounterTable(data->fishingMonsInfo, species, FISH_WILD_COUNT))
 #else
     if (IsSpeciesInEncounterTable(data->fishingMonsInfo, species, LAND_WILD_COUNT))
