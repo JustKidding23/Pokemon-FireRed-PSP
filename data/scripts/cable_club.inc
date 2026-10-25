@@ -199,6 +199,15 @@ Movement_PlayerApproachCounter:
 	step_end
 
 CableClub_EventScript_WelcomeToCableClub::
+.ifdef PORTABLE
+	@ No GBA Game Link cable on the PSP: the attendant says so straight away,
+	@ instead of saving and waiting for a partner (owner's wording, 2026-10-24)
+	msgbox CableClub_Text_WelcomeToCableClub
+	msgbox CableClub_Text_CableClubClosed
+	msgbox CableClub_Text_PleaseVisitAgain
+	release
+	end
+.endif
 	message CableClub_Text_WelcomeWhichCableClubService
 	waitmessage
 	delay 15
@@ -1287,6 +1296,14 @@ TwoIsland_JoyfulGameCorner_EventScript_ShowDodrioBerryPickingRecords::
 	waitstate
 	releaseall
 	end
+
+CableClub_Text_WelcomeToCableClub::
+	.string "Welcome to the POKéMON CABLE\n"
+	.string "CLUB.$"
+
+CableClub_Text_CableClubClosed::
+	.string "I'm sorry, the CABLE CLUB is closed\n"
+	.string "at the moment.$"
 
 CableClub_Text_WelcomeWhichCableClubService::
 	.string "Welcome to the POKéMON CABLE\n"
