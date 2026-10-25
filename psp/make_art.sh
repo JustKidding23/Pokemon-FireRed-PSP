@@ -6,27 +6,25 @@
 #   psp/PIC1.PNG (480x272): the box art's Charizard, whole, on its swirl, from
 #                           Game Rant's 1920x1080 key art (make_pic1.py;
 #                           without it or OpenCV, a crop of the box below the logo)
-#   psp/SND0.AT3:           30 s of the title screen's music (Charizard), from
-#                           the ROM, fading out over the last 5 s
+#   psp/SND0.AT3:           30 s of the title screen's music (Charizard), made by
+#                           the game's own sound engine (psp/songrender), fading
+#                           out over the last 5 s
 # They're made from the box art and the game, so don't share them; .gitignore
 # leaves them out. `make psp` puts them in the EBOOT if they're here.
 #
-# usage: psp/make_art.sh BOXART ROM [GBAREF] [ATRACDENC]
+# usage: psp/make_art.sh BOXART [ATRACDENC]   (after `make psp`, which makes the songs)
 #   KEYART (environment, optional): Game Rant's key art for the background,
 #     https://static0.gamerantimages.com/wordpress/wp-content/uploads/2026/03/pokemon-firered-version.jpg
 #   BOXART: the US cover, 512x512, from libretro-thumbnails:
 #     https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Game_Boy_Advance/master/Named_Boxarts/Pokemon%20-%20FireRed%20Version%20(USA).png
-#   ROM: Pokémon FireRed (USA), for the music
-#   GBAREF: ~/Projects/PSP-Ports/Tools/gbaref/gbaref (records the ROM's sound)
 #   ATRACDENC: https://github.com/dcherednik/atracdenc release 0.2.3. A PSP
 #              3001 played its files in the menu but not those of later versions.
-# Needs Python 3 with Pillow, ffmpeg, and for the background OpenCV; PYTHON
-# names a Python that has OpenCV if the default one doesn't.
+# Needs Python 3 with Pillow, ffmpeg, a compiler that builds 32-bit programs
+# for the music (gcc -m32), and for the background OpenCV; PYTHON names a
+# Python that has OpenCV if the default one doesn't.
 set -euo pipefail
 boxart=$(realpath "$1")
-rom=$(realpath "$2")
-gbaref=${3:-$HOME/Projects/PSP-Ports/Tools/gbaref/gbaref}
-atracdenc=${4:-$(command -v atracdenc || true)}
+atracdenc=${2:-$(command -v atracdenc || true)}
 cd "$(dirname "$0")/.."
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -118,16 +116,14 @@ if [ -n "${KEYART:-}" ]; then
         || echo "No OpenCV: PIC1.PNG is the plain crop of the box"
 fi
 
-# 30 seconds of the title music, from where it starts (24.4 s into the intro
-# with no save, after a second of silence), the last 5 fading out (the
+# 30 seconds of the title music from its start, the last 5 fading out (the
 # owner's choice). That's about 496 KB as ATRAC3, just inside the PSP menu's
-# limit of about 500 KB.
-if [ -n "$atracdenc" ]; then
-    printf '3400 -\n' > "$work/input.txt"
-    GBAREF_AUDIO="$work/rec.wav" "$gbaref" "$rom" "$work/input.txt" "$work" > /dev/null
-    # -ss before -i, so the fades' times count from the clip's start
-    ffmpeg -hide_banner -loglevel error -y -ss 24.4 -t 30 -i "$work/rec.wav" \
-        -af "afade=t=in:d=0.05,afade=t=out:st=25:d=5" -ac 2 -ar 44100 -c:a pcm_s16le "$work/title44.wav"
+# limit of about 500 KB. The sound engine mixes louder than the GBA recording
+# the owner chose it from, so it's turned down to the same level.
+if [ -n "$atracdenc" ] && make -f psp/songrender/Makefile > "$work/songrender.log" 2>&1; then
+    build/songrender/songrender 278 31 "$work/rec.wav"   # MUS_TITLE
+    ffmpeg -hide_banner -loglevel error -y -t 30 -i "$work/rec.wav" \
+        -af "volume=0.77,afade=t=in:d=0.05,afade=t=out:st=25:d=5" -ac 2 -ar 44100 -c:a pcm_s16le "$work/title44.wav"
     # atracdenc picks the RIFF container from the lowercase .at3. It writes the
     # RIFF size wrong; the files that played had it set to the file's size
     # less 8, as RIFF has it.
@@ -135,7 +131,10 @@ if [ -n "$atracdenc" ]; then
     python3 -c 'import os, struct, sys
 f = open(sys.argv[1], "r+b"); f.seek(4); f.write(struct.pack("<I", os.path.getsize(sys.argv[1]) - 8))' "$work/snd0.at3"
     cp "$work/snd0.at3" psp/SND0.AT3
-else
+elif [ -z "$atracdenc" ]; then
     echo "atracdenc not found, so there's no SND0.AT3"
+else
+    echo "The music couldn't be made (32-bit compiler missing?), so there's no SND0.AT3:"
+    tail -3 "$work/songrender.log"
 fi
 ls -l psp/ICON0.PNG psp/PIC1.PNG psp/SND0.AT3 2>/dev/null || true

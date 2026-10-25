@@ -74,3 +74,7 @@ build-*/
 psp/ICON0.PNG
 psp/PIC1.PNG
 psp/SND0.AT3
+
+# make_psp.sh: the toolchain and downloads it fetches, and what it makes
+/.psp-build/
+/out/
