@@ -1,4 +1,5 @@
 #include "global.h"
+#include "bg.h"
 #include "gflib.h"
 #include "battle.h"
 #include "battle_message.h"
@@ -241,6 +242,12 @@ void EvolutionScene(struct Pokemon* mon, u16 postEvoSpecies, bool8 canStopEvo, u
     gBattleTerrain = BATTLE_TERRAIN_PLAIN;
 
     InitBattleBgsVideo();
+#ifdef PORTABLE
+    // The battle background is shown from its second half (BG3 at x 256):
+    // its own art past the edges is the first half's, the battle ground's,
+    // so the margins carry on its edge instead
+    gWideViewNarrowBgs |= 1 << 3;
+#endif
     LoadBattleTextboxAndBackground();
     ResetSpriteData();
     ScanlineEffect_Stop();
@@ -348,6 +355,12 @@ static void CB2_EvolutionSceneLoadGraphics(void)
     gBattleTerrain = BATTLE_TERRAIN_PLAIN;
 
     InitBattleBgsVideo();
+#ifdef PORTABLE
+    // The battle background is shown from its second half (BG3 at x 256):
+    // its own art past the edges is the first half's, the battle ground's,
+    // so the margins carry on its edge instead
+    gWideViewNarrowBgs |= 1 << 3;
+#endif
     LoadBattleTextboxAndBackground();
     ResetSpriteData();
     FreeAllSpritePalettes();

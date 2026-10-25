@@ -1238,6 +1238,10 @@ static bool sEnterHallOfFame;  // and HOF
 static bool sHallOfFamePC;     // and HOFPC
 static bool sWarpPending;      // and WARP:g:n:x:y
 static bool sWildBattle;       // and WILDBATTLE
+static bool sEvolve, sHatch, sCoins;  // and EVOLVE, HATCH, COINS (test_field.c)
+void TestEvolve(void);
+void TestHatchEgg(void);
+void TestGiveCoins(void);
 void TestStartWildBattle(void);
 static int sWarp[4];
 void SetWarpDestination(s8 mapGroup, s8 mapNum, s8 warpId, s8 x, s8 y);
@@ -1302,6 +1306,22 @@ static u32 TestButtons(bool *done, bool *shot)
                 extern unsigned int gTestRenderABLines, gTestRenderABPixels, gTestRenderABFirst;
 
                 sLineShot = true;
+                // Sprites the wider view shows that the GBA's screen doesn't:
+                // past its left or right edge, in the margins
+                for (int i = 0; i < 128; i++)
+                {
+                    const struct OamData *o = &((const struct OamData *)OAM)[i];
+                    int ox = o->x >= 384 ? (int)o->x - 512 : (int)o->x;
+
+                    if (o->affineMode == 2 || (o->y >= DISPLAY_HEIGHT && o->y < 256 - 64))  // hidden
+                        continue;
+                    if (ox < 0 || ox + 8 > DISPLAY_WIDTH)
+                        TestLog("margin sprite: oam %d x %d y %d shape %d size %d tile %d pal %d prio %d\n", i, ox, o->y,
+                                o->shape, o->size, o->tileNum, o->paletteNum, o->priority);
+                }
+                TestLog("shot regs: dispcnt %04x bg %04x %04x %04x %04x hofs %d %d %d %d bldcnt %04x win %04x/%04x\n",
+                        REG_DISPCNT, REG_BG0CNT, REG_BG1CNT, REG_BG2CNT, REG_BG3CNT, REG_BG0HOFS, REG_BG1HOFS, REG_BG2HOFS,
+                        REG_BG3HOFS, REG_BLDCNT, REG_WININ, REG_WINOUT);
                 // Since the last shot: pixels the old way of blending draws differently
                 if (gTestRenderAB)
                 {
@@ -1324,6 +1344,12 @@ static u32 TestButtons(bool *done, bool *shot)
                 sHallOfFamePC = true;
             if (strcmp(name, "WILDBATTLE") == 0)
                 sWildBattle = true;
+            if (strcmp(name, "EVOLVE") == 0)
+                sEvolve = true;
+            if (strcmp(name, "HATCH") == 0)
+                sHatch = true;
+            if (strcmp(name, "COINS") == 0)
+                sCoins = true;
             {
                 int first, last;
 
@@ -1555,6 +1581,21 @@ int main(int argc, char **argv)
         {
             TestStartWildBattle();
             sWildBattle = false;
+        }
+        if (sEvolve && IsOverworldRunning())
+        {
+            TestEvolve();
+            sEvolve = false;
+        }
+        if (sHatch && IsOverworldRunning())
+        {
+            TestHatchEgg();
+            sHatch = false;
+        }
+        if (sCoins && IsOverworldRunning())
+        {
+            TestGiveCoins();
+            sCoins = false;
         }
         if (sWarpPending && IsOverworldRunning())
         {
