@@ -78,3 +78,7 @@ psp/SND0.AT3
 # make_psp.sh: the toolchain and downloads it fetches, and what it makes
 /.psp-build/
 /out/
+
+# The Windows builder app's build output
+/windows/FireRedPSPBuilder/bin/
+/windows/FireRedPSPBuilder/obj/

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A small Windows program that builds Pokémon FireRed PSP from the user's
+       ROM, by running make_psp.sh in Windows' Linux part (WSL). It targets
+       .NET Framework 4.8, which Windows 10 and 11 come with, so it needs
+       nothing installed. Build it (on any system) with:
+         dotnet build -c Release windows/FireRedPSPBuilder -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>10</LangVersion>
+    <AssemblyName>FireRed PSP Builder</AssemblyName>
+    <RootNamespace>FireRedPSPBuilder</RootNamespace>
+    <!-- 64-bit on 64-bit Windows: a 32-bit program doesn't see System32\wsl.exe -->
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <Nullable>disable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>1.0.0</Version>
+    <Product>Pokémon FireRed PSP Builder</Product>
+    <Description>Builds Pokémon FireRed PSP from your own ROM</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>
