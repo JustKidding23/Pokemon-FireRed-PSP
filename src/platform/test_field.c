@@ -1,7 +1,7 @@
 // Emulator and PSPLink tests only: shortcuts to screens that take a lot of
 // play to reach, for checking them in the wider view and hunting crashes. The
-// test input's EVOLVE, HATCH, COINS, DAYCAREEGG and CURRENTS, each done once
-// the overworld is up.
+// test input's EVOLVE, HATCH, COINS, DAYCAREEGG, CURRENTS, TRADE and
+// MYSTERYGIFT, each done once the overworld is up.
 #ifdef PSP_TEST
 #include "global.h"
 #include "coins.h"
@@ -13,6 +13,7 @@
 #include "overworld.h"
 #include "pokemon.h"
 #include "script.h"
+#include "trade_scene.h"
 #include "constants/flags.h"
 #include "constants/items.h"
 #include "constants/species.h"
@@ -82,5 +83,22 @@ void TestSeafoamCurrents(void)
     FlagSet(FLAG_HIDE_SEAFOAM_B3F_BOULDER_2);
     FlagSet(FLAG_HIDE_SEAFOAM_B4F_BOULDER_1);
     FlagSet(FLAG_HIDE_SEAFOAM_B4F_BOULDER_2);
+}
+
+// The first in-game trade, for the party's first Pokémon: the trade scene the
+// link trades share
+void TestInGameTrade(void)
+{
+    gSpecialVar_0x8004 = 0;
+    gSpecialVar_0x8005 = 0;
+    CreateInGameTradePokemon();
+    DoInGameTradeScene();
+}
+
+// MYSTERY GIFT on the title's menu, as after the questionnaire's LINK TOGETHER
+// WITH ALL (the save has to be saved and the game reset to see it)
+void TestEnableMysteryGift(void)
+{
+    EnableMysteryGift();
 }
 #endif

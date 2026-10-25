@@ -14,6 +14,9 @@
 
 #include "save.h"
 #include "task.h"
+#include "event_data.h"
+#include "fieldmap.h"
+#include "field_player_avatar.h"
 #include "characters.h"
 #include "constants/flags.h"
 #include "constants/rgb.h"
@@ -1238,7 +1241,9 @@ static bool sEnterHallOfFame;  // and HOF
 static bool sHallOfFamePC;     // and HOFPC
 static bool sWarpPending;      // and WARP:g:n:x:y
 static bool sWildBattle;       // and WILDBATTLE
-static bool sEvolve, sHatch, sCoins, sDaycareEgg, sCurrents;  // and EVOLVE, HATCH, COINS, DAYCAREEGG, CURRENTS (test_field.c)
+static bool sEvolve, sHatch, sCoins, sDaycareEgg, sCurrents, sTrade, sMysteryGift;  // and EVOLVE, HATCH, COINS, DAYCAREEGG, CURRENTS, TRADE, MYSTERYGIFT (test_field.c)
+void TestInGameTrade(void);
+void TestEnableMysteryGift(void);
 void TestSeafoamCurrents(void);
 void TestDaycareEgg(void);
 void TestEvolve(void);
@@ -1321,6 +1326,15 @@ static u32 TestButtons(bool *done, bool *shot)
                         TestLog("margin sprite: oam %d x %d y %d shape %d size %d tile %d pal %d prio %d\n", i, ox, o->y,
                                 o->shape, o->size, o->tileNum, o->paletteNum, o->priority);
                 }
+                // Where the player is (map coordinates, as in map.json)
+                if (gSaveBlock1Ptr != NULL && IsOverworldRunning())
+                {
+                    s16 px, py;
+
+                    PlayerGetDestCoords(&px, &py);
+                    TestLog("shot where: map %d:%d player %d %d\n", gSaveBlock1Ptr->location.mapGroup,
+                            gSaveBlock1Ptr->location.mapNum, px - MAP_OFFSET, py - MAP_OFFSET);
+                }
                 TestLog("shot regs: dispcnt %04x bg %04x %04x %04x %04x hofs %d %d %d %d bldcnt %04x win %04x/%04x\n",
                         REG_DISPCNT, REG_BG0CNT, REG_BG1CNT, REG_BG2CNT, REG_BG3CNT, REG_BG0HOFS, REG_BG1HOFS, REG_BG2HOFS,
                         REG_BG3HOFS, REG_BLDCNT, REG_WININ, REG_WINOUT);
@@ -1356,6 +1370,20 @@ static u32 TestButtons(bool *done, bool *shot)
                 sDaycareEgg = true;
             if (strcmp(name, "CURRENTS") == 0)
                 sCurrents = true;
+            if (strcmp(name, "TRADE") == 0)
+                sTrade = true;
+            if (strcmp(name, "MYSTERYGIFT") == 0)
+                sMysteryGift = true;
+            // SETFLAG:hex and SETVAR:hex:value, straight away (story flags and
+            // variables, like a cutscene seen)
+            {
+                unsigned int id, value;
+
+                if (sscanf(name, "SETFLAG:%x", &id) == 1)
+                    FlagSet(id);
+                if (sscanf(name, "SETVAR:%x:%u", &id, &value) == 2)
+                    VarSet(id, value);
+            }
             {
                 int first, last;
 
@@ -1612,6 +1640,16 @@ int main(int argc, char **argv)
         {
             TestSeafoamCurrents();
             sCurrents = false;
+        }
+        if (sTrade && IsOverworldRunning())
+        {
+            TestInGameTrade();
+            sTrade = false;
+        }
+        if (sMysteryGift && IsOverworldRunning())
+        {
+            TestEnableMysteryGift();
+            sMysteryGift = false;
         }
         if (sWarpPending && IsOverworldRunning())
         {
