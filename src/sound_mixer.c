@@ -490,15 +490,21 @@ s8 gBDPCMBlockBuffer[64];
 extern const s8 gDeltaEncodingTable[];
 
 static s8 sub_82DF758(struct MixerSource *chan, u32 current) {
-    u32 blockOffset = current >> 6; // current / 64
+    u32 blockOffset;
     u8 * blockPtr;
     int i;
-    //In route 102 lotad wild battle when it growls crashes the game because it decompresses out of bounds data
-    //I gave it its own printf error so it wouldn't get forgotten as this needs a more proper fix
-    if (chan->wav->size < blockOffset * 0x21) {
-            DBGPRINTF("Out of bounds decompress in %s wav->size = %u blockPtr = %u\n", __func__, chan->wav->size, blockOffset * 0x21);
-            return gBDPCMBlockBuffer[current & 63];
+
+    // Interpolating reads one sample past either end of a compressed cry:
+    // sample -1 when it plays backwards, sample `size` forwards. The GBA
+    // decodes whatever lies there (for -1, a wrapped-around address), which a
+    // PSP can't read, so the nearest sample of the cry is used instead.
+    if (current >= chan->wav->size)
+    {
+        if (chan->wav->size == 0)
+            return 0;
+        current = (s32)current < 0 ? 0 : chan->wav->size - 1;
     }
+    blockOffset = current >> 6; // current / 64
     
     if(chan->blockCount != blockOffset) { // decode block if not decoded
         s32 s;

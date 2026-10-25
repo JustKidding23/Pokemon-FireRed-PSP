@@ -275,10 +275,133 @@ static void RefreshSlotInfo(int slot)
     ReadSaveInfo(buffer, info);
 }
 
+// Saves from builds before 2026-10-25 laid two saved structs out smaller than
+// agbcc does: the quest log's object events in 18 bytes instead of 20, and the
+// Fame Checker's entries in 2 instead of 4. So everything saved after the
+// quest log (the rival's name, Mystery Gift...) sat 128 bytes early, and after
+// the Fame Checker 160. Those saves are moved to the GBA's layout when read.
+#define OLD_QL_OBJECT_SIZE 18
+#define QL_SHRINK (sizeof(struct QuestLogObjectEvent) - OLD_QL_OBJECT_SIZE)
+#define OLD_QL_SCENE_SIZE (sizeof(struct QuestLogScene) - OBJECT_EVENTS_COUNT * QL_SHRINK)
+#define QL_SHIFT (QUEST_LOG_SCENE_COUNT * OBJECT_EVENTS_COUNT * QL_SHRINK)
+#define OLD_FAME_CHECKER_SIZE 2
+#define FC_SHIFT (NUM_FAMECHECKER_PERSONS * (sizeof(struct FameCheckerSaveData) - OLD_FAME_CHECKER_SIZE))
+#define OLD_SAVEBLOCK1_SIZE (sizeof(struct SaveBlock1) - QL_SHIFT - FC_SHIFT)
+
+static u16 SectorChecksum(const u8 *data, u32 size)
+{
+    u32 sum = 0;
+
+    for (u32 i = 0; i + 4 <= size; i += 4)
+        sum += data[i] | (data[i + 1] << 8) | (data[i + 2] << 16) | ((u32)data[i + 3] << 24);
+    return ((sum >> 16) + sum) & 0xFFFF;
+}
+
+// A player or rival name: letters, digits or punctuation, then EOS
+static bool LooksLikeName(const u8 *name)
+{
+    int i;
+
+    for (i = 0; i < PLAYER_NAME_LENGTH + 1 && name[i] != EOS; i++)
+    {
+        if (name[i] < CHAR_0 && name[i] != CHAR_SPACE)
+            return false;
+    }
+    return i > 0 && i <= PLAYER_NAME_LENGTH;
+}
+
+// How well SaveBlock1's tail fits being at `shift` bytes before the GBA's
+// place: the Pokédex's second copy of the seen flags matching the first, and
+// the rival's name being a name
+static int TailFits(const u8 *block, u32 shift)
+{
+    const u8 *seen1 = block + offsetof(struct SaveBlock1, seen1);
+    const u8 *seen2 = block + offsetof(struct SaveBlock1, seen2) - shift;
+
+    return (memcmp(seen1, seen2, DEX_FLAGS_NO) == 0) + LooksLikeName(block + offsetof(struct SaveBlock1, rivalName) - shift);
+}
+
+// SaveBlock1 from one half of the flash, as the old layout wrote it: false if
+// a sector is missing or its checksum doesn't cover the old size
+static bool ReadOldSaveBlock1(u8 *flash, int half, struct SaveSector **sectors, u8 *block)
+{
+    for (int i = 0; i < NUM_SECTORS_PER_SLOT; i++)
+    {
+        struct SaveSector *sector = (void *)(flash + (half * NUM_SECTORS_PER_SLOT + i) * SECTOR_SIZE);
+
+        if (sector->signature == SECTOR_SIGNATURE && sector->id >= SECTOR_ID_SAVEBLOCK1_START
+         && sector->id <= SECTOR_ID_SAVEBLOCK1_END)
+            sectors[sector->id] = sector;
+    }
+    for (u32 id = SECTOR_ID_SAVEBLOCK1_START, pos = 0; id <= SECTOR_ID_SAVEBLOCK1_END; id++, pos += SECTOR_DATA_SIZE)
+    {
+        u32 size = OLD_SAVEBLOCK1_SIZE - pos < SECTOR_DATA_SIZE ? OLD_SAVEBLOCK1_SIZE - pos : SECTOR_DATA_SIZE;
+
+        if (sectors[id] == NULL || SectorChecksum(sectors[id]->data, size) != sectors[id]->checksum)
+            return false;
+        memcpy(block + pos, sectors[id]->data, size);
+    }
+    return true;
+}
+
+static bool MigrateQuestLogLayout(u8 *flash)
+{
+    static u8 oldBlock[sizeof(struct SaveBlock1)], newBlock[sizeof(struct SaveBlock1)];
+    bool migrated = false;
+
+    for (int half = 0; half < 2; half++)
+    {
+        struct SaveSector *sectors[SECTOR_ID_SAVEBLOCK1_END + 1] = {NULL};
+
+        memset(oldBlock, 0, sizeof(oldBlock));
+        if (!ReadOldSaveBlock1(flash, half, sectors, oldBlock) || TailFits(oldBlock, QL_SHIFT) <= TailFits(oldBlock, 0))
+            continue;
+
+        // The quest log's scenes, each object event padded to 20 bytes, then
+        // everything after them moved along
+        memset(newBlock, 0, sizeof(newBlock));
+        memcpy(newBlock, oldBlock, offsetof(struct SaveBlock1, questLog));
+        for (int scene = 0; scene < QUEST_LOG_SCENE_COUNT; scene++)
+        {
+            const u8 *from = oldBlock + offsetof(struct SaveBlock1, questLog) + scene * OLD_QL_SCENE_SIZE;
+            u8 *to = newBlock + offsetof(struct SaveBlock1, questLog) + scene * sizeof(struct QuestLogScene);
+            u32 rest = offsetof(struct QuestLogScene, objectEvents) + OBJECT_EVENTS_COUNT * OLD_QL_OBJECT_SIZE;
+
+            memcpy(to, from, offsetof(struct QuestLogScene, objectEvents));
+            for (int i = 0; i < OBJECT_EVENTS_COUNT; i++)
+                memcpy(to + offsetof(struct QuestLogScene, objectEvents) + i * sizeof(struct QuestLogObjectEvent),
+                       from + offsetof(struct QuestLogScene, objectEvents) + i * OLD_QL_OBJECT_SIZE, OLD_QL_OBJECT_SIZE);
+            memcpy(to + offsetof(struct QuestLogScene, flags), from + rest, OLD_QL_SCENE_SIZE - rest);
+        }
+        memcpy(newBlock + offsetof(struct SaveBlock1, easyChatProfile),
+               oldBlock + offsetof(struct SaveBlock1, easyChatProfile) - QL_SHIFT,
+               offsetof(struct SaveBlock1, fameChecker) - offsetof(struct SaveBlock1, easyChatProfile));
+        // The Fame Checker's entries, each padded to 4 bytes, then the rest
+        for (int i = 0; i < NUM_FAMECHECKER_PERSONS; i++)
+            memcpy(newBlock + offsetof(struct SaveBlock1, fameChecker) + i * sizeof(struct FameCheckerSaveData),
+                   oldBlock + offsetof(struct SaveBlock1, fameChecker) - QL_SHIFT + i * OLD_FAME_CHECKER_SIZE,
+                   OLD_FAME_CHECKER_SIZE);
+        memcpy(newBlock + offsetof(struct SaveBlock1, fameChecker) + sizeof(gSaveBlock1Ptr->fameChecker),
+               oldBlock + offsetof(struct SaveBlock1, fameChecker) - QL_SHIFT + NUM_FAMECHECKER_PERSONS * OLD_FAME_CHECKER_SIZE,
+               sizeof(struct SaveBlock1) - (offsetof(struct SaveBlock1, fameChecker) + sizeof(gSaveBlock1Ptr->fameChecker)));
+
+        for (u32 id = SECTOR_ID_SAVEBLOCK1_START, pos = 0; id <= SECTOR_ID_SAVEBLOCK1_END; id++, pos += SECTOR_DATA_SIZE)
+        {
+            u32 size = sizeof(struct SaveBlock1) - pos < SECTOR_DATA_SIZE ? sizeof(struct SaveBlock1) - pos : SECTOR_DATA_SIZE;
+
+            memset(sectors[id]->data, 0, SECTOR_DATA_SIZE);
+            memcpy(sectors[id]->data, newBlock + pos, size);
+            sectors[id]->checksum = SectorChecksum(sectors[id]->data, size);
+        }
+        migrated = true;
+    }
+    return migrated;
+}
+
 // A missing or short save reads as erased flash, like a new cartridge
 static void ReadSaveFile(int slot)
 {
-    char path[300];
+    char path[300], keepPath[340];
     long size;
 
     SlotPath(slot, path, sizeof(path));
@@ -286,6 +409,22 @@ static void ReadSaveFile(int slot)
     if (size < 0)
         size = 0;
     memset(FLASH_BASE + size, 0xFF, SAVE_SIZE - size);
+    if (size > 0 && MigrateQuestLogLayout(FLASH_BASE))
+    {
+        // The file as it was is kept, once, and the moved one saved over it
+        u8 probe;
+
+        snprintf(keepPath, sizeof(keepPath), "%s.before-questlog-fix", path);
+        if (PspHw_ReadFile(keepPath, &probe, 1) < 0)
+        {
+            static u8 original[SAVE_SIZE];
+            long originalSize = PspHw_ReadFile(path, original, sizeof(original));
+
+            if (originalSize > 0)
+                PspHw_WriteFile(keepPath, original, originalSize);
+        }
+        PspHw_WriteFileSafely(path, FLASH_BASE, SAVE_SIZE);
+    }
 }
 
 void Platform_StoreSaveFile(void)

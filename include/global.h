@@ -664,7 +664,7 @@ struct QuestLogObjectEvent
     /*0x0f*/ u8 previousMetatileBehavior;
     /*0x10*/ u8 directionSequenceIndex;
     /*0x11*/ u8 animId;
-};
+} ALIGNED(4); // 0x14 bytes, as agbcc pads it (the quest log is saved)
 
 // This represents all the data needed to display a single scene for the "Quest Log" when the player resumes playing.
 //
@@ -691,7 +691,7 @@ struct FameCheckerSaveData
     /*3a54*/ u16 pickState:2;
     u16 flavorTextFlags:12;
     u16 unk_0_E:2;
-};
+} ALIGNED(4); // 4 bytes, as agbcc pads it (it's saved)
 
 struct WonderNewsMetadata
 {
