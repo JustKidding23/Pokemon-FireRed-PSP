@@ -107,7 +107,7 @@ The game then appears in the PSP's Game menu as **Pokemon FireRed PSP**.
 
 ### On Windows
 
-**FireRed PSP Builder.exe** (from the [Releases](https://github.com/JustKidding23/Pokemon-FireRed-PSP/releases)
+**FireRed-PSP-Builder.exe** (from the [Releases](https://github.com/JustKidding23/Pokemon-FireRed-PSP/releases)
 page) does all of this in a small window: choose your ROM, and it builds the game and
 copies it to your PSP if it's plugged in. It uses Windows' own Linux part (WSL), which it
 offers to install the first time; that needs permission and a restart. It was tested on a
