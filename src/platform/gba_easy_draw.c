@@ -138,14 +138,57 @@ static inline uint32_t FlipTileRow4(uint32_t row)
     return (row << 16) | (row >> 16);
 }
 
-// Whether RenderBGScanlineDirect can draw a background: a 4bpp text one without
+// Whether RenderBGScanlineDirect can draw a background: a text one without
 // horizontal mosaic
 static bool CanDrawBGDirectly(uint16_t control)
 {
-    return !(control & BGCNT_256COLOR) && (!(control & BGCNT_MOSAIC) || mosaicBGEffectX == 0);
+    return !(control & BGCNT_MOSAIC) || mosaicBGEffectX == 0;
 }
 
-// Draws a background's opaque pixels straight onto the line, where winMask
+// A 256-color background's run of pixels (the title's logo), from row, a tile
+// row's 8 palette entries: see RenderBGScanlineDirect
+static inline void DrawRow8bpp(const uint8_t *row, bool flipX, unsigned int tileX, unsigned int x, unsigned int end,
+                               uint16_t *line, const uint16_t *pal, int bgNum, const uint16_t *winMask, uint8_t *below)
+{
+    uint16_t bgBit = 1 << bgNum;
+
+    if (!flipX && winMask == NULL && end - x == 8)
+    {
+        uint32_t lo = ((const uint32_t *)row)[0], hi = ((const uint32_t *)row)[1];
+
+        // A whole row with no clear pixel
+        if (((lo - 0x01010101) & ~lo & 0x80808080) == 0 && ((hi - 0x01010101) & ~hi & 0x80808080) == 0)
+        {
+            uint16_t *out = &line[x];
+
+            out[0] = pal[lo & 0xFF] | 0x8000;
+            out[1] = pal[(lo >> 8) & 0xFF] | 0x8000;
+            out[2] = pal[(lo >> 16) & 0xFF] | 0x8000;
+            out[3] = pal[lo >> 24] | 0x8000;
+            out[4] = pal[hi & 0xFF] | 0x8000;
+            out[5] = pal[(hi >> 8) & 0xFF] | 0x8000;
+            out[6] = pal[(hi >> 16) & 0xFF] | 0x8000;
+            out[7] = pal[hi >> 24] | 0x8000;
+            if (below != NULL)
+                memset(&below[x], bgNum, 8);
+            return;
+        }
+    }
+    for (; x < end; x++, tileX++)
+    {
+        unsigned int pixel = row[flipX ? 7 - tileX : tileX];
+
+        // Color 0 is clear in 256-color tiles too
+        if (pixel != 0 && (winMask == NULL || (winMask[x] & bgBit)))
+        {
+            line[x] = pal[pixel] | 0x8000;
+            if (below != NULL)
+                below[x] = bgNum;
+        }
+    }
+}
+
+// Draws a text background's opaque pixels straight onto the line, where winMask
 // (if not NULL) has the background's bit. That's what RenderBGScanline and
 // copying its layer onto the line do, for a background that isn't blended.
 // below (if not NULL) gets the background's number where it drew, for
@@ -188,12 +231,24 @@ static void RenderBGScanlineDirect(int bgNum, uint16_t control, uint16_t hoffs, 
 
         uint16_t entry = bgmap[xx / 8];
         unsigned int tileY = (entry & (1 << 11)) ? 7 - (yy % 8) : yy % 8;
-        uint32_t pixels = *(uint32_t *)(bgtiles + (uint16_t)((entry & 0x3FF) * 32) + tileY * 4);
         unsigned int tileX = xx % 8;
         unsigned int run = 8 - tileX;
 
         if (run > lineEnd - x)
             run = lineEnd - x;
+        if (control & BGCNT_256COLOR)
+        {
+            const uint8_t *row = bgtiles + (uint16_t)((entry & 0x3FF) * 64) + tileY * 8;
+
+            // A clear row draws nothing
+            if ((((const uint32_t *)row)[0] | ((const uint32_t *)row)[1]) != 0)
+                DrawRow8bpp(row, entry & (1 << 10), tileX, x, x + run, line, pal, bgNum, winMask, below);
+            x += run;
+            continue;
+        }
+
+        uint32_t pixels = *(uint32_t *)(bgtiles + (uint16_t)((entry & 0x3FF) * 32) + tileY * 4);
+
         if (pixels == 0)
         {
             x += run;
@@ -1051,9 +1106,50 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
             if (lastX >= firstX)
                 gSpriteStats[isObjWin ? 3 : isSemiTransparent ? 2 : identity ? 0 : 1] += lastX - firstX + 1;
 #endif
+            // A sprite window's shape, like Encore's spotlight: where it isn't
+            // clear, outside the other windows, the line takes the sprite
+            // window's settings. The texture's coordinates step along as for
+            // the turned and scaled sprites below.
+            if (isObjWin && oam->mosaic != 1)
+            {
+                const uint8_t *tiles = (const uint8_t *)objtiles;
+                unsigned int rowTiles = (REG_DISPCNT & 0x40) ? width / 8 : 16;
+                unsigned int tileNum = oam->tileNum;
+                uint16_t inside = (REG_WINOUT >> 8) & 0x3F;
+                int32_t pa = matrix[0][0], pc = matrix[1][0];
+                int32_t accX = pa * firstX + matrix[0][1] * local_y;
+                int32_t accY = pc * firstX + matrix[1][1] * local_y;
+
+                for (int local_x = firstX; local_x <= lastX; local_x++, accX += pa, accY += pc)
+                {
+                    unsigned int texX = (unsigned int)((accX >> 8) + (int)(width / 2));
+                    unsigned int texY = (unsigned int)((accY >> 8) + (int)(height / 2));
+                    unsigned int pixel;
+                    int bx = x + local_x + RENDER_MARGIN;
+
+                    if (texX >= width || texY >= height || !(scanline->winMask[bx] & WINMASK_WINOUT))
+                        continue;
+                    if (flipX)
+                        texX = width - 1 - texX;
+                    if (flipY)
+                        texY = height - 1 - texY;
+                    if (!is8BPP)
+                        pixel = (tiles[((texY / 8) * rowTiles + texX / 8 + tileNum) * 32 + (texY % 8) * 4 + (texX % 8) / 2]
+                                 >> ((texX & 1) * 4)) & 0xF;
+                    else
+                        pixel = tiles[(((texY / 8) * rowTiles + texX / 8) * 2 + tileNum) * 32 + (texY % 8) * 8 + texX % 8];
+                    if (pixel != 0)
+                        scanline->winMask[bx] = inside;
+                }
+                continue;
+            }
             // A plain sprite that nothing blends (most of them): its row of
-            // texels is copied straight, without the checks below for each pixel
-            if (identity && !isObjWin && !isSemiTransparent && !windowsEnabled
+            // texels is copied straight, without the checks below for each pixel.
+            // The windows don't matter here: whether one shows the sprite is
+            // looked at when the line is put together. (With windows on the
+            // line, sLineEffects is true, so a sprite that's a first target
+            // for an effect, which the windows may allow, goes the slow way.)
+            if (identity && !isObjWin && !isSemiTransparent
              && !((REG_BLDCNT & BLDCNT_TGT1_OBJ) && blendMode != 0 && sLineEffects))
             {
                 int texY = local_y + (int)(height / 2);
@@ -1168,7 +1264,7 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
             // coming out of its ball: the texture's coordinates step along by
             // the matrix's first column instead of being worked out for each
             // pixel, with the same results
-            if (!identity && oam->mosaic != 1 && !isObjWin && !isSemiTransparent && !windowsEnabled
+            if (!identity && oam->mosaic != 1 && !isObjWin && !isSemiTransparent
              && !((REG_BLDCNT & BLDCNT_TGT1_OBJ) && blendMode != 0 && sLineEffects))
             {
                 const uint8_t *tiles = (const uint8_t *)objtiles;

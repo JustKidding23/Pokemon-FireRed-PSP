@@ -143,6 +143,16 @@ static void Task_TestBattleAnims(u8 taskId)
             }
             TestLog("anim %d end %d frames, slowest draw %u us, %u over 13 ms, %u skipped\n", tMove, tFrame,
                     gTestDrawMax, gTestDrawSlow, gTestBehind() - sBehindAtStart);
+            {
+                // With RENDERAB: pixels the old way draws differently, during the move
+                extern _Bool gTestRenderAB;
+                extern unsigned int gTestRenderABLines, gTestRenderABPixels, gTestRenderABFirst;
+
+                if (gTestRenderAB)
+                    TestLog("renderab: %u lines, %u pixels differ (first at line %u x %u)\n", gTestRenderABLines,
+                            gTestRenderABPixels, gTestRenderABFirst >> 16, gTestRenderABFirst & 0xFFFF);
+                gTestRenderABLines = gTestRenderABPixels = gTestRenderABFirst = 0;
+            }
             // Where the two Pokémon were left: a move that leaves one moved
             // shows it in the wider view's margins
             for (u32 battler = 0; battler < 2; battler++)
