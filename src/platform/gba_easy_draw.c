@@ -193,10 +193,41 @@ static inline void DrawRow8bpp(const uint8_t *row, bool flipX, unsigned int tile
 // copying its layer onto the line do, for a background that isn't blended.
 // below (if not NULL) gets the background's number where it drew, for
 // blending another layer over it.
+// alphaBrightnessIncrease and Decrease for one channel at a time, worked out
+// once for each brightening or darkening and its strength, with the same
+// results, so the sprite fast paths can fade their pixels by looking them up
+static uint8_t sFadeTable[32];
+static unsigned int sFadeKey = ~0u;
+
+static const uint8_t *FadeTable(unsigned int blendMode, unsigned int evy)
+{
+    unsigned int key = (blendMode << 8) | evy;
+
+    if (key != sFadeKey)
+    {
+        for (unsigned int c = 0; c < 32; c++)
+        {
+            unsigned int v = blendMode == 2 ? c + (31 - c) * evy / 16 : c - c * evy / 16;
+
+            sFadeTable[c] = v > 31 ? 31 : v;
+        }
+        sFadeKey = key;
+    }
+    return sFadeTable;
+}
+
+static inline uint16_t FadeColor(const uint8_t *table, uint16_t c)
+{
+    return table[c & 0x1F] | (table[(c >> 5) & 0x1F] << 5) | (table[(c >> 10) & 0x1F] << 10);
+}
+
 static unsigned int TextBgColorIndexAt(uint16_t control, uint16_t hoffs, uint16_t voffs, int lineNum, int gx);
 
+// A brightened or darkened layer (fade, from FadeTable) is faded as it's
+// drawn: everywhere, or with windows on the line, where fadeMask allows
+// effects. Only 16-color layers fade here.
 static void RenderBGScanlineDirect(int bgNum, uint16_t control, uint16_t hoffs, uint16_t voffs, int lineNum, uint16_t *line, const uint16_t *winMask,
-                                   uint8_t *below)
+                                   uint8_t *below, const uint8_t *fade, const uint16_t *fadeMask)
 {
     unsigned int charBaseBlock = (control >> 2) & 3;
     unsigned int screenBaseBlock = (control >> 8) & 0x1F;
@@ -207,6 +238,10 @@ static void RenderBGScanlineDirect(int bgNum, uint16_t control, uint16_t hoffs, 
     uint16_t *bgmapRow = (uint16_t *)BG_SCREEN_ADDR(screenBaseBlock);
     uint16_t bgBit = 1 << bgNum;
     unsigned int yy;
+    // Faded, the 16-color palettes the line uses, each worked out when first
+    // needed (fadedPals says which)
+    static uint16_t sFadedPal[256];
+    unsigned int fadedPals = 0;
 
     if (control & BGCNT_MOSAIC)
         lineNum = applyBGVerticalMosaicEffect(lineNum);
@@ -232,7 +267,11 @@ static void RenderBGScanlineDirect(int bgNum, uint16_t control, uint16_t hoffs, 
         {
             if (color != 0 && (winMask == NULL || (winMask[x] & bgBit)))
             {
-                line[x] = pal[color] | 0x8000;
+                uint16_t c = pal[color];
+
+                if (fade != NULL && (fadeMask == NULL || (fadeMask[x] & WINMASK_CLR)))
+                    c = FadeColor(fade, c);
+                line[x] = c | 0x8000;
                 if (below != NULL)
                     below[x] = bgNum;
             }
@@ -280,6 +319,34 @@ static void RenderBGScanlineDirect(int bgNum, uint16_t control, uint16_t hoffs, 
         const uint16_t *subPal = pal + 16 * ((entry >> 12) & 0xF);
         unsigned int end = x + run;
 
+        if (fade != NULL)
+        {
+            unsigned int palNum = (entry >> 12) & 0xF;
+            const uint16_t *fadedPal = sFadedPal + 16 * palNum;
+
+            if (!(fadedPals & (1 << palNum)))
+            {
+                for (int i = 0; i < 16; i++)
+                    sFadedPal[16 * palNum + i] = FadeColor(fade, subPal[i]);
+                fadedPals |= 1 << palNum;
+            }
+            // Faded everywhere, it's drawn the usual way with the faded colors
+            if (fadeMask == NULL)
+                subPal = fadedPal;
+            else
+            {
+                for (; x < end; x++, pixels >>= 4)
+                {
+                    if ((pixels & 0xF) && (winMask == NULL || (winMask[x] & bgBit)))
+                    {
+                        line[x] = ((fadeMask[x] & WINMASK_CLR) ? fadedPal : subPal)[pixels & 0xF] | 0x8000;
+                        if (below != NULL)
+                            below[x] = bgNum;
+                    }
+                }
+                continue;
+            }
+        }
         if (winMask == NULL)
         {
             // A whole row with no clear pixel (most of the overworld's bottom
@@ -427,6 +494,35 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
         }
         for (unsigned int x = carryFrom; x < firstColumn; x++)
             line[x] = line[firstColumn];
+        return;
+    }
+
+    // With horizontal mosaic (Transform), each block shows the pixel at its
+    // left edge (the grid anchored on the GBA's 0), looked up once
+    if ((control & BGCNT_MOSAIC) && !((gWideViewClampBgs | gWideViewLeftOnlyBgs | gWideViewNoWrapBgs) & (1 << bgNum)))
+    {
+        int size = mosaicBGEffectX + 1;
+        unsigned int x = BgFirstColumn(bgNum, mapWidthInPixels), end = BgEndColumn(bgNum, mapWidthInPixels);
+        int gx = (int)x - RENDER_MARGIN;
+        int inBlock = ((gx % size) + size) % size;
+
+        memset(line, 0, RENDER_WIDTH * sizeof(line[0]));
+        while (x < end)
+        {
+            unsigned int n = size - inBlock;
+            unsigned int color = TextBgColorIndexAt(control, hoffs, voffs, lineNum, gx - inBlock);
+
+            if (n > end - x)
+                n = end - x;
+            if (color != 0)
+            {
+                for (unsigned int i = 0; i < n; i++)
+                    line[x + i] = pal[color] | 0x8000;
+            }
+            x += n;
+            gx += n;
+            inBlock = 0;
+        }
         return;
     }
 
@@ -793,34 +889,6 @@ static uint16_t alphaBrightnessDecrease(uint16_t targetA)
         b = 31;
     
      return r | (g << 5) | (b << 10) | (1 << 15);
-}
-
-// alphaBrightnessIncrease and Decrease for one channel at a time, worked out
-// once for each brightening or darkening and its strength, with the same
-// results, so the sprite fast paths can fade their pixels by looking them up
-static uint8_t sFadeTable[32];
-static unsigned int sFadeKey = ~0u;
-
-static const uint8_t *FadeTable(unsigned int blendMode, unsigned int evy)
-{
-    unsigned int key = (blendMode << 8) | evy;
-
-    if (key != sFadeKey)
-    {
-        for (unsigned int c = 0; c < 32; c++)
-        {
-            unsigned int v = blendMode == 2 ? c + (31 - c) * evy / 16 : c - c * evy / 16;
-
-            sFadeTable[c] = v > 31 ? 31 : v;
-        }
-        sFadeKey = key;
-    }
-    return sFadeTable;
-}
-
-static inline uint16_t FadeColor(const uint8_t *table, uint16_t c)
-{
-    return table[c & 0x1F] | (table[(c >> 5) & 0x1F] << 5) | (table[(c >> 10) & 0x1F] << 10);
 }
 
 //outputs the blended pixel in colorOutput, the prxxx are the bg priority and subpriority, pixelpos is pixel offset in scanline
@@ -1692,9 +1760,15 @@ unsigned int sceKernelGetSystemTimeLow(void);
 static unsigned int sProfMark;
 #define PROF(n) do { unsigned int t_ = sceKernelGetSystemTimeLow(); gDrawProfile[n] += t_ - sProfMark; sProfMark = t_; } while (0)
 #define PROF_START() (sProfMark = sceKernelGetSystemTimeLow())
+// Parts of putting the line together (6: backgrounds drawn straight onto it,
+// 7: sprites), also counted in its total
+#define SUBPROF_START(v) unsigned int v = sceKernelGetSystemTimeLow()
+#define SUBPROF_END(n, v) (gDrawProfile[n] += sceKernelGetSystemTimeLow() - (v))
 #else
 #define PROF(n) ((void)0)
 #define PROF_START() ((void)0)
+#define SUBPROF_START(v) ((void)0)
+#define SUBPROF_END(n, v) ((void)0)
 #endif
 
 // Each line's fade over everything that's still to be done, as mode << 8 |
@@ -1930,7 +2004,12 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
         {
             for (bgnum = 0; bgnum < (mode == 0 ? 4 : mode == 1 ? 2 : 0); bgnum++)
             {
-                if (CanDrawBGDirectly(scanline.bgcnts[bgnum]) && !(blendMode != 0 && (REG_BLDCNT & (1 << bgnum)))
+                // A brightened or darkened one is faded as it's drawn, unless
+                // the line tracks what's below for blending
+                bool fades = (blendMode == 2 || blendMode == 3) && !sLineSpriteBlend && !OLD_BLEND
+                          && !(scanline.bgcnts[bgnum] & BGCNT_256COLOR);
+
+                if (CanDrawBGDirectly(scanline.bgcnts[bgnum]) && !(blendMode != 0 && (REG_BLDCNT & (1 << bgnum)) && !fades)
                  && !((gWideViewClampBgs | gWideViewNoWrapBgs) & (1 << bgnum)))
                     directBgs |= 1 << bgnum;
             }
@@ -2036,17 +2115,23 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
                 uint16_t *src = scanline.layers[bgnum];
 
                 // Without a blend on this layer, every opaque pixel is copied
-                // as it is, where the windows let the layer show
-                if (blendMode == 0 || !(REG_BLDCNT & (1 << bgnum)))
+                // as it is, where the windows let the layer show (a direct
+                // one that's brightened or darkened is faded as it's drawn)
+                if (blendMode == 0 || !(REG_BLDCNT & (1 << bgnum)) || (directBgs & (1 << bgnum)))
                 {
                     if (directBgs & (1 << bgnum))
                     {
                         uint16_t bghoffs = *(uint16_t *)(REG_ADDR_BG0HOFS + bgnum * 4);
                         uint16_t bgvoffs = *(uint16_t *)(REG_ADDR_BG0VOFS + bgnum * 4);
+                        bool fades = blendMode != 0 && (REG_BLDCNT & (1 << bgnum));
+                        SUBPROF_START(t);
 
                         RenderBGScanlineDirect(bgnum, scanline.bgcnts[bgnum], bghoffs, bgvoffs, vcount, pixels,
                                                (windowsEnabled && !(winAll & (1 << bgnum))) ? scanline.winMask : NULL,
-                                               trackBelow ? sBelow : NULL);
+                                               trackBelow ? sBelow : NULL,
+                                               fades ? FadeTable(blendMode, REG_BLDY & 0x1F) : NULL,
+                                               fades && windowsEnabled ? scanline.winMask : NULL);
+                        SUBPROF_END(6, t);
                     }
                     else if (trackBelow)
                     {
@@ -2179,6 +2264,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
         if (!(scanline.spritePriorities & (1 << prnum)))
             continue;
         uint16_t *src = scanline.spriteLayers[prnum];
+        SUBPROF_START(t);
         for (xpos = scanline.spriteFirstX[prnum]; xpos < scanline.spriteEndX[prnum]; xpos++)
         {
             if (getAlphaBit(src[xpos]))
@@ -2214,6 +2300,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
                     sSpriteAtEdge[1] = true;
             }
         }
+        SUBPROF_END(7, t);
     }
 
     PROF(4);   // putting the line together (direct backgrounds included)

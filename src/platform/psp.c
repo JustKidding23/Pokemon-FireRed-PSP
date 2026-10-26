@@ -1966,10 +1966,11 @@ int main(int argc, char **argv)
             if (speedDrawn && sSpeedLogLen < sizeof(sSpeedLog) - 200)
             {
                 sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,
-                                         "  per drawn frame: setup %.2f  layers %.2f  windows %.2f  sprites %.2f  compose %.2f  edges %.2f ms\n",
+                                         "  per drawn frame: setup %.2f  layers %.2f  windows %.2f  sprites %.2f  compose %.2f (direct bgs %.2f, sprites %.2f)  edges %.2f ms\n",
                                          gDrawProfile[0] / 1000.0f / speedDrawn, gDrawProfile[1] / 1000.0f / speedDrawn,
                                          gDrawProfile[2] / 1000.0f / speedDrawn, gDrawProfile[3] / 1000.0f / speedDrawn,
-                                         gDrawProfile[4] / 1000.0f / speedDrawn, gDrawProfile[5] / 1000.0f / speedDrawn);
+                                         gDrawProfile[4] / 1000.0f / speedDrawn, gDrawProfile[6] / 1000.0f / speedDrawn,
+                                         gDrawProfile[7] / 1000.0f / speedDrawn, gDrawProfile[5] / 1000.0f / speedDrawn);
             }
             if (speedFrames && sSpeedLogLen < sizeof(sSpeedLog) - 200)
             {
