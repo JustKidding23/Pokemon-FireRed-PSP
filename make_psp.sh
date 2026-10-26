@@ -87,7 +87,9 @@ else
     mkdir -p "$work"
     url="https://github.com/pspdev/pspdev/releases/download/$PSPDEV_RELEASE/pspdev-$distro.tar.gz"
     echo "Downloading pspdev $PSPDEV_RELEASE ($distro), a few hundred MB"
-    curl -fL --progress-bar -o "$work/pspdev.tar.gz" "$url"
+    # A progress bar in a terminal; quiet in the Windows app's log
+    if [ -t 2 ]; then progress=--progress-bar; else progress=-sS; fi
+    curl -fL $progress -o "$work/pspdev.tar.gz" "$url"
     tar -xzf "$work/pspdev.tar.gz" -C "$work"
     rm "$work/pspdev.tar.gz"
     [ -x "$work/pspdev/bin/psp-gcc" ] || fail "The toolchain didn't unpack as expected."

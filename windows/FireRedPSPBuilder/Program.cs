@@ -19,12 +19,17 @@ namespace FireRedPSPBuilder
 {
     static class Program
     {
+        // FireRed PSP Builder.exe --test ROM LOG: builds ROM straight away with no
+        // questions, writes the details to LOG and exits with 0 if it worked
+        // (for trying the app out unattended)
         [STAThread]
-        static void Main()
+        static int Main(string[] args)
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new BuilderForm());
+            var form = args.Length == 3 && args[0] == "--test" ? new BuilderForm(args[1], args[2]) : new BuilderForm(null, null);
+            Application.Run(form);
+            return form.ExitCode;
         }
     }
 
@@ -66,9 +71,14 @@ namespace FireRedPSPBuilder
         readonly Timer pspTimer = new Timer();
         readonly StringBuilder log = new StringBuilder();
         bool built;
+        // The test mode's ROM and log (see Main)
+        readonly string testRom, testLog;
+        public int ExitCode { get; private set; }
 
-        public BuilderForm()
+        public BuilderForm(string testRom, string testLog)
         {
+            this.testRom = testRom;
+            this.testLog = testLog;
             Text = "Pokémon FireRed PSP Builder";
             Font = new Font("Segoe UI", 10f);
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -135,6 +145,22 @@ namespace FireRedPSPBuilder
             pspTimer.Tick += (s, e) => UpdateCopyButton();
             pspTimer.Start();
             SetStatus("", 0);
+            if (testRom != null)
+            {
+                detailsBox.Checked = true;
+                Shown += async (s, e) =>
+                {
+                    ExitCode = await BuildRom(testRom) ? 0 : 1;
+                    try
+                    {
+                        File.WriteAllText(testLog, log.ToString() + Environment.NewLine + "Status: " + statusLabel.Text + Environment.NewLine);
+                    }
+                    catch (IOException)
+                    {
+                    }
+                    Close();
+                };
+            }
         }
 
         void SetStatus(string text, int percent)
@@ -151,19 +177,22 @@ namespace FireRedPSPBuilder
 
         async Task ChooseAndBuild()
         {
-            string rom;
-
             using (var dialog = new OpenFileDialog { Title = "Choose your Pokémon FireRed ROM", Filter = "GBA ROM (*.gba)|*.gba|All files (*.*)|*.*" })
             {
-                if (dialog.ShowDialog(this) != DialogResult.OK)
-                    return;
-                rom = dialog.FileName;
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                    await BuildRom(dialog.FileName);
             }
+        }
+
+        async Task<bool> BuildRom(string rom)
+        {
             if (!IsFireRed(rom))
             {
-                MessageBox.Show(this, "That isn't Pokémon FireRed (USA), version 1.0 or 1.1.\n\nUse a copy of your own cartridge, dumped unchanged.",
-                                Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                if (testRom == null)
+                    MessageBox.Show(this, "That isn't Pokémon FireRed (USA), version 1.0 or 1.1.\n\nUse a copy of your own cartridge, dumped unchanged.",
+                                    Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                SetStatus("That isn't Pokémon FireRed (USA).", 0);
+                return false;
             }
 
             chooseButton.Enabled = false;
@@ -178,8 +207,9 @@ namespace FireRedPSPBuilder
                     SetStatus("Done! The game is in the \"FireRed PSP\" folder next to this app.", 100);
                     openButton.Enabled = true;
                     UpdateCopyButton();
-                    if (FindPsp() != null)
+                    if (FindPsp() != null && testRom == null)
                         CopyToPsp();
+                    return true;
                 }
             }
             catch (Exception ex)
@@ -192,6 +222,7 @@ namespace FireRedPSPBuilder
                 chooseButton.Enabled = true;
                 SaveLog();
             }
+            return false;
         }
 
         static bool IsFireRed(string path)
@@ -209,7 +240,10 @@ namespace FireRedPSPBuilder
             SetStatus("Checking Windows' Linux part (WSL)...", 2);
             if (!await HasUbuntu())
             {
-                OfferWslInstall();
+                if (testRom == null)
+                    OfferWslInstall();
+                else
+                    AddLog("No Ubuntu in WSL");
                 SetStatus("", 0);
                 return false;
             }
@@ -290,7 +324,8 @@ namespace FireRedPSPBuilder
                 return;
             try
             {
-                Process.Start(new ProcessStartInfo(WslExe(), "--install -d " + NewDistro) { Verb = "runas", UseShellExecute = true });
+                // --web-download: without the Microsoft Store, which some PCs don't have
+                Process.Start(new ProcessStartInfo(WslExe(), "--install --web-download -d " + NewDistro) { Verb = "runas", UseShellExecute = true });
             }
             catch (Exception ex)
             {
