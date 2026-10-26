@@ -193,6 +193,8 @@ static inline void DrawRow8bpp(const uint8_t *row, bool flipX, unsigned int tile
 // copying its layer onto the line do, for a background that isn't blended.
 // below (if not NULL) gets the background's number where it drew, for
 // blending another layer over it.
+static unsigned int TextBgColorIndexAt(uint16_t control, uint16_t hoffs, uint16_t voffs, int lineNum, int gx);
+
 static void RenderBGScanlineDirect(int bgNum, uint16_t control, uint16_t hoffs, uint16_t voffs, int lineNum, uint16_t *line, const uint16_t *winMask,
                                    uint8_t *below)
 {
@@ -220,6 +222,23 @@ static void RenderBGScanlineDirect(int bgNum, uint16_t control, uint16_t hoffs, 
     unsigned int firstColumn, lineEnd;
 
     BgColumns(bgNum, mapWidthInPixels, hoffs, &firstColumn, &lineEnd);
+    // The shop's room (gWideViewLeftOnlyBgs): further left than the 16 pixels
+    // of map left of the screen, the pixel there carries on
+    if ((gWideViewLeftOnlyBgs & bgBit) && firstColumn < RENDER_MARGIN - 16)
+    {
+        unsigned int color = TextBgColorIndexAt(control, hoffs, voffs, lineNum, -16);
+
+        for (unsigned int x = firstColumn; x < RENDER_MARGIN - 16; x++)
+        {
+            if (color != 0 && (winMask == NULL || (winMask[x] & bgBit)))
+            {
+                line[x] = pal[color] | 0x8000;
+                if (below != NULL)
+                    below[x] = bgNum;
+            }
+        }
+        firstColumn = RENDER_MARGIN - 16;
+    }
     for (unsigned int x = firstColumn; x < lineEnd;)
     {
         unsigned int xx = (x - RENDER_MARGIN + hoffs) & 0x1FF;
@@ -331,7 +350,7 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
     // entry, so it only needs looking up once per tile instead of for every
     // pixel. The overworld keeps mosaic on for BG1-3 with a size of 0, which
     // changes nothing.
-    if ((!(control & BGCNT_MOSAIC) || mosaicBGEffectX == 0) && !((gWideViewClampBgs | gWideViewLeftOnlyBgs) & (1 << bgNum)))
+    if ((!(control & BGCNT_MOSAIC) || mosaicBGEffectX == 0) && !(gWideViewClampBgs & (1 << bgNum)))
     {
         unsigned int yy = (lineNum + voffs) & 0x1FF;
         uint16_t *bgmapRow = (uint16_t *)BG_SCREEN_ADDR(screenBaseBlock);
@@ -349,6 +368,13 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
             memset(line, 0, firstColumn * sizeof(line[0]));
         if (lineEnd < RENDER_WIDTH)
             memset(&line[lineEnd], 0, (RENDER_WIDTH - lineEnd) * sizeof(line[0]));
+        // The shop's room (gWideViewLeftOnlyBgs): further left than the 16
+        // pixels of map left of the screen, the line carries on the pixel
+        // there, filled in below
+        unsigned int carryFrom = firstColumn;
+
+        if ((gWideViewLeftOnlyBgs & (1 << bgNum)) && firstColumn < RENDER_MARGIN - 16)
+            firstColumn = RENDER_MARGIN - 16;
         for (unsigned int x = firstColumn; x < lineEnd;)
         {
             unsigned int xx = (x - RENDER_MARGIN + hoffs) & 0x1FF;
@@ -399,6 +425,8 @@ static void RenderBGScanline(int bgNum, uint16_t control, uint16_t hoffs, uint16
                 }
             }
         }
+        for (unsigned int x = carryFrom; x < firstColumn; x++)
+            line[x] = line[firstColumn];
         return;
     }
 
@@ -767,6 +795,34 @@ static uint16_t alphaBrightnessDecrease(uint16_t targetA)
      return r | (g << 5) | (b << 10) | (1 << 15);
 }
 
+// alphaBrightnessIncrease and Decrease for one channel at a time, worked out
+// once for each brightening or darkening and its strength, with the same
+// results, so the sprite fast paths can fade their pixels by looking them up
+static uint8_t sFadeTable[32];
+static unsigned int sFadeKey = ~0u;
+
+static const uint8_t *FadeTable(unsigned int blendMode, unsigned int evy)
+{
+    unsigned int key = (blendMode << 8) | evy;
+
+    if (key != sFadeKey)
+    {
+        for (unsigned int c = 0; c < 32; c++)
+        {
+            unsigned int v = blendMode == 2 ? c + (31 - c) * evy / 16 : c - c * evy / 16;
+
+            sFadeTable[c] = v > 31 ? 31 : v;
+        }
+        sFadeKey = key;
+    }
+    return sFadeTable;
+}
+
+static inline uint16_t FadeColor(const uint8_t *table, uint16_t c)
+{
+    return table[c & 0x1F] | (table[(c >> 5) & 0x1F] << 5) | (table[(c >> 10) & 0x1F] << 10);
+}
+
 //outputs the blended pixel in colorOutput, the prxxx are the bg priority and subpriority, pixelpos is pixel offset in scanline
 #ifdef PSP_PROFILE
 // Pixels blended, layers looked at for their second target, lines with
@@ -1042,6 +1098,17 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
     void *objtiles = VRAM_ + 0x10000;
     unsigned int blendMode = (REG_BLDCNT >> 6) & 3;
     bool winShouldBlendPixel = true;
+    // Sprites brightened or darkened (like the rest of the screen around
+    // Encore's spotlight) take the fast paths too, fading each pixel there
+    // (where the windows allow it, with windows on the line)
+    const uint8_t *objFade = NULL;
+    bool fadeByWindow = false;
+
+    if ((REG_BLDCNT & BLDCNT_TGT1_OBJ) && (blendMode == 2 || blendMode == 3) && sLineEffects)
+    {
+        objFade = FadeTable(blendMode, REG_BLDY & 0x1F);
+        fadeByWindow = windowsEnabled;
+    }
 
     if (!(REG_DISPCNT & (1 << 6)))
     {
@@ -1146,11 +1213,11 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
             // A plain sprite that nothing blends (most of them): its row of
             // texels is copied straight, without the checks below for each pixel.
             // The windows don't matter here: whether one shows the sprite is
-            // looked at when the line is put together. (With windows on the
-            // line, sLineEffects is true, so a sprite that's a first target
-            // for an effect, which the windows may allow, goes the slow way.)
+            // looked at when the line is put together. A brightened or
+            // darkened sprite is faded here (objFade); one that alpha blends,
+            // which the windows may allow, goes the slow way.
             if (identity && !isObjWin && !isSemiTransparent
-             && !((REG_BLDCNT & BLDCNT_TGT1_OBJ) && blendMode != 0 && sLineEffects))
+             && !((REG_BLDCNT & BLDCNT_TGT1_OBJ) && blendMode == 1 && sLineEffects))
             {
                 int texY = local_y + (int)(height / 2);
                 const uint8_t *tiles = (const uint8_t *)objtiles;
@@ -1203,7 +1270,11 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
                         {
                             if (row & 0xF)
                             {
-                                *out = subPal[row & 0xF] | (1 << 15);
+                                uint16_t color = subPal[row & 0xF];
+
+                                if (objFade && (!fadeByWindow || (scanline->winMask[out - pixels] & WINMASK_CLR)))
+                                    color = FadeColor(objFade, color);
+                                *out = color | (1 << 15);
                                 // Over a blending sprite's pixel, this one doesn't blend
                                 if (sLineSpriteBlend)
                                     scanline->spriteBlend[oam->priority][out - pixels] = 0;
@@ -1234,7 +1305,11 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
                     }
                     if (pixel != 0)
                     {
-                        pixels[x + local_x + RENDER_MARGIN] = pal[pixel] | (1 << 15);
+                        uint16_t color = pal[pixel];
+
+                        if (objFade && (!fadeByWindow || (scanline->winMask[x + local_x + RENDER_MARGIN] & WINMASK_CLR)))
+                            color = FadeColor(objFade, color);
+                        pixels[x + local_x + RENDER_MARGIN] = color | (1 << 15);
                         if (sLineSpriteBlend)
                             scanline->spriteBlend[oam->priority][x + local_x + RENDER_MARGIN] = 0;
                         drew = true;
@@ -1265,7 +1340,7 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
             // the matrix's first column instead of being worked out for each
             // pixel, with the same results
             if (!identity && oam->mosaic != 1 && !isObjWin && !isSemiTransparent
-             && !((REG_BLDCNT & BLDCNT_TGT1_OBJ) && blendMode != 0 && sLineEffects))
+             && !((REG_BLDCNT & BLDCNT_TGT1_OBJ) && blendMode == 1 && sLineEffects))
             {
                 const uint8_t *tiles = (const uint8_t *)objtiles;
                 const uint16_t *pal = (const uint16_t *)(PLTT + 0x200);
@@ -1299,8 +1374,11 @@ static void DrawSprites(struct scanlineData* scanline, uint16_t vcount, bool win
                     if (pixel != 0)
                     {
                         int bx = x + local_x + RENDER_MARGIN;
+                        uint16_t color = pal[pixel];
 
-                        pixels[bx] = pal[pixel] | (1 << 15);
+                        if (objFade && (!fadeByWindow || (scanline->winMask[bx] & WINMASK_CLR)))
+                            color = FadeColor(objFade, color);
+                        pixels[bx] = color | (1 << 15);
                         if (sLineSpriteBlend)
                             scanline->spriteBlend[oam->priority][bx] = 0;
                         if (first < 0)
@@ -1853,7 +1931,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
             for (bgnum = 0; bgnum < (mode == 0 ? 4 : mode == 1 ? 2 : 0); bgnum++)
             {
                 if (CanDrawBGDirectly(scanline.bgcnts[bgnum]) && !(blendMode != 0 && (REG_BLDCNT & (1 << bgnum)))
-                 && !((gWideViewClampBgs | gWideViewLeftOnlyBgs | gWideViewNoWrapBgs) & (1 << bgnum)))
+                 && !((gWideViewClampBgs | gWideViewNoWrapBgs) & (1 << bgnum)))
                     directBgs |= 1 << bgnum;
             }
         }
