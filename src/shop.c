@@ -495,6 +495,26 @@ static void RecolorItemDescriptionBox(bool32 a0)
         SetBgTilemapPalette(1, 0, 14, 30, 6, paletteNum);
     else
         SetBgTilemapPalette(1, 0, 12, 30, 8, paletteNum);
+#ifdef PORTABLE
+    {
+        // The box carries on in the last two columns, past the screen's left
+        // edge (see BuyMenuCopyTilemapData): they change color with it
+        s16 top = (sShopData.martType != MART_TYPE_TMHM) ? 14 : 12;
+        s16 y, x;
+
+        for (y = top; y < 20; y++)
+        {
+            if ((*gShopTilemapBuffer1)[y * 32] <= 1)
+                continue;
+            for (x = 30; x < 32; x++)
+            {
+                u16 *entry = &(*gShopTilemapBuffer2)[y * 32 + x];
+
+                *entry = (*entry & 0x0FFF) | (paletteNum << 12);
+            }
+        }
+    }
+#endif
 
     ScheduleBgCopyTilemapToVram(1);
 }
