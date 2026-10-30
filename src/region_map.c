@@ -2274,8 +2274,8 @@ static void SetUpRollersInMargins(void)
     gWideViewEdgeArt = sRollerArt;
     gWideViewEdgeArtX[0] = -16;
     gWideViewEdgeArtX[1] = DISPLAY_WIDTH - 16;
-    // The blue bar across the top carries on; game column 20 is the bar's
-    // between the left roller and the map
+    // Past the rollers the margins are the blue of the bar across the top
+    // (game column 20, between the left roller and the map), owner's choice
     gWideViewEdgeBarLines = 16;
     gWideViewEdgeBarX = 20;
     gWideViewEdgeArtShown = FALSE;

@@ -159,9 +159,9 @@ extern u8 gWideViewNarrowBgs;
 // a 32-pixel-wide picture (color indexes, 0 clear) for every line, starting at
 // game column gWideViewEdgeArtX[side]. In the margins its pixels take the
 // colors the same indexes have on the screen where the art overlaps it, so
-// they match (fades included). Elsewhere the margins are black, apart from
-// the first gWideViewEdgeBarLines lines, which carry on the color at game
-// column gWideViewEdgeBarX (a bar across the top) while gWideViewEdgeArtShown.
+// they match (fades included). Elsewhere the margins take the color at game
+// column gWideViewEdgeBarX on the first gWideViewEdgeBarLines lines (a bar
+// across the top) while gWideViewEdgeArtShown, and are black otherwise.
 extern const u8 (*gWideViewEdgeArt)[DISPLAY_HEIGHT][32];
 extern s16 gWideViewEdgeArtX[2];
 extern u8 gWideViewEdgeBarLines;

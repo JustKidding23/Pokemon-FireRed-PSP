@@ -2713,6 +2713,8 @@ static void DrawEdgeArt(uint16_t *line, int i)
     // gathered down the frame
     static uint16_t sColors[16];
     static uint16_t sKnown;
+    // The bar's color, from its lines, for the rest of the margins
+    static uint16_t sBarColor;
 
     if (i == 0)
         sKnown = 0;
@@ -2734,7 +2736,11 @@ static void DrawEdgeArt(uint16_t *line, int i)
     for (int side = 0; side < 2; side++)
     {
         const uint8_t *row = gWideViewEdgeArt[side][i];
-        uint16_t empty = (gWideViewEdgeArtShown && i < gWideViewEdgeBarLines) ? line[RENDER_MARGIN + gWideViewEdgeBarX] : 0;
+        uint16_t empty;
+
+        if (i < gWideViewEdgeBarLines)
+            sBarColor = line[RENDER_MARGIN + gWideViewEdgeBarX];
+        empty = (gWideViewEdgeArtShown && gWideViewEdgeBarLines != 0) ? sBarColor : 0;
         // From the screen's edge outwards, so a color the screen doesn't show
         // on this side takes the one next to it, further in
         int step = side == 0 ? -1 : 1;
