@@ -167,9 +167,6 @@ extern s16 gWideViewEdgeArtX[2];
 extern u8 gWideViewEdgeBarLines;
 extern u8 gWideViewEdgeBarX;
 extern bool8 gWideViewEdgeArtShown;
-// The bar's gone (the Town Map closing): the margins keep its last color,
-// brightened as the screen whitens (BLDY)
-extern bool8 gWideViewEdgeBarFading;
 // How bright the margins are, 0 (black) to 16 (as drawn): a full-screen
 // picture over the field, like Viridian Forest's on the way in, keeps them
 // dark while it shows and lets them come up as it fades

@@ -80,7 +80,6 @@ extern int16_t gWideViewEdgeArtX[2];
 extern uint8_t gWideViewEdgeBarLines;
 extern uint8_t gWideViewEdgeBarX;
 extern bool8 gWideViewEdgeArtShown;
-extern bool8 gWideViewEdgeBarFading;
 extern uint8_t gWideViewMarginLevel;
 extern bool8 gWideViewSpritesInMargins;
 extern bool8 gWideViewFlashActive;
@@ -2739,14 +2738,14 @@ static void DrawEdgeArt(uint16_t *line, int i)
         const uint8_t *row = gWideViewEdgeArt[side][i];
         uint16_t empty;
 
-        // From the bar's middle line, clear of its edges (the lines above it
-        // take the last frame's)
-        if (i == gWideViewEdgeBarLines / 2 && !gWideViewEdgeBarFading)
+        // On the bar's lines, exactly the bar's pixel on that line; below
+        // them, the bar's middle line's, from this frame
+        if (i == gWideViewEdgeBarLines / 2)
             sBarColor = line[RENDER_MARGIN + gWideViewEdgeBarX];
         if (!gWideViewEdgeArtShown || gWideViewEdgeBarLines == 0)
             empty = 0;
-        else if (gWideViewEdgeBarFading && ((REG_BLDCNT >> 6) & 3) == 2)
-            empty = alphaBrightnessIncrease(sBarColor);
+        else if (i < gWideViewEdgeBarLines)
+            empty = line[RENDER_MARGIN + gWideViewEdgeBarX];
         else
             empty = sBarColor;
         // From the screen's edge outwards, so a color the screen doesn't show
