@@ -2026,7 +2026,10 @@ static void Task_DungeonMapPreview(u8 taskId)
         break;
     case 9:
         FreeDungeonMapPreview(taskId);
+#ifndef UBFIX
+        // Freed (and NULL) by now: the GBA writes to its BIOS, the PSP crashes
         sDungeonMapPreview->mainState++;
+#endif
         break;
     }
 }
