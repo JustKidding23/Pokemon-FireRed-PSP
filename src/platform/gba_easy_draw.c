@@ -2280,14 +2280,26 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
         // The backdrop is brightened or darkened only where the windows
         // allow effects (DrawLineOnce filled the line with it changed): like
         // the Town Map's top bar while the map fades in, which stays blue
+        // (with the windows' spans, as for the mask above: a run at a time)
         if ((REG_BLDCNT & BLDCNT_TGT1_BD) && ((REG_BLDCNT >> 6) & 3) >= 2)
         {
-            uint16_t backdrop = *(uint16_t *)PLTT;
+            bool outClr = (REG_WINOUT & WINMASK_CLR) != 0;
+            bool win1Clr = (REG_WININ & (WINMASK_CLR << 8)) != 0;
+            bool win0Clr = (REG_WININ & WINMASK_CLR) != 0;
 
-            for (xpos = 0; xpos < RENDER_WIDTH; xpos++)
+            if (!outClr || (WIN1enable && !win1Clr) || ((WIN0enable || win0Wide) && !win0Clr))
             {
-                if (!(scanline.winMask[xpos] & WINMASK_CLR))
-                    pixels[xpos] = backdrop;
+                uint16_t raw = *(uint16_t *)PLTT;
+                uint16_t faded = pixels[RENDER_MARGIN];   // as DrawLineOnce filled it
+
+                if (!outClr)
+                    memsetu16(pixels, raw, RENDER_WIDTH);
+                if (WIN1enable)
+                    FillWindowSpan(pixels, WIN1left, WIN1right, win1Clr ? faded : raw);
+                if (win0Wide)
+                    FillColumns(pixels, win0WideLeft, win0WideRight, win0Clr ? faded : raw);
+                else if (WIN0enable)
+                    FillWindowSpan(pixels, WIN0left, WIN0right, win0Clr ? faded : raw);
             }
         }
     }
@@ -2325,8 +2337,25 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     // from the top down, so what's covered isn't drawn (see
     // RenderBGScanlineFront). A brightened or darkened background has to be
     // one drawn straight onto the line for this.
-    bool frontToBack = !trackBelow && !OLD_BLEND;
+    // Plain lines only: with windows or a fade (Encore's spotlight, say)
+    // the checks cost more than they save
+    bool frontToBack = !trackBelow && !OLD_BLEND && !windowsEnabled && blendMode == 0;
 
+    // It doesn't pay on lines with many sprite pixels, like a battle's
+    // Pokémon: each needs checking and marking, which costs more than the
+    // little it hides (text boxes and menus are where it saves)
+    if (frontToBack)
+    {
+        int spriteSpan = 0;
+
+        for (prnum = 0; prnum < 4; prnum++)
+        {
+            if (scanline.spritePriorities & (1 << prnum))
+                spriteSpan += scanline.spriteEndX[prnum] - scanline.spriteFirstX[prnum];
+        }
+        if (spriteSpan > 64)
+            frontToBack = false;
+    }
     if (frontToBack && blendMode != 0)
     {
         for (int b = 0; b < 4; b++)
