@@ -1340,6 +1340,9 @@ static size_t sSpeedLogLen;
 static unsigned sBehind;    // display frames that ran more game frames than the speed, to catch up
 #ifdef PSP_PROFILE
 extern unsigned int gDrawProfile[8];
+#ifdef PSP_PROFILE
+extern unsigned int gPresentProfile[3];
+#endif
 extern unsigned int gSoundProfile[6];
 extern unsigned int gSpriteStats[4];
 extern unsigned int gBlendStats[4];
@@ -1633,7 +1636,10 @@ static void FindBaseDir(const char *exePath)
 
 int main(int argc, char **argv)
 {
-    static u16 __attribute__((aligned(16))) image[RENDER_STRIDE * DISPLAY_HEIGHT];
+    // Two, so a frame is drawn in one while the GE puts the other on the
+    // screen (see PspHw_Present); image is the one shown
+    static u16 __attribute__((aligned(16))) images[2][RENDER_STRIDE * DISPLAY_HEIGHT];
+    u16 *image = images[0];
     char path[300];
     u32 held = 0;
     u64 clockStart, framesRun = 0;
@@ -1868,6 +1874,7 @@ int main(int argc, char **argv)
                 unsigned int profBefore[8];
                 memcpy(profBefore, gDrawProfile, sizeof(profBefore));
 #endif
+                image = image == images[0] ? images[1] : images[0];
                 DrawFrame(image);
                 speedDrawn++;
 #ifdef PSP_TEST
@@ -1942,6 +1949,8 @@ int main(int argc, char **argv)
         UpdateSavesFade();
         if (sSavesShown)
         {
+            // Its picture may still be on its way to the screen from last time
+            PspHw_FinishPresent();
             DrawSavesScreen();
             PspHw_DrawGame(sSavesImage, RENDER_WIDTH, RENDER_STRIDE, sSettings.scale, sSettings.filter, sSavesFade * 255 / 16, false, 0);
         }
@@ -1972,6 +1981,11 @@ int main(int argc, char **argv)
                                          gDrawProfile[2] / 1000.0f / speedDrawn, gDrawProfile[3] / 1000.0f / speedDrawn,
                                          gDrawProfile[4] / 1000.0f / speedDrawn, gDrawProfile[6] / 1000.0f / speedDrawn,
                                          gDrawProfile[7] / 1000.0f / speedDrawn, gDrawProfile[5] / 1000.0f / speedDrawn);
+                sSpeedLogLen += snprintf(sSpeedLog + sSpeedLogLen, sizeof(sSpeedLog) - sSpeedLogLen,
+                                         "  present per drawn frame: cache writeback %.2f  GE list %.2f  waiting for the GE %.2f ms\n",
+                                         gPresentProfile[0] / 1000.0f / speedDrawn, gPresentProfile[1] / 1000.0f / speedDrawn,
+                                         gPresentProfile[2] / 1000.0f / speedDrawn);
+                memset(gPresentProfile, 0, sizeof(gPresentProfile));
             }
             if (speedFrames && sSpeedLogLen < sizeof(sSpeedLog) - 200)
             {
@@ -2033,6 +2047,8 @@ int main(int argc, char **argv)
 #endif
         // Frames are shown without waiting for the refresh (see PspHw_Present),
         // so the game waits here while it's ahead of time
+        if ((PspHw_Microseconds() - clockStart) * speed / FRAME_MICROSECONDS < framesRun)
+            PspHw_FinishPresent();
         while ((PspHw_Microseconds() - clockStart) * speed / FRAME_MICROSECONDS < framesRun)
             PspHw_WaitRefresh();
     }

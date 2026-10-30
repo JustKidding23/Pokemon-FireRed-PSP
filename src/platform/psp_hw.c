@@ -279,6 +279,7 @@ bool PspHw_Running(void)
 
 void PspHw_Exit(void)
 {
+    PspHw_FinishPresent();
     // Stop the kernel thread before the game's memory goes away
     // Stop the kernel thread. Stopping or unloading its module here would hang
     // when quitting from the HOME menu: the system holds the module manager
@@ -337,8 +338,20 @@ struct ColorVertex
 // stride pixels apart, a multiple of 8. zoom shows its middle at twice the size
 // instead, for letterboxed scenes that can't be widened (the "fit" size only).
 // dim darkens it, from 0 (not at all) to 255 (black).
+#ifdef PSP_PROFILE
+// Putting the frame on the screen, for the speed log: writing the image back
+// from the cache, building the GE's list, waiting for the GE (microseconds)
+unsigned int gPresentProfile[3];
+#endif
+
+void PspHw_FinishPresent(void);
+
 void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, bool filter, int dim, bool zoom, unsigned int fade)
 {
+    PspHw_FinishPresent();
+#ifdef PSP_PROFILE
+    unsigned int profStart = sceKernelGetSystemTimeLow();
+#endif
     int x = 0, y = 0, w = SCREEN_WIDTH, h = SCREEN_HEIGHT;
     int u0 = 0, v0 = 0, u1 = width, v1 = GBA_HEIGHT;
     struct TexVertex *verts;
@@ -384,6 +397,10 @@ void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, boo
     y = (SCREEN_HEIGHT - h) / 2;
 
     sceKernelDcacheWritebackRange(image, stride * GBA_HEIGHT * 2);
+#ifdef PSP_PROFILE
+    gPresentProfile[0] += sceKernelGetSystemTimeLow() - profStart;
+    profStart = sceKernelGetSystemTimeLow();
+#endif
 
     sceGuStart(GU_DIRECT, sDisplayList);
     sceGuDrawBufferList(GU_PSM_8888, sDrawBuffer, BUFFER_WIDTH);
@@ -459,6 +476,9 @@ void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, boo
         sceGuDisable(GU_BLEND);
     }
     sceGuFinish();
+#ifdef PSP_PROFILE
+    gPresentProfile[1] += sceKernelGetSystemTimeLow() - profStart;
+#endif
 }
 
 // Text waits until the GU has drawn the frame, and then goes on top
@@ -482,9 +502,29 @@ void PspHw_Print(int column, int row, uint32_t color, const char *text)
     sNumTextRuns++;
 }
 
+// The GE takes a while (1.7 ms) to put the frame on its buffer: PspHw_Present
+// doesn't wait for it, so the game's next frame and the sound get going in
+// the meantime. It's shown once the GE is done (PspHw_FinishPresent), which
+// happens before anything touches the image, the GE or the screen again.
+static bool sPresentPending;
+
 void PspHw_Present(void)
 {
+    sPresentPending = true;
+}
+
+void PspHw_FinishPresent(void)
+{
+    if (!sPresentPending)
+        return;
+    sPresentPending = false;
+#ifdef PSP_PROFILE
+    unsigned int profStart = sceKernelGetSystemTimeLow();
+#endif
     sceGuSync(GU_SYNC_FINISH, GU_SYNC_WHAT_DONE);
+#ifdef PSP_PROFILE
+    gPresentProfile[2] += sceKernelGetSystemTimeLow() - profStart;
+#endif
 
     if (sNumTextRuns != 0)
     {
@@ -720,6 +760,7 @@ void PspHw_MakeDir(const char *path)
 
 void PspHw_DumpScreen(const char *path)
 {
+    PspHw_FinishPresent();
     static uint32_t pixels[SCREEN_WIDTH * SCREEN_HEIGHT];
     void *frame;
     int width, format;

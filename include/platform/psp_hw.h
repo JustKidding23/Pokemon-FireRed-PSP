@@ -84,6 +84,9 @@ uint64_t PspHw_Microseconds(void);
 void PspHw_DrawGame(const uint16_t *image, int width, int stride, int scale, bool filter, int dim, bool zoom, unsigned int fade);
 void PspHw_Print(int column, int row, uint32_t color, const char *text);
 void PspHw_Present(void);
+// Waits for the frame given to PspHw_Present to be ready, and shows it (it's
+// done when anything needs the image, the GE or the screen again)
+void PspHw_FinishPresent(void);
 // Waits for the screen's next refresh (the game is ahead of time)
 void PspHw_WaitRefresh(void);
 // Text is 8x8 pixels, so the screen holds 60x34 characters
