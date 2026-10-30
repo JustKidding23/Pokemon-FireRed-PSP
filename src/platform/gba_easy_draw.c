@@ -2103,7 +2103,12 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
             sLineEffects = (mask & WINMASK_CLR) != 0;
             windowsEnabled = false;
             if (!sLineEffects)
+            {
                 blendMode = 0;
+                // Nor is the backdrop brightened or darkened here (see below)
+                if ((REG_BLDCNT & BLDCNT_TGT1_BD) && ((REG_BLDCNT >> 6) & 3) >= 2)
+                    memsetu16(pixels, *(uint16_t *)PLTT, RENDER_WIDTH);
+            }
         }
     }
 
@@ -2272,6 +2277,19 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
             FillColumns(scanline.winMask, win0WideLeft, win0WideRight, REG_WININ & 0x3F);
         else if (WIN0enable)
             FillWindowSpan(scanline.winMask, WIN0left, WIN0right, REG_WININ & 0x3F);
+        // The backdrop is brightened or darkened only where the windows
+        // allow effects (DrawLineOnce filled the line with it changed): like
+        // the Town Map's top bar while the map fades in, which stays blue
+        if ((REG_BLDCNT & BLDCNT_TGT1_BD) && ((REG_BLDCNT >> 6) & 3) >= 2)
+        {
+            uint16_t backdrop = *(uint16_t *)PLTT;
+
+            for (xpos = 0; xpos < RENDER_WIDTH; xpos++)
+            {
+                if (!(scanline.winMask[xpos] & WINMASK_CLR))
+                    pixels[xpos] = backdrop;
+            }
+        }
     }
 
     PROF(2);   // windows
