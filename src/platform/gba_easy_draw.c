@@ -2356,6 +2356,13 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
         if (spriteSpan > 64)
             frontToBack = false;
     }
+    // Nor with a 256-color background (the title's logo), whose fast way
+    // RenderBGScanlineFront doesn't have
+    for (int b = 0; b < 4 && frontToBack; b++)
+    {
+        if (isbgEnabled(b) && (scanline.bgcnts[b] & BGCNT_256COLOR))
+            frontToBack = false;
+    }
     if (frontToBack && blendMode != 0)
     {
         for (int b = 0; b < 4; b++)
