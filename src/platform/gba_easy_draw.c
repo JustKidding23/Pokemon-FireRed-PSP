@@ -75,8 +75,11 @@ extern u8 gWideViewClampBgs;
 extern u8 gWideViewNoWrapBgs;
 extern u8 gWideViewLeftOnlyBgs;
 extern u8 gWideViewNarrowBgs;
-extern bool8 gWideViewMirrorEdges;
-extern u8 gWideViewMirrorTopLines;
+extern const uint8_t (*gWideViewEdgeArt)[DISPLAY_HEIGHT][32];
+extern int16_t gWideViewEdgeArtX[2];
+extern uint8_t gWideViewEdgeBarLines;
+extern uint8_t gWideViewEdgeBarX;
+extern bool8 gWideViewEdgeArtShown;
 extern bool8 gWideViewFlashActive;
 extern s16 gWideViewFlashSpans[2][DISPLAY_HEIGHT + 1][2];
 
@@ -2621,6 +2624,7 @@ static void BeginLine(int i)
 }
 
 static void DrawLineOnce(uint16_t *line, int i);
+static void DrawEdgeArt(uint16_t *line, int i);
 
 static void DrawLine(uint16_t *line, int i)
 {
@@ -2686,16 +2690,61 @@ static void DrawLineOnce(uint16_t *line, int i)
         if (!sExtendedRight)
             memset(&line[RENDER_MARGIN + DISPLAY_WIDTH], 0, RENDER_MARGIN * sizeof(line[0]));
     }
-    // The edge columns mirrored (see gWideViewMirrorEdges)
-    if (gWideViewMirrorEdges)
-    {
-        bool fromLeft = i < gWideViewMirrorTopLines;
+    if (gWideViewEdgeArt != NULL)
+        DrawEdgeArt(line, i);
+}
 
-        for (int k = 0; k < RENDER_MARGIN; k++)
+// The margins of a screen with art past its edges (see gWideViewEdgeArt)
+static void DrawEdgeArt(uint16_t *line, int i)
+{
+    // The colors of the art's indexes, from where it overlaps the screen,
+    // gathered down the frame
+    static uint16_t sColors[16];
+    static uint16_t sKnown;
+
+    if (!gWideViewEdgeArtShown)
+    {
+        memset(line, 0, RENDER_MARGIN * sizeof(line[0]));
+        memset(&line[RENDER_MARGIN + DISPLAY_WIDTH], 0, RENDER_MARGIN * sizeof(line[0]));
+        return;
+    }
+    if (i == 0)
+        sKnown = 0;
+    for (int side = 0; side < 2; side++)
+    {
+        const uint8_t *row = gWideViewEdgeArt[side][i];
+
+        for (int c = 0; c < 32; c++)
         {
-            line[RENDER_MARGIN - 1 - k] = line[RENDER_MARGIN + k];
-            line[RENDER_MARGIN + DISPLAY_WIDTH + k] = fromLeft ? line[RENDER_MARGIN + k]
-                                                               : line[RENDER_MARGIN + DISPLAY_WIDTH - 1 - k];
+            int gx = gWideViewEdgeArtX[side] + c;
+
+            if (row[c] != 0 && gx >= 0 && gx < DISPLAY_WIDTH)
+            {
+                sColors[row[c]] = line[RENDER_MARGIN + gx];
+                sKnown |= 1 << row[c];
+            }
+        }
+    }
+    for (int side = 0; side < 2; side++)
+    {
+        const uint8_t *row = gWideViewEdgeArt[side][i];
+        uint16_t empty = i < gWideViewEdgeBarLines ? line[RENDER_MARGIN + gWideViewEdgeBarX] : 0;
+        // From the screen's edge outwards, so a color the screen doesn't show
+        // on this side takes the one next to it, further in
+        int step = side == 0 ? -1 : 1;
+        int gx = side == 0 ? -1 : DISPLAY_WIDTH;
+        uint16_t last = line[RENDER_MARGIN + gx - step];
+
+        for (int k = 0; k < RENDER_MARGIN; k++, gx += step)
+        {
+            int c = gx - gWideViewEdgeArtX[side];
+            unsigned int index = (c >= 0 && c < 32) ? row[c] : 0;
+
+            if (index == 0)
+                last = empty;
+            else if (sKnown & (1 << index))
+                last = sColors[index];
+            line[RENDER_MARGIN + gx] = last;
         }
     }
 }

@@ -328,6 +328,9 @@ static void InitScreenForDungeonMapPreview(void);
 static void CopyMapPreviewTilemapToBgTilemapBuffer(u8, const u16 *);
 static bool8 UpdateDungeonMapPreview(bool8);
 static void InitMapOpenAnim(u8, TaskFunc);
+#ifdef PORTABLE
+static void SetUpRollersInMargins(void);
+#endif
 static void InitScreenForMapOpenAnim(void);
 static void Task_MapOpenAnim(u8);
 static void FreeMapOpenCloseAnim(void);
@@ -1196,6 +1199,9 @@ static void Task_RegionMap(u8 taskId)
         }
         else
         {
+#ifdef PORTABLE
+            gWideViewEdgeArtShown = TRUE;
+#endif
             ShowBg(0);
             ShowBg(3);
             ShowBg(1);
@@ -1374,9 +1380,7 @@ static void InitRegionMapBgs(void)
     ResetBgsAndClearDma3BusyFlags(FALSE);
     InitBgsFromTemplates(0, sRegionMapBgTemplates, NELEMS(sRegionMapBgTemplates));
 #ifdef PORTABLE
-    // The rollers either side come out whole in the wider view's margins
-    gWideViewMirrorEdges = TRUE;
-    gWideViewMirrorTopLines = 16;
+    SetUpRollersInMargins();
 #endif
     ChangeBgX(0, 0, 0);
     ChangeBgY(0, 0, 0);
@@ -2222,9 +2226,66 @@ static void CreateMapEdgeSprite(u8 mapEdgeNum, u8 tileTag, u8 palTag)
     gSprites[spriteId].invisible = TRUE;
 }
 
+#ifdef PORTABLE
+// The rollers either side come out whole in the wider view's margins: the
+// GBA shows their inner halves (the frame's background), and the opening
+// animation's sprites have the whole of them, which end up at x 0 and 240
+// (centers) on the lines from 8 down (see gWideViewEdgeArt)
+static EWRAM_DATA u8 sRollerArt[2][DISPLAY_HEIGHT][32] = {0};
+
+static void SetUpRollersInMargins(void)
+{
+    static const u32 *const sPieces[2][3] = {
+        {sMapEdge_TopLeft, sMapEdge_MidLeft, sMapEdge_BottomLeft},
+        {sMapEdge_TopRight, sMapEdge_MidRight, sMapEdge_BottomRight},
+    };
+    u8 *tiles = Alloc(0x400);
+    int side, piece, x, y;
+
+    if (tiles == NULL)
+        return;
+    memset(sRollerArt, 0, sizeof(sRollerArt));
+    for (side = 0; side < 2; side++)
+    {
+        for (piece = 0; piece < 3; piece++)
+        {
+            LZ77UnCompWram(sPieces[side][piece], tiles);
+            // A 32x64 sprite's tiles, four to a row
+            for (y = 0; y < 64; y++)
+            {
+                int line = 8 + 64 * piece + y;
+
+                if (line >= DISPLAY_HEIGHT)
+                    break;
+                for (x = 0; x < 32; x++)
+                {
+                    u8 byte = tiles[((y / 8) * 4 + x / 8) * 32 + (y % 8) * 4 + (x % 8) / 2];
+
+                    sRollerArt[side][line][x] = (x & 1) ? byte >> 4 : byte & 0xF;
+                }
+            }
+        }
+    }
+    Free(tiles);
+    gWideViewEdgeArt = sRollerArt;
+    gWideViewEdgeArtX[0] = -16;
+    gWideViewEdgeArtX[1] = DISPLAY_WIDTH - 16;
+    // The blue bar across the top carries on; game column 20 is the bar's
+    // between the left roller and the map
+    gWideViewEdgeBarLines = 16;
+    gWideViewEdgeBarX = 20;
+    gWideViewEdgeArtShown = FALSE;
+}
+#endif
+
 static void InitMapOpenAnim(u8 taskId, TaskFunc taskFunc)
 {
     u8 i;
+
+#ifdef PORTABLE
+    // The rollers move in from the middle as sprites
+    gWideViewEdgeArtShown = FALSE;
+#endif
 
     sMapOpenCloseAnim = AllocZeroed(sizeof(struct MapOpenCloseAnim));
     for (i = 0; i < NELEMS(sMapOpenCloseAnim->mapEdges); i++)
@@ -2399,7 +2460,13 @@ static void Task_MapOpenAnim(u8 taskId)
         break;
     case 6:
         if (MoveMapEdgesOutward() == TRUE)
+        {
+#ifdef PORTABLE
+            // The rollers' sprites are where the art goes
+            gWideViewEdgeArtShown = TRUE;
+#endif
             sMapOpenCloseAnim->openState++;
+        }
         break;
     case 7:
         SetPlayerIconInvisibility(FALSE);
@@ -2613,6 +2680,10 @@ static void Task_MapCloseAnim(u8 taskId)
         sMapOpenCloseAnim->closeState++;
         break;
     case 7:
+#ifdef PORTABLE
+        // The rollers move in as sprites
+        gWideViewEdgeArtShown = FALSE;
+#endif
         if (MoveMapEdgesInward() == TRUE)
             sMapOpenCloseAnim->closeState++;
         break;
@@ -3945,6 +4016,9 @@ static void Task_FlyMap(u8 taskId)
         }
         else
         {
+#ifdef PORTABLE
+            gWideViewEdgeArtShown = TRUE;
+#endif
             ShowBg(0);
             ShowBg(3);
             ShowBg(1);

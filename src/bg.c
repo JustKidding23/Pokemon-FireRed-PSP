@@ -17,8 +17,11 @@ u8 gWideViewEndsAtEdgeBgs;
 u8 gWideViewClampBgs;
 u8 gWideViewNoWrapBgs;
 u8 gWideViewLeftOnlyBgs;
-bool8 gWideViewMirrorEdges;
-u8 gWideViewMirrorTopLines;
+const u8 (*gWideViewEdgeArt)[DISPLAY_HEIGHT][32];
+s16 gWideViewEdgeArtX[2];
+u8 gWideViewEdgeBarLines;
+u8 gWideViewEdgeBarX;
+bool8 gWideViewEdgeArtShown;
 u8 gWideViewNarrowBgs;
 #endif
 
@@ -388,8 +391,9 @@ void InitBgsFromTemplates(u8 bgMode, const struct BgTemplate *templates, u8 numT
     gWideViewNoWrapBgs = 0;
     gWideViewLeftOnlyBgs = 0;
     gWideViewNarrowBgs = 0;
-    gWideViewMirrorEdges = FALSE;
-    gWideViewMirrorTopLines = 0;
+    gWideViewEdgeArt = NULL;
+    gWideViewEdgeArtShown = FALSE;
+    gWideViewEdgeBarLines = 0;
 #endif
     int i;
     u8 bg;

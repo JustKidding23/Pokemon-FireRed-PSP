@@ -154,13 +154,20 @@ extern u8 gWideViewLeftOnlyBgs;
 // are (unless made to repeat), like the battle's BG1 and BG2, whose maps past
 // the GBA's screen hold whatever was left there
 extern u8 gWideViewNarrowBgs;
-// The margins show the GBA screen's edge columns mirrored, like the Town Map's
-// rollers, of which the GBA shows the inner halves: they come out whole
-extern bool8 gWideViewMirrorEdges;
-// With gWideViewMirrorEdges, the first lines whose right margin is the left
-// one's instead, where text runs up to the screen's right edge (the Town Map's
-// top bar, the same at both ends)
-extern u8 gWideViewMirrorTopLines;
+// Art that carries on past the GBA screen's left and right edges, like the
+// Town Map's rollers, of which the GBA shows the inner halves: for each side,
+// a 32-pixel-wide picture (color indexes, 0 clear) for every line, starting at
+// game column gWideViewEdgeArtX[side]. In the margins its pixels take the
+// colors the same indexes have on the screen where the art overlaps it, so
+// they match (fades included). Elsewhere the margins are black, apart from
+// the first gWideViewEdgeBarLines lines, which carry on the color at game
+// column gWideViewEdgeBarX (a bar across the top). Shown while
+// gWideViewEdgeArtShown; while it's not, the margins are black.
+extern const u8 (*gWideViewEdgeArt)[DISPLAY_HEIGHT][32];
+extern s16 gWideViewEdgeArtX[2];
+extern u8 gWideViewEdgeBarLines;
+extern u8 gWideViewEdgeBarX;
+extern bool8 gWideViewEdgeArtShown;
 #endif
 
 #endif // GUARD_BG_H
