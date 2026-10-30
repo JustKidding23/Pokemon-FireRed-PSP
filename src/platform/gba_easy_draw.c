@@ -2756,13 +2756,14 @@ static void DrawEdgeArt(uint16_t *line, int i)
         const uint8_t *row = gWideViewEdgeArt[side][i];
         uint16_t empty;
 
-        // On the bar's lines, exactly the bar's pixel on that line; below
-        // them, the bar's middle line's, from this frame
+        // The bar's fill, this frame: on its top half its pixel on the same
+        // line, from its middle line down that one's (not the outline along
+        // its bottom edge, which would make a line in the margins)
         if (i == gWideViewEdgeBarLines / 2)
             sBarColor = line[RENDER_MARGIN + gWideViewEdgeBarX];
         if (!gWideViewEdgeArtShown || gWideViewEdgeBarLines == 0)
             empty = 0;
-        else if (i < gWideViewEdgeBarLines)
+        else if (i < gWideViewEdgeBarLines / 2)
             empty = line[RENDER_MARGIN + gWideViewEdgeBarX];
         else
             empty = sBarColor;
