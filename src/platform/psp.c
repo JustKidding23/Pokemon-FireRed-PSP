@@ -1960,7 +1960,8 @@ int main(int argc, char **argv)
                                      speed, (unsigned)speedFrames, (unsigned)speedDrawn, sBehind,
                                      speedFrames ? timeGame / 1000.0f / speedFrames : 0.0f,
                                      speedDrawn ? timeDraw / 1000.0f / speedDrawn : 0.0f,
-                                     speedFrames ? timeSound / 1000.0f / speedFrames : 0.0f);
+                                     speedFrames ? timeSound / 1000.0f / speedFrames : 0.0f,
+                                     speedDrawn ? sTimePresent / 1000.0f / speedDrawn : 0.0f);
             sBehind = 0;
 #ifdef PSP_PROFILE
             if (speedDrawn && sSpeedLogLen < sizeof(sSpeedLog) - 200)
@@ -1999,6 +2000,7 @@ int main(int argc, char **argv)
             {
                 speedFrames = speedDrawn = 0;
                 timeGame = timeDraw = timeSound = 0;
+                sTimePresent = 0;
                 speedStart = PspHw_Microseconds();
             }
         }

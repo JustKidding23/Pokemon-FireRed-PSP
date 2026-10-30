@@ -1373,6 +1373,11 @@ static void InitRegionMapBgs(void)
     SetGpuReg(REG_OFFSET_DISPCNT, 0);
     ResetBgsAndClearDma3BusyFlags(FALSE);
     InitBgsFromTemplates(0, sRegionMapBgTemplates, NELEMS(sRegionMapBgTemplates));
+#ifdef PORTABLE
+    // The rollers either side come out whole in the wider view's margins
+    gWideViewMirrorEdges = TRUE;
+    gWideViewMirrorTopLines = 16;
+#endif
     ChangeBgX(0, 0, 0);
     ChangeBgY(0, 0, 0);
     ChangeBgX(1, 0, 0);

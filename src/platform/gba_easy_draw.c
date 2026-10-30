@@ -75,6 +75,8 @@ extern u8 gWideViewClampBgs;
 extern u8 gWideViewNoWrapBgs;
 extern u8 gWideViewLeftOnlyBgs;
 extern u8 gWideViewNarrowBgs;
+extern bool8 gWideViewMirrorEdges;
+extern u8 gWideViewMirrorTopLines;
 extern bool8 gWideViewFlashActive;
 extern s16 gWideViewFlashSpans[2][DISPLAY_HEIGHT + 1][2];
 
@@ -389,6 +391,199 @@ static void RenderBGScanlineDirect(int bgNum, uint16_t control, uint16_t hoffs, 
                         below[x] = bgNum;
                 }
             }
+        }
+    }
+}
+
+// Which of the line's pixels something has already covered, a bit each, when
+// the line is put together from the top down (see DrawScanline)
+#define FILLED_WORDS ((RENDER_WIDTH + 31) / 32 + 1)
+
+// The bits of the n (up to 8) pixels from x
+static inline unsigned int FilledBits(const uint32_t *filled, unsigned int x)
+{
+    unsigned int i = x >> 5, shift = x & 31;
+    uint32_t bits = filled[i] >> shift;
+
+    if (shift > 24)
+        bits |= filled[i + 1] << (32 - shift);
+    return bits & 0xFF;
+}
+
+static inline void SetFilledBits(uint32_t *filled, unsigned int x, unsigned int bits)
+{
+    unsigned int i = x >> 5, shift = x & 31;
+
+    filled[i] |= bits << shift;
+    if (shift > 24)
+        filled[i + 1] |= bits >> (32 - shift);
+}
+
+#define IS_FILLED(f, x) (((f)[(x) >> 5] >> ((x) & 31)) & 1)
+#define SET_FILLED(f, x) ((f)[(x) >> 5] |= 1u << ((x) & 31))
+
+// RenderBGScanlineDirect for a line put together from the top down: a pixel
+// is drawn only where nothing above covers it yet, and then counts as covered.
+// Runs of pixels already covered aren't even looked up, which is where this
+// saves time: under text boxes, menus and the battle's boxes. Nothing on such
+// a line blends with what's below (see DrawScanline).
+static void RenderBGScanlineFront(int bgNum, uint16_t control, uint16_t hoffs, uint16_t voffs, int lineNum, uint16_t *line,
+                                  const uint16_t *winMask, const uint8_t *fade, const uint16_t *fadeMask, uint32_t *filled)
+{
+    unsigned int charBaseBlock = (control >> 2) & 3;
+    unsigned int screenBaseBlock = (control >> 8) & 0x1F;
+    unsigned int mapWidthInPixels = bgMapSizes[control >> 14][0] * 8;
+    unsigned int mapHeightInPixels = bgMapSizes[control >> 14][1] * 8;
+    bool is8bpp = (control & BGCNT_256COLOR) != 0;
+    uint8_t *bgtiles = (uint8_t *)BG_CHAR_ADDR(charBaseBlock);
+    uint16_t *pal = (uint16_t *)PLTT;
+    uint16_t *bgmapRow = (uint16_t *)BG_SCREEN_ADDR(screenBaseBlock);
+    uint16_t bgBit = 1 << bgNum;
+    unsigned int yy;
+    static uint16_t sFadedPal[256];
+    unsigned int fadedPals = 0;
+
+    if (control & BGCNT_MOSAIC)
+        lineNum = applyBGVerticalMosaicEffect(lineNum);
+    hoffs &= 0x1FF;
+    voffs &= 0x1FF;
+
+    yy = (lineNum + voffs) & 0x1FF;
+    if (yy > 255 && mapHeightInPixels > 256)
+        bgmapRow += (mapWidthInPixels > 256) ? 0x800 : 0x400;
+    yy &= 0xFF;
+    bgmapRow += (yy / 8) * 32;
+
+    unsigned int firstColumn, lineEnd;
+
+    BgColumns(bgNum, mapWidthInPixels, hoffs, &firstColumn, &lineEnd);
+    // The shop's room (gWideViewLeftOnlyBgs), as in RenderBGScanlineDirect
+    if ((gWideViewLeftOnlyBgs & bgBit) && firstColumn < RENDER_MARGIN - 16)
+    {
+        unsigned int color = TextBgColorIndexAt(control, hoffs, voffs, lineNum, -16);
+
+        for (unsigned int x = firstColumn; x < RENDER_MARGIN - 16; x++)
+        {
+            if (color != 0 && !IS_FILLED(filled, x) && (winMask == NULL || (winMask[x] & bgBit)))
+            {
+                uint16_t c = pal[color];
+
+                if (fade != NULL && (fadeMask == NULL || (fadeMask[x] & WINMASK_CLR)))
+                    c = FadeColor(fade, c);
+                line[x] = c | 0x8000;
+                SET_FILLED(filled, x);
+            }
+        }
+        firstColumn = RENDER_MARGIN - 16;
+    }
+    for (unsigned int x = firstColumn; x < lineEnd;)
+    {
+        unsigned int xx = (x - RENDER_MARGIN + hoffs) & 0x1FF;
+        uint16_t *bgmap = bgmapRow;
+        unsigned int tileX = xx % 8;
+        unsigned int run = 8 - tileX;
+
+        if (run > lineEnd - x)
+            run = lineEnd - x;
+
+        unsigned int runBits = (1u << run) - 1;
+        unsigned int open = ~FilledBits(filled, x) & runBits;
+
+        if (open == 0)
+        {
+            x += run;
+            continue;
+        }
+        if (xx > 255 && mapWidthInPixels > 256)
+            bgmap += 0x400;
+        xx &= 0xFF;
+
+        uint16_t entry = bgmap[xx / 8];
+        unsigned int tileY = (entry & (1 << 11)) ? 7 - (yy % 8) : yy % 8;
+        unsigned int end = x + run;
+
+        if (is8bpp)
+        {
+            const uint8_t *row = bgtiles + (uint16_t)((entry & 0x3FF) * 64) + tileY * 8;
+            bool flipX = entry & (1 << 10);
+
+            for (unsigned int i = 0; x < end; x++, i++)
+            {
+                unsigned int pixel = row[flipX ? 7 - (tileX + i) : tileX + i];
+
+                if (pixel != 0 && (open & (1u << i)) && (winMask == NULL || (winMask[x] & bgBit)))
+                {
+                    uint16_t c = pal[pixel];
+
+                    if (fade != NULL && (fadeMask == NULL || (fadeMask[x] & WINMASK_CLR)))
+                        c = FadeColor(fade, c);
+                    line[x] = c | 0x8000;
+                    SET_FILLED(filled, x);
+                }
+            }
+            continue;
+        }
+
+        uint32_t pixels = *(uint32_t *)(bgtiles + (uint16_t)((entry & 0x3FF) * 32) + tileY * 4);
+
+        if (pixels == 0)
+        {
+            x = end;
+            continue;
+        }
+        if (entry & (1 << 10))
+            pixels = FlipTileRow4(pixels);
+        pixels >>= tileX * 4;
+
+        unsigned int palNum = (entry >> 12) & 0xF;
+        const uint16_t *subPal = pal + 16 * palNum;
+        const uint16_t *fadedPal = subPal;
+
+        if (fade != NULL)
+        {
+            fadedPal = sFadedPal + 16 * palNum;
+            if (!(fadedPals & (1 << palNum)))
+            {
+                for (int i = 0; i < 16; i++)
+                    sFadedPal[16 * palNum + i] = FadeColor(fade, subPal[i]);
+                fadedPals |= 1 << palNum;
+            }
+            if (fadeMask == NULL)
+                subPal = fadedPal;
+        }
+        // Nothing covered yet and every pixel opaque (most of a background
+        // under nothing): the whole row, as in RenderBGScanlineDirect
+        if (run == 8 && open == 0xFF && winMask == NULL && (fade == NULL || fadeMask == NULL)
+         && ((pixels - 0x11111111) & ~pixels & 0x88888888) == 0)
+        {
+            uint16_t *out = &line[x];
+
+            out[0] = subPal[pixels & 0xF] | 0x8000;
+            out[1] = subPal[(pixels >> 4) & 0xF] | 0x8000;
+            out[2] = subPal[(pixels >> 8) & 0xF] | 0x8000;
+            out[3] = subPal[(pixels >> 12) & 0xF] | 0x8000;
+            out[4] = subPal[(pixels >> 16) & 0xF] | 0x8000;
+            out[5] = subPal[(pixels >> 20) & 0xF] | 0x8000;
+            out[6] = subPal[(pixels >> 24) & 0xF] | 0x8000;
+            out[7] = subPal[pixels >> 28] | 0x8000;
+            SetFilledBits(filled, x, 0xFF);
+            x = end;
+            continue;
+        }
+        {
+            unsigned int drawn = 0;
+
+            for (unsigned int i = 0; x < end; x++, i++, pixels >>= 4)
+            {
+                if ((pixels & 0xF) && (open & (1u << i)) && (winMask == NULL || (winMask[x] & bgBit)))
+                {
+                    const uint16_t *p = (fadeMask != NULL && fade != NULL && (fadeMask[x] & WINMASK_CLR)) ? fadedPal : subPal;
+
+                    line[x] = p[pixels & 0xF] | 0x8000;
+                    drawn |= 1u << i;
+                }
+            }
+            SetFilledBits(filled, end - run, drawn);
         }
     }
 }
@@ -2103,8 +2298,87 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
 #define BELOW_SOURCE 7
 #define BELOW_BLENDED 0x80
 
+    // Where nothing blends with what's below it, the line is put together
+    // from the top down, so what's covered isn't drawn (see
+    // RenderBGScanlineFront). A brightened or darkened background has to be
+    // one drawn straight onto the line for this.
+    bool frontToBack = !trackBelow && !OLD_BLEND;
+
+    if (frontToBack && blendMode != 0)
+    {
+        for (int b = 0; b < 4; b++)
+        {
+            if (isbgEnabled(b) && (REG_BLDCNT & (1 << b)) && !(directBgs & (1 << b)))
+                frontToBack = false;
+        }
+    }
+    if (frontToBack)
+    {
+        static uint32_t sFilled[FILLED_WORDS];
+
+        memset(sFilled, 0, sizeof(sFilled));
+        for (prnum = 0; prnum < 4; prnum++)
+        {
+            // Sprites go over the backgrounds of their priority
+            if (scanline.spritePriorities & (1 << prnum))
+            {
+                uint16_t *src = scanline.spriteLayers[prnum];
+                SUBPROF_START(t);
+
+                for (xpos = scanline.spriteFirstX[prnum]; xpos < scanline.spriteEndX[prnum]; xpos++)
+                {
+                    if (!getAlphaBit(src[xpos]) || (windowsEnabled && !(scanline.winMask[xpos] & WINMASK_OBJ)))
+                        continue;
+                    if (xpos == RENDER_MARGIN)
+                        sSpriteAtEdge[0] = true;
+                    else if (xpos == RENDER_MARGIN + DISPLAY_WIDTH - 1)
+                        sSpriteAtEdge[1] = true;
+                    if (IS_FILLED(sFilled, xpos))
+                        continue;
+                    pixels[xpos] = src[xpos];
+                    SET_FILLED(sFilled, xpos);
+                }
+                SUBPROF_END(7, t);
+            }
+            for (int prsub = 0; prsub < scanline.prioritySortedBgsCount[prnum]; prsub++)
+            {
+                int bg = scanline.prioritySortedBgs[prnum][prsub];
+                uint16_t bit = 1 << bg;
+
+                if (!isbgEnabled(bg))
+                    continue;
+                if (directBgs & bit)
+                {
+                    uint16_t bghoffs = *(uint16_t *)(REG_ADDR_BG0HOFS + bg * 4);
+                    uint16_t bgvoffs = *(uint16_t *)(REG_ADDR_BG0VOFS + bg * 4);
+                    bool fades = blendMode != 0 && (REG_BLDCNT & bit);
+                    SUBPROF_START(t);
+
+                    RenderBGScanlineFront(bg, scanline.bgcnts[bg], bghoffs, bgvoffs, vcount, pixels,
+                                          (windowsEnabled && !(winAll & bit)) ? scanline.winMask : NULL,
+                                          fades ? FadeTable(blendMode, REG_BLDY & 0x1F) : NULL,
+                                          fades && windowsEnabled ? scanline.winMask : NULL, sFilled);
+                    SUBPROF_END(6, t);
+                }
+                else
+                {
+                    uint16_t *src = scanline.layers[bg];
+                    bool allShow = !windowsEnabled || (winAll & bit);
+
+                    for (xpos = 0; xpos < RENDER_WIDTH; xpos++)
+                    {
+                        if (getAlphaBit(src[xpos]) && (allShow || (scanline.winMask[xpos] & bit)) && !IS_FILLED(sFilled, xpos))
+                        {
+                            pixels[xpos] = src[xpos];
+                            SET_FILLED(sFilled, xpos);
+                        }
+                    }
+                }
+            }
+        }
+    }
     //iterate trough every priority in order
-    for (prnum = 3; prnum >= 0; prnum--)
+    else for (prnum = 3; prnum >= 0; prnum--)
     {
         for (char prsub = scanline.prioritySortedBgsCount[prnum] - 1; prsub >= 0; prsub--)
         {
@@ -2411,6 +2685,18 @@ static void DrawLineOnce(uint16_t *line, int i)
             memset(line, 0, RENDER_MARGIN * sizeof(line[0]));
         if (!sExtendedRight)
             memset(&line[RENDER_MARGIN + DISPLAY_WIDTH], 0, RENDER_MARGIN * sizeof(line[0]));
+    }
+    // The edge columns mirrored (see gWideViewMirrorEdges)
+    if (gWideViewMirrorEdges)
+    {
+        bool fromLeft = i < gWideViewMirrorTopLines;
+
+        for (int k = 0; k < RENDER_MARGIN; k++)
+        {
+            line[RENDER_MARGIN - 1 - k] = line[RENDER_MARGIN + k];
+            line[RENDER_MARGIN + DISPLAY_WIDTH + k] = fromLeft ? line[RENDER_MARGIN + k]
+                                                               : line[RENDER_MARGIN + DISPLAY_WIDTH - 1 - k];
+        }
     }
 }
 

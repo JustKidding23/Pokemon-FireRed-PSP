@@ -154,6 +154,13 @@ extern u8 gWideViewLeftOnlyBgs;
 // are (unless made to repeat), like the battle's BG1 and BG2, whose maps past
 // the GBA's screen hold whatever was left there
 extern u8 gWideViewNarrowBgs;
+// The margins show the GBA screen's edge columns mirrored, like the Town Map's
+// rollers, of which the GBA shows the inner halves: they come out whole
+extern bool8 gWideViewMirrorEdges;
+// With gWideViewMirrorEdges, the first lines whose right margin is the left
+// one's instead, where text runs up to the screen's right edge (the Town Map's
+// top bar, the same at both ends)
+extern u8 gWideViewMirrorTopLines;
 #endif
 
 #endif // GUARD_BG_H
