@@ -80,6 +80,7 @@ extern int16_t gWideViewEdgeArtX[2];
 extern uint8_t gWideViewEdgeBarLines;
 extern uint8_t gWideViewEdgeBarX;
 extern bool8 gWideViewEdgeArtShown;
+extern bool8 gWideViewEdgeBarFading;
 extern uint8_t gWideViewMarginLevel;
 extern bool8 gWideViewSpritesInMargins;
 extern bool8 gWideViewFlashActive;
@@ -2167,7 +2168,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     // Only on screens that say they fill the margins (gWideViewMargins):
     // others, like the summary screen, have wide maps for scrolling whose
     // other parts aren't meant to be seen.
-    sWinExtendMargins = gWideViewSpritesInMargins;
+    sWinExtendMargins = gWideViewSpritesInMargins && !gWideViewEdgeArtShown;
     for (bgnum = 0; bgnum < (mode == 0 ? 4 : 2); bgnum++)
     {
         if (isbgEnabled(bgnum) && BgFillsMargins(bgnum, bgMapSizes[scanline.bgcnts[bgnum] >> 14][0] * 8))
@@ -2591,7 +2592,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     }
     scanline.spritePriorities = 0;
 
-    if (!gWideViewSpritesInMargins)
+    if (!gWideViewSpritesInMargins || gWideViewEdgeArtShown)
         ExtendEdges(pixels, vcount, scanline.bgcnts, windowsEnabled, scanline.winMask, scanline.layers);
     sLineFade[vcount] = 0;
     if (lateBrightness != 0)
@@ -2693,7 +2694,7 @@ static void DrawLineOnce(uint16_t *line, int i)
         if (!sExtendedRight)
             memset(&line[RENDER_MARGIN + DISPLAY_WIDTH], 0, RENDER_MARGIN * sizeof(line[0]));
     }
-    if (gWideViewEdgeArt != NULL && !gWideViewSpritesInMargins)
+    if (gWideViewEdgeArt != NULL && (!gWideViewSpritesInMargins || gWideViewEdgeArtShown))
         DrawEdgeArt(line, i);
     // Dimmed margins (see gWideViewMarginLevel)
     if (gWideViewMarginLevel < 16)
@@ -2738,9 +2739,16 @@ static void DrawEdgeArt(uint16_t *line, int i)
         const uint8_t *row = gWideViewEdgeArt[side][i];
         uint16_t empty;
 
-        if (i < gWideViewEdgeBarLines)
+        // From the bar's middle line, clear of its edges (the lines above it
+        // take the last frame's)
+        if (i == gWideViewEdgeBarLines / 2 && !gWideViewEdgeBarFading)
             sBarColor = line[RENDER_MARGIN + gWideViewEdgeBarX];
-        empty = (gWideViewEdgeArtShown && gWideViewEdgeBarLines != 0) ? sBarColor : 0;
+        if (!gWideViewEdgeArtShown || gWideViewEdgeBarLines == 0)
+            empty = 0;
+        else if (gWideViewEdgeBarFading && ((REG_BLDCNT >> 6) & 3) == 2)
+            empty = alphaBrightnessIncrease(sBarColor);
+        else
+            empty = sBarColor;
         // From the screen's edge outwards, so a color the screen doesn't show
         // on this side takes the one next to it, further in
         int step = side == 0 ? -1 : 1;

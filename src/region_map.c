@@ -2641,6 +2641,10 @@ static void Task_MapCloseAnim(u8 taskId)
         ClearOrDrawTopBar(TRUE);
         CopyWindowToVram(WIN_TOPBAR_LEFT, COPYWIN_FULL);
         CopyWindowToVram(WIN_TOPBAR_RIGHT, COPYWIN_FULL);
+#ifdef PORTABLE
+        // The margins keep the bar's blue and whiten with the map
+        gWideViewEdgeBarFading = TRUE;
+#endif
         sMapOpenCloseAnim->closeState++;
         break;
     case 1:
@@ -2678,16 +2682,17 @@ static void Task_MapCloseAnim(u8 taskId)
         }
         break;
     case 6:
+#ifdef PORTABLE
+        // The rollers move in: black margins
+        gWideViewEdgeArtShown = FALSE;
+        gWideViewEdgeBarFading = FALSE;
+#endif
         InitScreenForMapCloseAnim();
         SetGpuWindowDimsToMapEdges();
         PlaySE(SE_CARD_FLIPPING);
         sMapOpenCloseAnim->closeState++;
         break;
     case 7:
-#ifdef PORTABLE
-        // The top bar's gone
-        gWideViewEdgeArtShown = FALSE;
-#endif
         if (MoveMapEdgesInward() == TRUE)
             sMapOpenCloseAnim->closeState++;
         break;
