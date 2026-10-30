@@ -22,6 +22,8 @@ s16 gWideViewEdgeArtX[2];
 u8 gWideViewEdgeBarLines;
 u8 gWideViewEdgeBarX;
 bool8 gWideViewEdgeArtShown;
+u8 gWideViewMarginLevel = 16;
+bool8 gWideViewSpritesInMargins;
 u8 gWideViewNarrowBgs;
 #endif
 
@@ -394,6 +396,8 @@ void InitBgsFromTemplates(u8 bgMode, const struct BgTemplate *templates, u8 numT
     gWideViewEdgeArt = NULL;
     gWideViewEdgeArtShown = FALSE;
     gWideViewEdgeBarLines = 0;
+    gWideViewMarginLevel = 16;
+    gWideViewSpritesInMargins = FALSE;
 #endif
     int i;
     u8 bg;

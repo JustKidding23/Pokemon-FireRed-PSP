@@ -438,8 +438,10 @@ void MapPreview_StartForestTransition(u8 mapsec)
     SetBgAttribute(0, BG_ATTR_PRIORITY, 0);
 #ifdef PORTABLE
     // The picture fades over the forest, which carries on in the margins
-    // beside it (see MapPreview_InitBgs)
+    // beside it (see MapPreview_InitBgs): they're dark while the picture
+    // shows, and come up as the forest does
     gWideViewEndsAtEdgeBgs |= 1 << 0;
+    gWideViewMarginLevel = 0;
 #endif
     SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT1_BG0 | BLDCNT_EFFECT_BLEND | BLDCNT_TGT2_BG1 | BLDCNT_TGT2_BG2 | BLDCNT_TGT2_BG3 | BLDCNT_TGT2_OBJ | BLDCNT_TGT2_BD);
     SetGpuReg(REG_OFFSET_BLDALPHA, BLDALPHA_BLEND(16, 0));
@@ -540,6 +542,9 @@ static void Task_RunMapPreviewScreenForest(u8 taskId)
         }
         data[1] = (data[1] + 1) % 3;
         SetGpuReg(REG_OFFSET_BLDALPHA, BLDALPHA_BLEND(data[8], data[9]));
+#ifdef PORTABLE
+        gWideViewMarginLevel = data[9];
+#endif
         if (data[8] == 0 && data[9] == 16)
         {
             FillBgTilemapBufferRect_Palette0(0, 0, 0, 0, 32, 32);
@@ -559,6 +564,7 @@ static void Task_RunMapPreviewScreenForest(u8 taskId)
             SetGpuReg(REG_OFFSET_WINOUT, data[7]);
 #ifdef PORTABLE
             gWideViewEndsAtEdgeBgs &= ~(1 << 0);
+            gWideViewMarginLevel = 16;
 #endif
             DestroyTask(taskId);
         }

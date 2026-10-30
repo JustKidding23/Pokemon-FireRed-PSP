@@ -2222,6 +2222,10 @@ static void CreateMapEdgeSprite(u8 mapEdgeNum, u8 tileTag, u8 palTag)
     LoadSpriteSheet(&spriteSheet);
     LoadSpritePalette(&spritePalette);
     spriteId = CreateSprite(&template, sMapOpenCloseAnim->mapEdges[mapEdgeNum]->x, sMapOpenCloseAnim->mapEdges[mapEdgeNum]->y, 0);
+#ifdef PORTABLE
+    // Moving, the rollers are whole as sprites (see SetUpRollersInMargins)
+    gWideViewSpritesInMargins = TRUE;
+#endif
     sMapOpenCloseAnim->mapEdges[mapEdgeNum]->sprite = &gSprites[spriteId];
     gSprites[spriteId].invisible = TRUE;
 }
@@ -2282,10 +2286,6 @@ static void InitMapOpenAnim(u8 taskId, TaskFunc taskFunc)
 {
     u8 i;
 
-#ifdef PORTABLE
-    // The rollers move in from the middle as sprites
-    gWideViewEdgeArtShown = FALSE;
-#endif
 
     sMapOpenCloseAnim = AllocZeroed(sizeof(struct MapOpenCloseAnim));
     for (i = 0; i < NELEMS(sMapOpenCloseAnim->mapEdges); i++)
@@ -2407,6 +2407,10 @@ static void FreeMapOpenCloseAnim(void)
 static void FreeMapEdgeSprites(void)
 {
     u8 i;
+#ifdef PORTABLE
+    // The art in the margins takes over from the sprites
+    gWideViewSpritesInMargins = FALSE;
+#endif
     for (i = 0; i < NELEMS(sMapOpenCloseAnim->mapEdges); i++)
     {
         sMapOpenCloseAnim->mapEdges[i]->x = sMapOpenCloseAnim->mapEdges[i]->sprite->x;
@@ -2462,7 +2466,7 @@ static void Task_MapOpenAnim(u8 taskId)
         if (MoveMapEdgesOutward() == TRUE)
         {
 #ifdef PORTABLE
-            // The rollers' sprites are where the art goes
+            // The top bar's coming
             gWideViewEdgeArtShown = TRUE;
 #endif
             sMapOpenCloseAnim->openState++;
@@ -2681,7 +2685,7 @@ static void Task_MapCloseAnim(u8 taskId)
         break;
     case 7:
 #ifdef PORTABLE
-        // The rollers move in as sprites
+        // The top bar's gone
         gWideViewEdgeArtShown = FALSE;
 #endif
         if (MoveMapEdgesInward() == TRUE)

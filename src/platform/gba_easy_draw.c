@@ -80,6 +80,8 @@ extern int16_t gWideViewEdgeArtX[2];
 extern uint8_t gWideViewEdgeBarLines;
 extern uint8_t gWideViewEdgeBarX;
 extern bool8 gWideViewEdgeArtShown;
+extern uint8_t gWideViewMarginLevel;
+extern bool8 gWideViewSpritesInMargins;
 extern bool8 gWideViewFlashActive;
 extern s16 gWideViewFlashSpans[2][DISPLAY_HEIGHT + 1][2];
 
@@ -2165,7 +2167,7 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     // Only on screens that say they fill the margins (gWideViewMargins):
     // others, like the summary screen, have wide maps for scrolling whose
     // other parts aren't meant to be seen.
-    sWinExtendMargins = false;
+    sWinExtendMargins = gWideViewSpritesInMargins;
     for (bgnum = 0; bgnum < (mode == 0 ? 4 : 2); bgnum++)
     {
         if (isbgEnabled(bgnum) && BgFillsMargins(bgnum, bgMapSizes[scanline.bgcnts[bgnum] >> 14][0] * 8))
@@ -2589,7 +2591,8 @@ static void DrawScanline(uint16_t *pixels, uint16_t vcount)
     }
     scanline.spritePriorities = 0;
 
-    ExtendEdges(pixels, vcount, scanline.bgcnts, windowsEnabled, scanline.winMask, scanline.layers);
+    if (!gWideViewSpritesInMargins)
+        ExtendEdges(pixels, vcount, scanline.bgcnts, windowsEnabled, scanline.winMask, scanline.layers);
     sLineFade[vcount] = 0;
     if (lateBrightness != 0)
     {
@@ -2690,8 +2693,17 @@ static void DrawLineOnce(uint16_t *line, int i)
         if (!sExtendedRight)
             memset(&line[RENDER_MARGIN + DISPLAY_WIDTH], 0, RENDER_MARGIN * sizeof(line[0]));
     }
-    if (gWideViewEdgeArt != NULL)
+    if (gWideViewEdgeArt != NULL && !gWideViewSpritesInMargins)
         DrawEdgeArt(line, i);
+    // Dimmed margins (see gWideViewMarginLevel)
+    if (gWideViewMarginLevel < 16)
+    {
+        for (int k = 0; k < RENDER_MARGIN; k++)
+        {
+            line[k] = BlendColors(line[k], 0, gWideViewMarginLevel, 0);
+            line[RENDER_MARGIN + DISPLAY_WIDTH + k] = BlendColors(line[RENDER_MARGIN + DISPLAY_WIDTH + k], 0, gWideViewMarginLevel, 0);
+        }
+    }
 }
 
 // The margins of a screen with art past its edges (see gWideViewEdgeArt)
@@ -2702,12 +2714,6 @@ static void DrawEdgeArt(uint16_t *line, int i)
     static uint16_t sColors[16];
     static uint16_t sKnown;
 
-    if (!gWideViewEdgeArtShown)
-    {
-        memset(line, 0, RENDER_MARGIN * sizeof(line[0]));
-        memset(&line[RENDER_MARGIN + DISPLAY_WIDTH], 0, RENDER_MARGIN * sizeof(line[0]));
-        return;
-    }
     if (i == 0)
         sKnown = 0;
     for (int side = 0; side < 2; side++)
@@ -2728,7 +2734,7 @@ static void DrawEdgeArt(uint16_t *line, int i)
     for (int side = 0; side < 2; side++)
     {
         const uint8_t *row = gWideViewEdgeArt[side][i];
-        uint16_t empty = i < gWideViewEdgeBarLines ? line[RENDER_MARGIN + gWideViewEdgeBarX] : 0;
+        uint16_t empty = (gWideViewEdgeArtShown && i < gWideViewEdgeBarLines) ? line[RENDER_MARGIN + gWideViewEdgeBarX] : 0;
         // From the screen's edge outwards, so a color the screen doesn't show
         // on this side takes the one next to it, further in
         int step = side == 0 ? -1 : 1;

@@ -161,13 +161,20 @@ extern u8 gWideViewNarrowBgs;
 // colors the same indexes have on the screen where the art overlaps it, so
 // they match (fades included). Elsewhere the margins are black, apart from
 // the first gWideViewEdgeBarLines lines, which carry on the color at game
-// column gWideViewEdgeBarX (a bar across the top). Shown while
-// gWideViewEdgeArtShown; while it's not, the margins are black.
+// column gWideViewEdgeBarX (a bar across the top) while gWideViewEdgeArtShown.
 extern const u8 (*gWideViewEdgeArt)[DISPLAY_HEIGHT][32];
 extern s16 gWideViewEdgeArtX[2];
 extern u8 gWideViewEdgeBarLines;
 extern u8 gWideViewEdgeBarX;
 extern bool8 gWideViewEdgeArtShown;
+// How bright the margins are, 0 (black) to 16 (as drawn): a full-screen
+// picture over the field, like Viridian Forest's on the way in, keeps them
+// dark while it shows and lets them come up as it fades
+extern u8 gWideViewMarginLevel;
+// Sprites reach into the margins, which stay black behind them instead of
+// carrying on the screen's edges (and gWideViewEdgeArt waits): like the Town
+// Map's rollers while they're sprites, moving in or out
+extern bool8 gWideViewSpritesInMargins;
 #endif
 
 #endif // GUARD_BG_H
